@@ -1,0 +1,444 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  LayoutDashboard, ListChecks, Camera, FileBarChart2, Settings, LogOut,
+  Plus, Trash2, Pencil, X, Check, Eye, Save
+} from 'lucide-react'
+import {
+  loadData, saveData, addExpense, updateExpense, deleteExpense,
+  updateSettings, calculateTotals, getMonthYear, getLastDataMonth
+} from '../utils/storage'
+import Header from '../components/Header'
+import SummaryCards from '../components/SummaryCards'
+import ExpenseTable from '../components/ExpenseTable'
+import Charts from '../components/Charts'
+import { exportToCSV, printReport } from '../utils/export'
+import './AdminPanel.css'
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+
+const CATEGORIES = ['Security', 'Maintenance', 'Utilities', 'Miscellaneous', 'Capital']
+
+const emptyForm = { date: '', category: 'Security', name: '', amount: '', description: '' }
+
+export default function AdminPanel() {
+  const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState('dashboard')
+  const [data, setData] = useState(loadData())
+  const lastMonth = getLastDataMonth(loadData())
+  const [selectedMonth, setSelectedMonth] = useState(lastMonth.month)
+  const [selectedYear, setSelectedYear] = useState(lastMonth.year)
+  const [form, setForm] = useState(emptyForm)
+  const [editingId, setEditingId] = useState(null)
+  const [settingsForm, setSettingsForm] = useState({ ...data.settings })
+  const [settingsSaved, setSettingsSaved] = useState(false)
+  const [notification, setNotification] = useState(null)
+
+  const currentMonthKey = `${selectedMonth} ${selectedYear}`
+  const monthlyExpenses = data.expenses.filter(e => e.month === currentMonthKey)
+  const totals = calculateTotals(data.expenses, data.settings, currentMonthKey)
+
+  const showNotif = (msg, type = 'success') => {
+    setNotification({ msg, type })
+    setTimeout(() => setNotification(null), 3000)
+  }
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('admin_auth')
+    navigate('/admin/login')
+  }
+
+  // Expense CRUD
+  const handleFormChange = (e) => {
+    const { name, value } = e.target
+    const updated = { ...form, [name]: value }
+    if (name === 'date' && value) {
+      // auto detect month - also update dropdown
+      const detectedMonth = getMonthYear(value)
+      const [m, y] = detectedMonth.split(' ')
+      setSelectedMonth(m)
+      setSelectedYear(Number(y))
+    }
+    setForm(updated)
+  }
+
+  const handleAddExpense = (e) => {
+    e.preventDefault()
+    if (!form.date || !form.name || !form.amount) return
+    const newData = addExpense(form)
+    setData(newData)
+    setForm(emptyForm)
+    showNotif('Expense added successfully!')
+  }
+
+  const handleEditStart = (expense) => {
+    setEditingId(expense.id)
+    setForm({ date: expense.date, category: expense.category, name: expense.name, amount: expense.amount, description: expense.description || '' })
+    setActiveTab('expenses')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleEditSave = (e) => {
+    e.preventDefault()
+    const newData = updateExpense({ ...form, id: editingId })
+    setData(newData)
+    setEditingId(null)
+    setForm(emptyForm)
+    showNotif('Expense updated!')
+  }
+
+  const handleDelete = (id) => {
+    if (!window.confirm('Delete this expense?')) return
+    const newData = deleteExpense(id)
+    setData(newData)
+    showNotif('Expense deleted.', 'error')
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setForm(emptyForm)
+  }
+
+  // Settings save
+  const handleSaveSettings = () => {
+    const newData = updateSettings({
+      openingBalance: Number(settingsForm.openingBalance),
+      monthlyCollection: Number(settingsForm.monthlyCollection),
+      cctvExpense: Number(settingsForm.cctvExpense),
+      currency: settingsForm.currency,
+    })
+    setData(newData)
+    setSettingsSaved(true)
+    showNotif('Settings saved!')
+    setTimeout(() => setSettingsSaved(false), 2000)
+  }
+
+  const navItems = [
+    { id: 'dashboard', icon: <LayoutDashboard size={18}/>, label: 'Dashboard' },
+    { id: 'expenses', icon: <ListChecks size={18}/>, label: 'Expenses' },
+    { id: 'capital', icon: <Camera size={18}/>, label: 'Capital' },
+    { id: 'reports', icon: <FileBarChart2 size={18}/>, label: 'Reports' },
+    { id: 'settings', icon: <Settings size={18}/>, label: 'Settings' },
+  ]
+
+  return (
+    <div className="admin-layout">
+      {/* Notification toast */}
+      {notification && (
+        <div className={`toast ${notification.type}`}>{notification.msg}</div>
+      )}
+
+      {/* Sidebar */}
+      <aside className="admin-sidebar">
+        <div className="sidebar-brand">
+          <div className="brand-icon">💰</div>
+          <div>
+            <div className="brand-title">Expense Admin</div>
+            <div className="brand-sub">Administrator</div>
+          </div>
+        </div>
+        <nav className="sidebar-nav">
+          {navItems.map(item => (
+            <button
+              key={item.id}
+              className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(item.id)}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-footer">
+          <a href="/view" className="nav-item viewer-link">
+            <Eye size={18}/> <span>Viewer View</span>
+          </a>
+          <button className="nav-item logout" onClick={handleLogout}>
+            <LogOut size={18}/> <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="admin-main">
+        <Header
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          onMonthChange={setSelectedMonth}
+          onYearChange={setSelectedYear}
+          isAdmin={true}
+        />
+
+        {/* Dashboard Tab */}
+        {activeTab === 'dashboard' && (
+          <div className="tab-content">
+            <SummaryCards
+              openingBalance={data.settings.openingBalance}
+              monthlyCollection={data.settings.monthlyCollection}
+              totalExpense={totals.totalExpense}
+              saving={totals.saving}
+              totalSaving={totals.totalSaving}
+              currency={data.settings.currency}
+            />
+            <Charts expenses={monthlyExpenses} allExpenses={data.expenses} />
+            <ExpenseTable
+              expenses={monthlyExpenses}
+              settings={data.settings}
+              selectedMonth={currentMonthKey}
+              totals={totals}
+              onEdit={handleEditStart}
+              onDelete={handleDelete}
+              isAdmin={true}
+            />
+          </div>
+        )}
+
+        {/* Expenses Tab */}
+        {activeTab === 'expenses' && (
+          <div className="tab-content">
+            <div className="admin-panel-card">
+              <div className="panel-header">
+                {editingId ? (
+                  <><Pencil size={18}/> Edit Expense <span className="panel-tag">Editing ID #{editingId}</span></>
+                ) : (
+                  <><Plus size={18}/> Add New Expense</>
+                )}
+              </div>
+              <form className="expense-form" onSubmit={editingId ? handleEditSave : handleAddExpense}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Date</label>
+                    <input type="date" name="date" value={form.date} onChange={handleFormChange} required />
+                  </div>
+                  <div className="form-group">
+                    <label>Category</label>
+                    <select name="category" value={form.category} onChange={handleFormChange}>
+                      {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Expense Name</label>
+                    <input type="text" name="name" value={form.name} onChange={handleFormChange} placeholder="e.g. Electrician Bill" required />
+                  </div>
+                  <div className="form-group">
+                    <label>Amount ({data.settings.currency})</label>
+                    <input type="number" name="amount" value={form.amount} onChange={handleFormChange} placeholder="0.00" min="0" step="0.01" required />
+                  </div>
+                </div>
+                <div className="form-group full">
+                  <label>Description</label>
+                  <textarea name="description" value={form.description} onChange={handleFormChange} rows={3} placeholder="Provide additional details..." />
+                </div>
+                <div className="form-actions">
+                  <button type="submit" className="btn-submit">
+                    {editingId ? <><Check size={16}/> Save Changes</> : <><Plus size={16}/> Add Expense</>}
+                  </button>
+                  {editingId && (
+                    <button type="button" className="btn-cancel" onClick={handleCancelEdit}>
+                      <X size={16}/> Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            {/* Expense List */}
+            <div className="admin-panel-card">
+              <div className="panel-header"><ListChecks size={18}/> All Expenses – {currentMonthKey}</div>
+              {monthlyExpenses.length === 0 ? (
+                <div className="empty-state">No expenses for {currentMonthKey}. Add one above!</div>
+              ) : (
+                <div className="expense-list">
+                  <table className="expense-list-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th><th>Category</th><th>Name</th><th>Amount</th><th>Description</th><th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monthlyExpenses.map(exp => (
+                        <tr key={exp.id} className={editingId === exp.id ? 'row-editing' : ''}>
+                          <td>{exp.date}</td>
+                          <td><span className="cat-badge">{exp.category}</span></td>
+                          <td>{exp.name}</td>
+                          <td className="amount-right">{Number(exp.amount).toLocaleString()} {data.settings.currency}</td>
+                          <td className="desc-cell">{exp.description || '—'}</td>
+                          <td>
+                            <button className="btn-edit" onClick={() => handleEditStart(exp)}><Pencil size={13}/></button>
+                            <button className="btn-delete" onClick={() => handleDelete(exp.id)}><Trash2 size={13}/></button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="total-row">
+                        <td colSpan={3}><strong>Total</strong></td>
+                        <td className="amount-right"><strong>{Number(totals.totalExpense).toLocaleString()} {data.settings.currency}</strong></td>
+                        <td colSpan={2}></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Capital Expenses Tab */}
+        {activeTab === 'capital' && (
+          <div className="tab-content">
+            <div className="admin-panel-card">
+              <div className="panel-header"><Camera size={18}/> Capital Expenses</div>
+              <div className="capital-section">
+                <div className="capital-card">
+                  <div className="capital-icon">📹</div>
+                  <div className="capital-info">
+                    <div className="capital-label">CCTV Camera Installation</div>
+                    <div className="capital-amount">{Number(data.settings.cctvExpense).toLocaleString()} {data.settings.currency}</div>
+                  </div>
+                </div>
+                <div className="capital-edit">
+                  <label>Update CCTV Expense Amount</label>
+                  <div className="capital-input-row">
+                    <input
+                      type="number"
+                      value={settingsForm.cctvExpense}
+                      onChange={e => setSettingsForm({ ...settingsForm, cctvExpense: e.target.value })}
+                      min="0"
+                    />
+                    <button className="btn-submit" onClick={handleSaveSettings}>
+                      <Save size={16}/> Update
+                    </button>
+                  </div>
+                </div>
+                <div className="capital-expense-list">
+                  {data.expenses.filter(e => e.category === 'Capital').map(exp => (
+                    <div key={exp.id} className="capital-expense-item">
+                      <span>{exp.name}</span>
+                      <span>{exp.date}</span>
+                      <span className="amount-right">{Number(exp.amount).toLocaleString()} {data.settings.currency}</span>
+                      <button className="btn-delete" onClick={() => handleDelete(exp.id)}><Trash2 size={13}/></button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reports Tab */}
+        {activeTab === 'reports' && (
+          <div className="tab-content">
+            <div className="admin-panel-card">
+              <div className="panel-header"><FileBarChart2 size={18}/> Reports – {currentMonthKey}</div>
+              <div className="reports-summary">
+                <div className="report-stat"><span>Total Expenses</span><strong>{Number(totals.totalExpense).toLocaleString()} {data.settings.currency}</strong></div>
+                <div className="report-stat"><span>Monthly Saving</span><strong className="saving">{Number(totals.saving).toLocaleString()} {data.settings.currency}</strong></div>
+                <div className="report-stat"><span>Total Saving</span><strong className="total-saving">{Number(totals.totalSaving).toLocaleString()} {data.settings.currency}</strong></div>
+              </div>
+              <div className="reports-actions">
+                <button className="btn-submit" onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)}>
+                  📥 Export CSV
+                </button>
+                <button className="btn-submit btn-print-report" onClick={printReport}>
+                  🖨️ Print Report
+                </button>
+              </div>
+              <div className="divider" />
+              <ExpenseTable
+                expenses={monthlyExpenses}
+                settings={data.settings}
+                selectedMonth={currentMonthKey}
+                totals={totals}
+                isAdmin={false}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+          <div className="tab-content">
+            <div className="admin-panel-card">
+              <div className="panel-header"><Settings size={18}/> System Settings</div>
+              <div className="settings-form">
+                <div className="settings-section">
+                  <h4>Financial Configuration</h4>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Opening Balance ({data.settings.currency})</label>
+                      <input
+                        type="number"
+                        value={settingsForm.openingBalance}
+                        onChange={e => setSettingsForm({ ...settingsForm, openingBalance: e.target.value })}
+                        min="0"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Monthly Collection ({data.settings.currency})</label>
+                      <input
+                        type="number"
+                        value={settingsForm.monthlyCollection}
+                        onChange={e => setSettingsForm({ ...settingsForm, monthlyCollection: e.target.value })}
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>CCTV Capital Expense ({data.settings.currency})</label>
+                      <input
+                        type="number"
+                        value={settingsForm.cctvExpense}
+                        onChange={e => setSettingsForm({ ...settingsForm, cctvExpense: e.target.value })}
+                        min="0"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Currency</label>
+                      <select value={settingsForm.currency} onChange={e => setSettingsForm({ ...settingsForm, currency: e.target.value })}>
+                        <option>PKR</option>
+                        <option>USD</option>
+                        <option>EUR</option>
+                        <option>GBP</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="settings-section">
+                  <h4>Expense Categories</h4>
+                  <div className="categories-list">
+                    {CATEGORIES.map(cat => (
+                      <span key={cat} className="cat-badge">{cat}</span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="settings-section">
+                  <h4>User Roles</h4>
+                  <table className="roles-table">
+                    <thead><tr><th>Role</th><th>Access</th><th>URL</th></tr></thead>
+                    <tbody>
+                      <tr><td>Admin</td><td>Full Access</td><td>/admin</td></tr>
+                      <tr><td>Viewer</td><td>Read-Only</td><td>/view</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <button
+                  className={`btn-submit ${settingsSaved ? 'btn-saved' : ''}`}
+                  onClick={handleSaveSettings}
+                >
+                  <Save size={16}/> {settingsSaved ? 'Saved!' : 'Save Settings'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

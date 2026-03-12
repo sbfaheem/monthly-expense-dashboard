@@ -1,0 +1,161 @@
+.expense-table-wrapper {
+  background: var(--white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  margin: 0 32px 24px;
+}
+
+.table-header-bar {
+  background: var(--highlight-yellow);
+  color: #333;
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  letter-spacing: 0.04em;
+}
+
+.table-icon { font-size: 1.1rem; }
+
+.expense-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.expense-table thead tr {
+  background: #f9f9f9;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.expense-table th {
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.col-amount { text-align: right; }
+.col-actions { text-align: center; width: 120px; }
+
+.expense-table td {
+  padding: 10px 16px;
+  font-size: 0.88rem;
+  border-bottom: 1px solid #f0f0f0;
+  color: var(--text-main);
+}
+
+.amount-cell { text-align: right; font-variant-numeric: tabular-nums; }
+
+.bold-cell { font-weight: 700; }
+
+.row-bold td { font-weight: 700; background: #fafafa; }
+
+.row-collection td { background: rgba(255, 152, 0, 0.08); }
+.collection-amount { color: var(--highlight-orange); font-weight: 700; font-size: 0.95rem; }
+
+.category-header td {
+  background: #fff3e0;
+  color: #e65100;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 7px 16px;
+}
+
+.category-header.miscellaneous td {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.expense-name { padding-left: 28px !important; font-style: italic; }
+.misc-row .expense-name { color: #5c6bc0; }
+
+.row-total-expense td { background: rgba(76, 175, 80, 0.1); border-top: 2px solid #e0e0e0; }
+.total-expense-amount { color: #e53935; font-weight: 800; font-size: 1rem; }
+
+.row-saving td { background: rgba(27, 94, 32, 0.06); }
+.saving-amount { color: var(--primary-color); font-weight: 700; font-size: 0.95rem; }
+
+.cctv-amount { color: #1565c0; font-weight: 600; }
+
+.row-total-saving td {
+  background: #212121;
+  color: var(--secondary-color);
+}
+.row-total-saving .bold-cell { color: var(--white); }
+.total-saving-amount { color: var(--secondary-color); font-weight: 800; font-size: 1.05rem; }
+
+/* Actions */
+.actions-cell { text-align: center; }
+.btn-edit {
+  background: #e3f2fd;
+  color: #1565c0;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-right: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-edit:hover { background: #bbdefb; }
+.btn-delete {
+  background: #ffebee;
+  color: #c62828;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-delete:hover { background: #ffcdd2; }
+
+/* Notes */
+.notes-section {
+  padding: 24px;
+  border-top: 2px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.notes-section h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 12px;
+}
+
+.notes-content p {
+  font-size: 0.82rem;
+  color: #555;
+  margin: 0 0 12px 0;
+  line-height: 1.6;
+}
+
+.formula-note {
+  background: #fff9c4;
+  border-left: 3px solid var(--secondary-color);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.8rem !important;
+  color: #555 !important;
+}
+
+@media (max-width: 768px) {
+  .expense-table-wrapper { margin: 0 16px 16px; }
+  .expense-name { padding-left: 16px !important; }
+  .expense-table td, .expense-table th { padding: 8px 10px; font-size: 0.78rem; }
+}
+
+@media print {
+  .actions-cell, .col-actions { display: none; }
+  .site-header .header-controls { display: none; }
+}
