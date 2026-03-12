@@ -108,6 +108,7 @@ export default function AdminPanel() {
       defaultOpeningBalance: Number(settingsForm.defaultOpeningBalance),
       defaultMonthlyCollection: Number(settingsForm.defaultMonthlyCollection),
       cctvExpense: Number(settingsForm.cctvExpense),
+      showCctvExpense: settingsForm.showCctvExpense,
       currency: settingsForm.currency,
     })
     setData(newData)
@@ -433,7 +434,28 @@ export default function AdminPanel() {
                     <div className="capital-amount">{Number(data.settings.cctvExpense).toLocaleString()} {data.settings.currency}</div>
                   </div>
                 </div>
+
                 <div className="capital-edit">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', padding: '12px', background: '#f9f9f9', borderRadius: '8px', border: '1px solid #eee' }}>
+                    <input 
+                      type="checkbox" 
+                      id="showCctv"
+                      checked={settingsForm.showCctvExpense} 
+                      onChange={e => {
+                        const updated = { ...settingsForm, showCctvExpense: e.target.checked };
+                        setSettingsForm(updated);
+                        // Save immediately for better UX
+                        const newData = updateSettings(updated);
+                        setData(newData);
+                        showNotif(`Capital Expenses will now be ${e.target.checked ? 'shown' : 'hidden'}`);
+                      }}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                    <label htmlFor="showCctv" style={{ margin: 0, fontWeight: '600', cursor: 'pointer', color: '#333' }}>
+                      {settingsForm.showCctvExpense ? 'Show' : 'Hide'} Capital Expenditure on Front-end
+                    </label>
+                  </div>
+
                   <label>Update CCTV Expense Amount</label>
                   <div className="capital-input-row">
                     <input
@@ -447,6 +469,7 @@ export default function AdminPanel() {
                     </button>
                   </div>
                 </div>
+
                 <div className="capital-expense-list">
                   {data.expenses.filter(e => e.category === 'Capital').map(exp => (
                     <div key={exp.id} className="capital-expense-item">
@@ -538,6 +561,17 @@ export default function AdminPanel() {
                         <option>EUR</option>
                         <option>GBP</option>
                       </select>
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={settingsForm.showCctvExpense} 
+                        onChange={e => setSettingsForm({ ...settingsForm, showCctvExpense: e.target.checked })} 
+                        style={{ width: 'auto' }}
+                      />
+                      <label style={{ margin: 0 }}>Show Capital Expenditure on Front-end</label>
                     </div>
                   </div>
                 </div>

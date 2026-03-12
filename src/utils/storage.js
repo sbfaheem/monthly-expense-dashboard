@@ -9,6 +9,7 @@ const initialData = {
     // Default values for new months
     defaultOpeningBalance: 50400,
     defaultMonthlyCollection: 284750,
+    showCctvExpense: true,
   },
   monthlyRecords: [
     { 
@@ -56,6 +57,10 @@ export const loadData = () => {
     delete parsed.settings.openingBalance;
     delete parsed.settings.monthlyCollection;
   }
+  // Ensure new settings field exists
+  if (parsed.settings.showCctvExpense === undefined) {
+    parsed.settings.showCctvExpense = true;
+  }
   return parsed;
 };
 
@@ -88,7 +93,7 @@ export const calculateTotals = (expenses, settings, monthlyRecords, selectedMont
   };
 
   const saving = record.isManualSaving ? Number(record.manualSaving) : (Number(record.monthlyCollection) - totalExpense);
-  const totalSaving = (Number(record.openingBalance) + saving) - (settings.cctvExpense || 0);
+  const totalSaving = (Number(record.openingBalance) + saving) - (settings.showCctvExpense ? (settings.cctvExpense || 0) : 0);
 
   return {
     totalExpense,
