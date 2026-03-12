@@ -1,16 +1,28 @@
-# React + Vite
+# Monthly Expense Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, responsive financial dashboard built with React and Vite. This application features two distinct interfaces: a read-only **Viewer Dashboard** and a secure **Admin Panel** for managing monthly expenses.
 
-Currently, two official plugins are available:
+## 🚀 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Viewer Dashboard:** Public read-only access to financial summaries, charts, and expense tables.
+- **Admin Panel:** Secure interface for CRUD operations on expenses, capital expense management, and system settings.
+- **Dynamic Charts:** Visual representation of expense distribution and monthly trends using Chart.js.
+- **Financial Calculations:** Automatic calculation of savings and total accumulated savings.
+- **Export & Print:** Functionality to export data to CSV and print monthly reports.
+- **Responsive Design:** Optimized for desktop, tablet, and mobile devices with a premium Dark Green and Gold theme.
 
-## React Compiler
+## 🛠️ Technology Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend:** React, Vite
+- **Routing:** React Router DOM
+- **Icons:** Lucide-React
+- **Charts:** Chart.js, React-Chartjs-2
+- **Data Persistence:** Local Storage
 
-## Expanding the ESLint configuration
+## 📦 Deployment
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+The project is configured for seamless deployment on Vercel with SPA routing support.
+
+---
+
+Built with ❤️ by Antigravity.
