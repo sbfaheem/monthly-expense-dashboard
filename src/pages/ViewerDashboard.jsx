@@ -17,7 +17,7 @@ export default function ViewerDashboard() {
   const [selectedYear, setSelectedYear] = useState(lastMonth.year)
   const currentMonthKey = `${selectedMonth} ${selectedYear}`
   const monthlyExpenses = data.expenses.filter(e => e.month === currentMonthKey)
-  const totals = calculateTotals(data.expenses, data.settings, currentMonthKey)
+  const totals = calculateTotals(data.expenses, data.settings, data.monthlyRecords, currentMonthKey)
 
   return (
     <div className="viewer-layout">
@@ -30,8 +30,8 @@ export default function ViewerDashboard() {
         isAdmin={false}
       />
       <SummaryCards
-        openingBalance={data.settings.openingBalance}
-        monthlyCollection={data.settings.monthlyCollection}
+        openingBalance={totals.record.openingBalance}
+        monthlyCollection={totals.record.monthlyCollection}
         totalExpense={totals.totalExpense}
         saving={totals.saving}
         totalSaving={totals.totalSaving}

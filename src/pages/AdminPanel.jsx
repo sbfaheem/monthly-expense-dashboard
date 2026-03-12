@@ -6,7 +6,8 @@ import {
 } from 'lucide-react'
 import {
   loadData, saveData, addExpense, updateExpense, deleteExpense,
-  updateSettings, calculateTotals, getMonthYear, getLastDataMonth
+  updateSettings, calculateTotals, getMonthYear, getLastDataMonth,
+  addMonthlyRecord, updateMonthlyRecord, deleteMonthlyRecord
 } from '../utils/storage'
 import Header from '../components/Header'
 import SummaryCards from '../components/SummaryCards'
@@ -25,9 +26,11 @@ export default function AdminPanel() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('dashboard')
   const [data, setData] = useState(loadData())
-  const lastMonth = getLastDataMonth(loadData())
+  const lastMonth = getLastDataMonth(data)
   const [selectedMonth, setSelectedMonth] = useState(lastMonth.month)
   const [selectedYear, setSelectedYear] = useState(lastMonth.year)
+  const [recordForm, setRecordForm] = useState({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false })
+  const [editingRecordId, setEditingRecordId] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState(null)
   const [settingsForm, setSettingsForm] = useState({ ...data.settings })
@@ -36,7 +39,7 @@ export default function AdminPanel() {
 
   const currentMonthKey = `${selectedMonth} ${selectedYear}`
   const monthlyExpenses = data.expenses.filter(e => e.month === currentMonthKey)
-  const totals = calculateTotals(data.expenses, data.settings, currentMonthKey)
+  const totals = calculateTotals(data.expenses, data.settings, data.monthlyRecords, currentMonthKey)
 
   const showNotif = (msg, type = 'success') => {
     setNotification({ msg, type })
@@ -102,8 +105,8 @@ export default function AdminPanel() {
   // Settings save
   const handleSaveSettings = () => {
     const newData = updateSettings({
-      openingBalance: Number(settingsForm.openingBalance),
-      monthlyCollection: Number(settingsForm.monthlyCollection),
+      defaultOpeningBalance: Number(settingsForm.defaultOpeningBalance),
+      defaultMonthlyCollection: Number(settingsForm.defaultMonthlyCollection),
       cctvExpense: Number(settingsForm.cctvExpense),
       currency: settingsForm.currency,
     })
@@ -115,11 +118,54 @@ export default function AdminPanel() {
 
   const navItems = [
     { id: 'dashboard', icon: <LayoutDashboard size={18}/>, label: 'Dashboard' },
+    { id: 'records', icon: <FileBarChart2 size={18}/>, label: 'Monthly Records' },
     { id: 'expenses', icon: <ListChecks size={18}/>, label: 'Expenses' },
     { id: 'capital', icon: <Camera size={18}/>, label: 'Capital' },
     { id: 'reports', icon: <FileBarChart2 size={18}/>, label: 'Reports' },
     { id: 'settings', icon: <Settings size={18}/>, label: 'Settings' },
   ]
+
+  // Monthly Record CRUD
+  const handleRecordFormChange = (e) => {
+    const { name, value, type, checked } = e.target
+    setRecordForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
+  }
+
+  const handleAddMonthlyRecord = (e) => {
+    e.preventDefault()
+    const newData = addMonthlyRecord({
+      month: recordForm.month,
+      openingBalance: Number(recordForm.openingBalance),
+      monthlyCollection: Number(recordForm.monthlyCollection),
+      manualSaving: Number(recordForm.manualSaving),
+      isManualSaving: recordForm.isManualSaving
+    })
+    setData(newData)
+    setRecordForm({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false })
+    showNotif('Monthly record added!')
+  }
+
+  const handleEditRecordStart = (record) => {
+    setEditingRecordId(record.id)
+    setRecordForm({ ...record })
+    setActiveTab('records')
+  }
+
+  const handleEditRecordSave = (e) => {
+    e.preventDefault()
+    const newData = updateMonthlyRecord(recordForm)
+    setData(newData)
+    setEditingRecordId(null)
+    setRecordForm({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false })
+    showNotif('Record updated!')
+  }
+
+  const handleDeleteRecord = (id) => {
+    if (!window.confirm('Delete this monthly record?')) return
+    const newData = deleteMonthlyRecord(id)
+    setData(newData)
+    showNotif('Record deleted.', 'error')
+  }
 
   return (
     <div className="admin-layout">
@@ -169,12 +215,100 @@ export default function AdminPanel() {
           isAdmin={true}
         />
 
+        {/* Monthly Records Tab */}
+        {activeTab === 'records' && (
+          <div className="tab-content">
+            <div className="admin-panel-card">
+              <div className="panel-header">
+                {editingRecordId ? <><Pencil size={18}/> Edit Monthly Summary</> : <><Plus size={18}/> Add New Month</>}
+              </div>
+              <form className="expense-form" onSubmit={editingRecordId ? handleEditRecordSave : handleAddMonthlyRecord}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Month (e.g. March 2026)</label>
+                    <input type="text" name="month" value={recordForm.month} onChange={handleRecordFormChange} placeholder="March 2026" required />
+                  </div>
+                  <div className="form-group">
+                    <label>Opening Balance ({data.settings.currency})</label>
+                    <input type="number" name="openingBalance" value={recordForm.openingBalance} onChange={handleRecordFormChange} required />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Monthly Collection ({data.settings.currency})</label>
+                    <input type="number" name="monthlyCollection" value={recordForm.monthlyCollection} onChange={handleRecordFormChange} required />
+                  </div>
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', marginTop: '20px' }}>
+                    <input 
+                      type="checkbox" 
+                      name="isManualSaving" 
+                      checked={recordForm.isManualSaving} 
+                      onChange={handleRecordFormChange} 
+                      style={{ width: 'auto' }}
+                    />
+                    <label style={{ margin: 0 }}>Manual Monthly Saving?</label>
+                  </div>
+                </div>
+                {recordForm.isManualSaving && (
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Manual Monthly Saving Amount</label>
+                      <input type="number" name="manualSaving" value={recordForm.manualSaving} onChange={handleRecordFormChange} required />
+                    </div>
+                  </div>
+                )}
+                <div className="form-actions" style={{ marginTop: '10px' }}>
+                  <button type="submit" className="btn-submit">
+                    {editingRecordId ? <><Check size={16}/> Save Changes</> : <><Plus size={16}/> Add Month</>}
+                  </button>
+                  {editingRecordId && (
+                    <button type="button" className="btn-cancel" onClick={() => { setEditingRecordId(null); setRecordForm({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false }) }}>
+                      <X size={16}/> Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            <div className="admin-panel-card">
+              <div className="panel-header"><LayoutDashboard size={18}/> Existing Monthly Records</div>
+              <div className="expense-list">
+                <table className="expense-list-table">
+                  <thead>
+                    <tr>
+                      <th>Month</th><th>Opening Bal</th><th>Collection</th><th>Saving</th><th>Total Saving</th><th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.monthlyRecords.map(rec => {
+                      const recTotals = calculateTotals(data.expenses, data.settings, data.monthlyRecords, rec.month)
+                      return (
+                        <tr key={rec.id} className={editingRecordId === rec.id ? 'row-editing' : ''}>
+                          <td><strong>{rec.month}</strong></td>
+                          <td className="amount-right">{rec.openingBalance.toLocaleString()}</td>
+                          <td className="amount-right">{rec.monthlyCollection.toLocaleString()}</td>
+                          <td className="amount-right">{recTotals.saving.toLocaleString()} {rec.isManualSaving && <span className="panel-tag">Manual</span>}</td>
+                          <td className="amount-right"><strong>{recTotals.totalSaving.toLocaleString()}</strong></td>
+                          <td>
+                            <button className="btn-edit" onClick={() => handleEditRecordStart(rec)}><Pencil size={13}/></button>
+                            <button className="btn-delete" onClick={() => handleDeleteRecord(rec.id)}><Trash2 size={13}/></button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
           <div className="tab-content">
             <SummaryCards
-              openingBalance={data.settings.openingBalance}
-              monthlyCollection={data.settings.monthlyCollection}
+              openingBalance={totals.record.openingBalance}
+              monthlyCollection={totals.record.monthlyCollection}
               totalExpense={totals.totalExpense}
               saving={totals.saving}
               totalSaving={totals.totalSaving}
@@ -368,20 +502,20 @@ export default function AdminPanel() {
                   <h4>Financial Configuration</h4>
                   <div className="form-row">
                     <div className="form-group">
-                      <label>Opening Balance ({data.settings.currency})</label>
+                      <label>Default Opening Balance ({data.settings.currency})</label>
                       <input
                         type="number"
-                        value={settingsForm.openingBalance}
-                        onChange={e => setSettingsForm({ ...settingsForm, openingBalance: e.target.value })}
+                        value={settingsForm.defaultOpeningBalance}
+                        onChange={e => setSettingsForm({ ...settingsForm, defaultOpeningBalance: e.target.value })}
                         min="0"
                       />
                     </div>
                     <div className="form-group">
-                      <label>Monthly Collection ({data.settings.currency})</label>
+                      <label>Default Monthly Collection ({data.settings.currency})</label>
                       <input
                         type="number"
-                        value={settingsForm.monthlyCollection}
-                        onChange={e => setSettingsForm({ ...settingsForm, monthlyCollection: e.target.value })}
+                        value={settingsForm.defaultMonthlyCollection}
+                        onChange={e => setSettingsForm({ ...settingsForm, defaultMonthlyCollection: e.target.value })}
                         min="0"
                       />
                     </div>
