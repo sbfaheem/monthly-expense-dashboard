@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ListChecks, Camera, FileBarChart2, Settings, LogOut,
   Plus, Trash2, Pencil, X, Check, Eye, Save
 } from 'lucide-react'
 import {
-  loadData, saveData, addExpense, updateExpense, deleteExpense,
+  loadData, addExpense, updateExpense, deleteExpense,
   updateSettings, calculateTotals, getMonthYear, getLastDataMonth,
   addMonthlyRecord, updateMonthlyRecord, deleteMonthlyRecord
 } from '../utils/storage'
@@ -17,25 +17,52 @@ import { exportToCSV, printReport } from '../utils/export'
 import './AdminPanel.css'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
-
 const CATEGORIES = ['Security', 'Maintenance', 'Utilities', 'Miscellaneous', 'Capital']
-
 const emptyForm = { date: '', category: 'Security', name: '', amount: '', description: '' }
+
+const defaultData = {
+  settings: {
+    cctvExpense: 0, currency: 'PKR', defaultOpeningBalance: 0,
+    defaultMonthlyCollection: 0, showCctvExpense: true,
+  },
+  monthlyRecords: [],
+  expenses: [],
+}
 
 export default function AdminPanel() {
   const navigate = useNavigate()
+  const [data, setData] = useState(defaultData)
+  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [data, setData] = useState(loadData())
-  const lastMonth = getLastDataMonth(data)
-  const [selectedMonth, setSelectedMonth] = useState(lastMonth.month)
-  const [selectedYear, setSelectedYear] = useState(lastMonth.year)
+  const [selectedMonth, setSelectedMonth] = useState('')
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [recordForm, setRecordForm] = useState({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false })
   const [editingRecordId, setEditingRecordId] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState(null)
-  const [settingsForm, setSettingsForm] = useState({ ...data.settings })
+  const [settingsForm, setSettingsForm] = useState(defaultData.settings)
   const [settingsSaved, setSettingsSaved] = useState(false)
   const [notification, setNotification] = useState(null)
+
+  // ── Load data on mount ──────────────────────────────────────
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const freshData = await loadData()
+        setData(freshData)
+        setSettingsForm({ ...freshData.settings })
+        const last = getLastDataMonth(freshData)
+        setSelectedMonth(last.month)
+        setSelectedYear(last.year)
+      } catch (err) {
+        console.error('Failed to load data:', err)
+        showNotif('Failed to connect to database. Check console.', 'error')
+      } finally {
+        setLoading(false)
+      }
+    }
+    init()
+  }, [])
 
   const currentMonthKey = `${selectedMonth} ${selectedYear}`
   const monthlyExpenses = data.expenses.filter(e => e.month === currentMonthKey)
@@ -51,12 +78,11 @@ export default function AdminPanel() {
     navigate('/admin/login')
   }
 
-  // Expense CRUD
+  // ── Expense CRUD ────────────────────────────────────────────
   const handleFormChange = (e) => {
     const { name, value } = e.target
     const updated = { ...form, [name]: value }
     if (name === 'date' && value) {
-      // auto detect month - also update dropdown
       const detectedMonth = getMonthYear(value)
       const [m, y] = detectedMonth.split(' ')
       setSelectedMonth(m)
@@ -65,13 +91,18 @@ export default function AdminPanel() {
     setForm(updated)
   }
 
-  const handleAddExpense = (e) => {
+  const handleAddExpense = async (e) => {
     e.preventDefault()
     if (!form.date || !form.name || !form.amount) return
-    const newData = addExpense(form)
-    setData(newData)
-    setForm(emptyForm)
-    showNotif('Expense added successfully!')
+    try {
+      const newData = await addExpense(form)
+      setData(newData)
+      setForm(emptyForm)
+      showNotif('Expense added successfully!')
+    } catch (err) {
+      console.error(err)
+      showNotif('Failed to add expense.', 'error')
+    }
   }
 
   const handleEditStart = (expense) => {
@@ -81,20 +112,30 @@ export default function AdminPanel() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleEditSave = (e) => {
+  const handleEditSave = async (e) => {
     e.preventDefault()
-    const newData = updateExpense({ ...form, id: editingId })
-    setData(newData)
-    setEditingId(null)
-    setForm(emptyForm)
-    showNotif('Expense updated!')
+    try {
+      const newData = await updateExpense({ ...form, id: editingId })
+      setData(newData)
+      setEditingId(null)
+      setForm(emptyForm)
+      showNotif('Expense updated!')
+    } catch (err) {
+      console.error(err)
+      showNotif('Failed to update expense.', 'error')
+    }
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!window.confirm('Delete this expense?')) return
-    const newData = deleteExpense(id)
-    setData(newData)
-    showNotif('Expense deleted.', 'error')
+    try {
+      const newData = await deleteExpense(id)
+      setData(newData)
+      showNotif('Expense deleted.', 'error')
+    } catch (err) {
+      console.error(err)
+      showNotif('Failed to delete expense.', 'error')
+    }
   }
 
   const handleCancelEdit = () => {
@@ -102,48 +143,49 @@ export default function AdminPanel() {
     setForm(emptyForm)
   }
 
-  // Settings save
-  const handleSaveSettings = () => {
-    const newData = updateSettings({
-      defaultOpeningBalance: Number(settingsForm.defaultOpeningBalance),
-      defaultMonthlyCollection: Number(settingsForm.defaultMonthlyCollection),
-      cctvExpense: Number(settingsForm.cctvExpense),
-      showCctvExpense: settingsForm.showCctvExpense,
-      currency: settingsForm.currency,
-    })
-    setData(newData)
-    setSettingsSaved(true)
-    showNotif('Settings saved!')
-    setTimeout(() => setSettingsSaved(false), 2000)
+  // ── Settings ────────────────────────────────────────────────
+  const handleSaveSettings = async () => {
+    try {
+      const newData = await updateSettings({
+        defaultOpeningBalance: Number(settingsForm.defaultOpeningBalance),
+        defaultMonthlyCollection: Number(settingsForm.defaultMonthlyCollection),
+        cctvExpense: Number(settingsForm.cctvExpense),
+        showCctvExpense: settingsForm.showCctvExpense,
+        currency: settingsForm.currency,
+      })
+      setData(newData)
+      setSettingsSaved(true)
+      showNotif('Settings saved!')
+      setTimeout(() => setSettingsSaved(false), 2000)
+    } catch (err) {
+      console.error(err)
+      showNotif('Failed to save settings.', 'error')
+    }
   }
 
-  const navItems = [
-    { id: 'dashboard', icon: <LayoutDashboard size={18}/>, label: 'Dashboard' },
-    { id: 'records', icon: <FileBarChart2 size={18}/>, label: 'Monthly Records' },
-    { id: 'expenses', icon: <ListChecks size={18}/>, label: 'Expenses' },
-    { id: 'capital', icon: <Camera size={18}/>, label: 'Capital' },
-    { id: 'reports', icon: <FileBarChart2 size={18}/>, label: 'Reports' },
-    { id: 'settings', icon: <Settings size={18}/>, label: 'Settings' },
-  ]
-
-  // Monthly Record CRUD
+  // ── Monthly Records CRUD ─────────────────────────────────────
   const handleRecordFormChange = (e) => {
     const { name, value, type, checked } = e.target
     setRecordForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
   }
 
-  const handleAddMonthlyRecord = (e) => {
+  const handleAddMonthlyRecord = async (e) => {
     e.preventDefault()
-    const newData = addMonthlyRecord({
-      month: recordForm.month,
-      openingBalance: Number(recordForm.openingBalance),
-      monthlyCollection: Number(recordForm.monthlyCollection),
-      manualSaving: Number(recordForm.manualSaving),
-      isManualSaving: recordForm.isManualSaving
-    })
-    setData(newData)
-    setRecordForm({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false })
-    showNotif('Monthly record added!')
+    try {
+      const newData = await addMonthlyRecord({
+        month: recordForm.month,
+        openingBalance: Number(recordForm.openingBalance),
+        monthlyCollection: Number(recordForm.monthlyCollection),
+        manualSaving: Number(recordForm.manualSaving),
+        isManualSaving: recordForm.isManualSaving
+      })
+      setData(newData)
+      setRecordForm({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false })
+      showNotif('Monthly record added!')
+    } catch (err) {
+      console.error(err)
+      showNotif('Failed to add monthly record.', 'error')
+    }
   }
 
   const handleEditRecordStart = (record) => {
@@ -152,20 +194,50 @@ export default function AdminPanel() {
     setActiveTab('records')
   }
 
-  const handleEditRecordSave = (e) => {
+  const handleEditRecordSave = async (e) => {
     e.preventDefault()
-    const newData = updateMonthlyRecord(recordForm)
-    setData(newData)
-    setEditingRecordId(null)
-    setRecordForm({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false })
-    showNotif('Record updated!')
+    try {
+      const newData = await updateMonthlyRecord(recordForm)
+      setData(newData)
+      setEditingRecordId(null)
+      setRecordForm({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false })
+      showNotif('Record updated!')
+    } catch (err) {
+      console.error(err)
+      showNotif('Failed to update record.', 'error')
+    }
   }
 
-  const handleDeleteRecord = (id) => {
+  const handleDeleteRecord = async (id) => {
     if (!window.confirm('Delete this monthly record?')) return
-    const newData = deleteMonthlyRecord(id)
-    setData(newData)
-    showNotif('Record deleted.', 'error')
+    try {
+      const newData = await deleteMonthlyRecord(id)
+      setData(newData)
+      showNotif('Record deleted.', 'error')
+    } catch (err) {
+      console.error(err)
+      showNotif('Failed to delete record.', 'error')
+    }
+  }
+
+  const navItems = [
+    { id: 'dashboard', icon: <LayoutDashboard size={18}/>, label: 'Dashboard' },
+    { id: 'records',   icon: <FileBarChart2  size={18}/>, label: 'Monthly Records' },
+    { id: 'expenses',  icon: <ListChecks     size={18}/>, label: 'Expenses' },
+    { id: 'capital',   icon: <Camera         size={18}/>, label: 'Capital' },
+    { id: 'reports',   icon: <FileBarChart2  size={18}/>, label: 'Reports' },
+    { id: 'settings',  icon: <Settings       size={18}/>, label: 'Settings' },
+  ]
+
+  // ── Loading screen ──────────────────────────────────────────
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: '16px', background: '#f8fafc' }}>
+        <div style={{ width: 48, height: 48, border: '4px solid #e2e8f0', borderTop: '4px solid #6366f1', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <p style={{ color: '#64748b', fontFamily: 'Inter, sans-serif' }}>Connecting to database…</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    )
   }
 
   return (
@@ -240,11 +312,11 @@ export default function AdminPanel() {
                     <input type="number" name="monthlyCollection" value={recordForm.monthlyCollection} onChange={handleRecordFormChange} required />
                   </div>
                   <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', marginTop: '20px' }}>
-                    <input 
-                      type="checkbox" 
-                      name="isManualSaving" 
-                      checked={recordForm.isManualSaving} 
-                      onChange={handleRecordFormChange} 
+                    <input
+                      type="checkbox"
+                      name="isManualSaving"
+                      checked={recordForm.isManualSaving}
+                      onChange={handleRecordFormChange}
                       style={{ width: 'auto' }}
                     />
                     <label style={{ margin: 0 }}>Manual Monthly Saving?</label>
@@ -437,17 +509,20 @@ export default function AdminPanel() {
 
                 <div className="capital-edit">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', padding: '12px', background: '#f9f9f9', borderRadius: '8px', border: '1px solid #eee' }}>
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       id="showCctv"
-                      checked={settingsForm.showCctvExpense} 
-                      onChange={e => {
-                        const updated = { ...settingsForm, showCctvExpense: e.target.checked };
-                        setSettingsForm(updated);
-                        // Save immediately for better UX
-                        const newData = updateSettings(updated);
-                        setData(newData);
-                        showNotif(`Capital Expenses will now be ${e.target.checked ? 'shown' : 'hidden'}`);
+                      checked={settingsForm.showCctvExpense}
+                      onChange={async (e) => {
+                        const updated = { ...settingsForm, showCctvExpense: e.target.checked }
+                        setSettingsForm(updated)
+                        try {
+                          const newData = await updateSettings(updated)
+                          setData(newData)
+                          showNotif(`Capital Expenses will now be ${e.target.checked ? 'shown' : 'hidden'}`)
+                        } catch (err) {
+                          console.error(err)
+                        }
                       }}
                       style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                     />
@@ -565,10 +640,10 @@ export default function AdminPanel() {
                   </div>
                   <div className="form-row">
                     <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={settingsForm.showCctvExpense} 
-                        onChange={e => setSettingsForm({ ...settingsForm, showCctvExpense: e.target.checked })} 
+                      <input
+                        type="checkbox"
+                        checked={settingsForm.showCctvExpense}
+                        onChange={e => setSettingsForm({ ...settingsForm, showCctvExpense: e.target.checked })}
                         style={{ width: 'auto' }}
                       />
                       <label style={{ margin: 0 }}>Show Capital Expenditure on Front-end</label>

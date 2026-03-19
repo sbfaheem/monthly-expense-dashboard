@@ -1,167 +1,181 @@
+import { supabase } from './supabase'
 
-const STORAGE_KEY = 'expense_dashboard_data';
-
-const initialData = {
-  settings: {
-    cctvExpense: 38800,
-    categories: ['Security', 'Maintenance', 'Utilities', 'Miscellaneous', 'Capital'],
-    currency: 'PKR',
-    // Default values for new months
-    defaultOpeningBalance: 50400,
-    defaultMonthlyCollection: 284750,
-    showCctvExpense: true,
-  },
-  monthlyRecords: [
-    { 
-      id: 1, 
-      month: 'February 2026', 
-      openingBalance: 50400, 
-      monthlyCollection: 284750,
-      manualSaving: 0,
-      isManualSaving: false 
-    }
-  ],
-  expenses: [
-    { id: 1, date: '2026-02-01', month: 'February 2026', category: 'Security', name: 'Security Expense', amount: 207000, description: 'Monthly security services' },
-    { id: 2, date: '2026-02-05', month: 'February 2026', category: 'Maintenance', name: 'Electrician Charges', amount: 8000, description: 'Electrical maintenance' },
-    { id: 3, date: '2026-02-10', month: 'February 2026', category: 'Security', name: 'Sweeper Salary', amount: 15000, description: 'Sweeping services' },
-    { id: 4, date: '2026-02-12', month: 'February 2026', category: 'Maintenance', name: 'Sweeper Accessories', amount: 7900, description: 'Cleaning supplies' },
-    { id: 5, date: '2026-02-15', month: 'February 2026', category: 'Utilities', name: 'Electrical Accessories', amount: 7520, description: 'Bulbs and wires' },
-    { id: 6, date: '2026-02-20', month: 'February 2026', category: 'Miscellaneous', name: 'Park', amount: 1500, description: 'Park maintenance' },
-    { id: 7, date: '2026-02-22', month: 'February 2026', category: 'Miscellaneous', name: 'Chair', amount: 1500, description: 'Office chair' },
-  ]
-};
+// ─── Helpers ────────────────────────────────────────────────
 
 export const getMonthYear = (dateString) => {
-  const date = new Date(dateString);
-  const options = { month: 'long', year: 'numeric' };
-  return date.toLocaleDateString('en-US', options);
-};
-
-export const loadData = () => {
-  const data = localStorage.getItem(STORAGE_KEY);
-  if (!data) return initialData;
-  const parsed = JSON.parse(data);
-  // Migration for old data structure
-  if (!parsed.monthlyRecords) {
-    parsed.monthlyRecords = [{
-      id: 1,
-      month: parsed.expenses?.[0]?.month || getMonthYear(new Date()),
-      openingBalance: parsed.settings.openingBalance || 50400,
-      monthlyCollection: parsed.settings.monthlyCollection || 284750,
-      manualSaving: 0,
-      isManualSaving: false
-    }];
-    parsed.settings.defaultOpeningBalance = parsed.settings.openingBalance || 50400;
-    parsed.settings.defaultMonthlyCollection = parsed.settings.monthlyCollection || 284750;
-    delete parsed.settings.openingBalance;
-    delete parsed.settings.monthlyCollection;
-  }
-  // Ensure new settings field exists
-  if (parsed.settings.showCctvExpense === undefined) {
-    parsed.settings.showCctvExpense = true;
-  }
-  return parsed;
-};
-
-export const saveData = (data) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-};
+  // Parse date parts directly to avoid UTC timezone shift.
+  // new Date('YYYY-MM-DD') is UTC midnight — in UTC+5 (Pakistan) that
+  // shifts March 1 back to Feb 28. Local construction avoids this.
+  const [year, month, day] = dateString.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+}
 
 export const getLastDataMonth = (data) => {
   if (data.monthlyRecords && data.monthlyRecords.length > 0) {
-    // Sort records by month date-like parsing if possible, or just use latest added
-    const sorted = [...data.monthlyRecords].sort((a, b) => new Date(b.month) - new Date(a.month));
-    const parts = sorted[0].month.split(' ');
-    return { month: parts[0], year: Number(parts[1]) };
+    const sorted = [...data.monthlyRecords].sort((a, b) => new Date(b.month) - new Date(a.month))
+    const parts = sorted[0].month.split(' ')
+    return { month: parts[0], year: Number(parts[1]) }
   }
-  const now = new Date();
-  const opts = { month: 'long', year: 'numeric' };
-  const [m, y] = now.toLocaleDateString('en-US', opts).split(' ');
-  return { month: m, year: Number(y) };
-};
+  const now = new Date()
+  const [m, y] = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).split(' ')
+  return { month: m, year: Number(y) }
+}
 
 export const calculateTotals = (expenses, settings, monthlyRecords, selectedMonth) => {
-  const monthlyExpenses = expenses.filter(e => e.month === selectedMonth);
-  const totalExpense = monthlyExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-  
+  const monthlyExpenses = expenses.filter(e => e.month === selectedMonth)
+  const totalExpense = monthlyExpenses.reduce((sum, e) => sum + Number(e.amount), 0)
+
   const record = monthlyRecords.find(r => r.month === selectedMonth) || {
     openingBalance: settings.defaultOpeningBalance || 0,
     monthlyCollection: settings.defaultMonthlyCollection || 0,
     isManualSaving: false,
-    manualSaving: 0
-  };
+    manualSaving: 0,
+  }
 
-  const saving = record.isManualSaving ? Number(record.manualSaving) : (Number(record.monthlyCollection) - totalExpense);
-  const totalSaving = (Number(record.openingBalance) + saving) - (settings.showCctvExpense ? (settings.cctvExpense || 0) : 0);
+  const saving = record.isManualSaving
+    ? Number(record.manualSaving)
+    : Number(record.monthlyCollection) - totalExpense
+
+  const totalSaving =
+    Number(record.openingBalance) +
+    saving -
+    (settings.showCctvExpense ? settings.cctvExpense || 0 : 0)
+
+  return { totalExpense, saving, totalSaving, record }
+}
+
+// ─── Map DB row → app shape ──────────────────────────────────
+
+const toSettings = (row) => ({
+  currency: row.currency,
+  cctvExpense: Number(row.cctv_expense),
+  showCctvExpense: row.show_cctv_expense,
+  defaultOpeningBalance: Number(row.default_opening_balance),
+  defaultMonthlyCollection: Number(row.default_monthly_collection),
+})
+
+const toMonthlyRecord = (row) => ({
+  id: row.id,
+  month: row.month,
+  openingBalance: Number(row.opening_balance),
+  monthlyCollection: Number(row.monthly_collection),
+  isManualSaving: row.is_manual_saving,
+  manualSaving: Number(row.manual_saving),
+})
+
+const toExpense = (row) => ({
+  id: row.id,
+  date: row.date,
+  month: row.month,
+  category: row.category,
+  name: row.name,
+  amount: Number(row.amount),
+  description: row.description || '',
+})
+
+// ─── Load all data ───────────────────────────────────────────
+
+export const loadData = async () => {
+  const [settingsRes, recordsRes, expensesRes] = await Promise.all([
+    supabase.from('settings').select('*').eq('id', 1).single(),
+    supabase.from('monthly_records').select('*').order('created_at', { ascending: true }),
+    supabase.from('expenses').select('*').order('date', { ascending: true }),
+  ])
+
+  // Default settings in case the row doesn't exist yet
+  const defaultSettings = {
+    currency: 'PKR',
+    cctvExpense: 38800,
+    showCctvExpense: true,
+    defaultOpeningBalance: 50400,
+    defaultMonthlyCollection: 284750,
+  }
 
   return {
-    totalExpense,
-    saving,
-    totalSaving,
-    record
-  };
-};
+    settings: settingsRes.data ? toSettings(settingsRes.data) : defaultSettings,
+    monthlyRecords: (recordsRes.data || []).map(toMonthlyRecord),
+    expenses: (expensesRes.data || []).map(toExpense),
+  }
+}
 
-// Monthly Records CRUD
-export const addMonthlyRecord = (record) => {
-  const data = loadData();
-  const newRecord = {
-    ...record,
-    id: Date.now(),
-    isManualSaving: record.isManualSaving || false,
-    manualSaving: record.manualSaving || 0
-  };
-  data.monthlyRecords.push(newRecord);
-  saveData(data);
-  return data;
-};
+// ─── Settings ────────────────────────────────────────────────
 
-export const updateMonthlyRecord = (updatedRecord) => {
-  const data = loadData();
-  data.monthlyRecords = data.monthlyRecords.map(r => r.id === updatedRecord.id ? updatedRecord : r);
-  saveData(data);
-  return data;
-};
+export const updateSettings = async (newSettings) => {
+  const { error } = await supabase.from('settings').upsert({
+    id: 1,
+    currency: newSettings.currency,
+    cctv_expense: newSettings.cctvExpense,
+    show_cctv_expense: newSettings.showCctvExpense,
+    default_opening_balance: newSettings.defaultOpeningBalance,
+    default_monthly_collection: newSettings.defaultMonthlyCollection,
+  })
+  if (error) throw error
+  return loadData()
+}
 
-export const deleteMonthlyRecord = (id) => {
-  const data = loadData();
-  data.monthlyRecords = data.monthlyRecords.filter(r => r.id !== id);
-  saveData(data);
-  return data;
-};
+// ─── Monthly Records CRUD ────────────────────────────────────
 
-// Expense CRUD
-export const addExpense = (expense) => {
-  const data = loadData();
-  const newExpense = {
-    ...expense,
-    id: Date.now(),
-    month: getMonthYear(expense.date)
-  };
-  data.expenses.push(newExpense);
-  saveData(data);
-  return data;
-};
+export const addMonthlyRecord = async (record) => {
+  const { error } = await supabase.from('monthly_records').insert({
+    month: record.month,
+    opening_balance: record.openingBalance,
+    monthly_collection: record.monthlyCollection,
+    is_manual_saving: record.isManualSaving || false,
+    manual_saving: record.manualSaving || 0,
+  })
+  if (error) throw error
+  return loadData()
+}
 
-export const updateExpense = (updatedExpense) => {
-  const data = loadData();
-  data.expenses = data.expenses.map(e => e.id === updatedExpense.id ? { ...updatedExpense, month: getMonthYear(updatedExpense.date) } : e);
-  saveData(data);
-  return data;
-};
+export const updateMonthlyRecord = async (record) => {
+  const { error } = await supabase.from('monthly_records').update({
+    month: record.month,
+    opening_balance: record.openingBalance,
+    monthly_collection: record.monthlyCollection,
+    is_manual_saving: record.isManualSaving || false,
+    manual_saving: record.manualSaving || 0,
+  }).eq('id', record.id)
+  if (error) throw error
+  return loadData()
+}
 
-export const deleteExpense = (id) => {
-  const data = loadData();
-  data.expenses = data.expenses.filter(e => e.id !== id);
-  saveData(data);
-  return data;
-};
+export const deleteMonthlyRecord = async (id) => {
+  const { error } = await supabase.from('monthly_records').delete().eq('id', id)
+  if (error) throw error
+  return loadData()
+}
 
-export const updateSettings = (newSettings) => {
-  const data = loadData();
-  data.settings = { ...data.settings, ...newSettings };
-  saveData(data);
-  return data;
-};
+// ─── Expenses CRUD ───────────────────────────────────────────
 
+export const addExpense = async (expense) => {
+  const { error } = await supabase.from('expenses').insert({
+    date: expense.date,
+    month: getMonthYear(expense.date),
+    category: expense.category,
+    name: expense.name,
+    amount: expense.amount,
+    description: expense.description || '',
+  })
+  if (error) throw error
+  return loadData()
+}
+
+export const updateExpense = async (expense) => {
+  const { error } = await supabase.from('expenses').update({
+    date: expense.date,
+    month: getMonthYear(expense.date),
+    category: expense.category,
+    name: expense.name,
+    amount: expense.amount,
+    description: expense.description || '',
+  }).eq('id', expense.id)
+  if (error) throw error
+  return loadData()
+}
+
+export const deleteExpense = async (id) => {
+  const { error } = await supabase.from('expenses').delete().eq('id', id)
+  if (error) throw error
+  return loadData()
+}
