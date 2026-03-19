@@ -40,19 +40,6 @@ const ExpenseTable = ({ expenses, settings, selectedMonth, totals, onEdit, onDel
           </tr>
         </thead>
         <tbody>
-          {/* Opening Balance */}
-          <tr className="row-bold">
-            <td>Opening Balance</td>
-            <td className="amount-cell">{fmt(settings.openingBalance)}</td>
-            {isAdmin && <td></td>}
-          </tr>
-          {/* Monthly Collection */}
-          <tr className="row-collection">
-            <td>Monthly Collection</td>
-            <td className="amount-cell collection-amount">{fmt(settings.monthlyCollection)}</td>
-            {isAdmin && <td></td>}
-          </tr>
-
           {/* Operational Expenses header */}
           <tr className="category-header">
             <td colSpan={isAdmin ? 3 : 2}>OPERATIONAL EXPENSES</td>
