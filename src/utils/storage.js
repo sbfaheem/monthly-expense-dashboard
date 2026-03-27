@@ -26,9 +26,12 @@ export const calculateTotals = (expenses, settings, monthlyRecords, selectedMont
   const monthlyExpenses = expenses.filter(e => e.month === selectedMonth)
   const totalExpense = monthlyExpenses.reduce((sum, e) => sum + Number(e.amount), 0)
 
-  const record = monthlyRecords.find(r => r.month === selectedMonth) || {
-    openingBalance: settings.defaultOpeningBalance || 0,
-    monthlyCollection: settings.defaultMonthlyCollection || 0,
+  const monthRecord = monthlyRecords.find(r => r.month === selectedMonth)
+  const isNoData = !monthRecord && monthlyExpenses.length === 0
+  
+  const record = monthRecord || {
+    openingBalance: 0,
+    monthlyCollection: 0,
     isManualSaving: false,
     manualSaving: 0,
   }
@@ -37,12 +40,11 @@ export const calculateTotals = (expenses, settings, monthlyRecords, selectedMont
     ? Number(record.manualSaving)
     : Number(record.monthlyCollection) - totalExpense
 
-  const totalSaving =
-    Number(record.openingBalance) +
-    saving -
-    (settings.showCctvExpense ? settings.cctvExpense || 0 : 0)
+  const totalSaving = isNoData 
+    ? 0 
+    : Number(record.openingBalance) + saving - (settings.showCctvExpense ? settings.cctvExpense || 0 : 0)
 
-  return { totalExpense, saving, totalSaving, record }
+  return { totalExpense, saving, totalSaving, record: { ...record, isNoData } }
 }
 
 // ─── Map DB row → app shape ──────────────────────────────────

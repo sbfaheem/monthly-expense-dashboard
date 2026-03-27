@@ -1,37 +1,37 @@
 import './SummaryCards.css'
 
-const SummaryCards = ({ openingBalance, monthlyCollection, totalExpense, saving, totalSaving, currency = 'PKR' }) => {
+const SummaryCards = ({ openingBalance, monthlyCollection, totalExpense, saving, totalSaving, currency = 'PKR', isNoData }) => {
   const fmt = (n) => Number(n).toLocaleString('en-PK')
   
   const cards = [
     {
       label: 'Opening Balance',
       value: fmt(openingBalance),
-      note: '0% change',
+      note: isNoData ? '0% change' : '0% change',
       colorClass: 'card-blue',
     },
     {
       label: 'Monthly Collection',
       value: fmt(monthlyCollection),
-      note: '+15% vs target',
+      note: isNoData ? '0% vs target' : '+15% vs target',
       colorClass: 'card-orange',
     },
     {
       label: 'Total Expense',
       value: fmt(totalExpense),
-      note: '-5% efficiency',
+      note: isNoData ? '0% efficiency' : '-5% efficiency',
       colorClass: 'card-red',
     },
     {
       label: 'Monthly Saving',
       value: fmt(saving),
-      note: saving >= 0 ? '+10% growth' : 'Over budget',
-      colorClass: saving >= 0 ? 'card-green' : 'card-red',
+      note: isNoData ? '0% growth' : (saving >= 0 ? '+10% growth' : 'Over budget'),
+      colorClass: isNoData ? 'card-neutral' : (saving >= 0 ? 'card-green' : 'card-red'),
     },
     {
       label: 'Total Saving',
       value: fmt(totalSaving),
-      note: '+8% net',
+      note: isNoData ? '0% net' : '+8% net',
       colorClass: 'card-gold',
     },
   ]

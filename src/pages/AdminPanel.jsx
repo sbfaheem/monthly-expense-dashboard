@@ -386,6 +386,7 @@ export default function AdminPanel() {
               saving={totals.saving}
               totalSaving={totals.totalSaving}
               currency={data.settings.currency}
+              isNoData={totals.record.isNoData}
             />
             <Charts expenses={monthlyExpenses} allExpenses={data.expenses} />
             <ExpenseTable
