@@ -23,18 +23,29 @@ export const getLastDataMonth = (data) => {
 }
 
 export const calculateTotals = (expenses, settings, monthlyRecords, selectedMonth) => {
+  const [selMonthName, selYearStr] = selectedMonth.split(' ')
+  const selYear = Number(selYearStr)
+  
+  const today = new Date()
+  const curMonthName = today.toLocaleDateString('en-US', { month: 'long' })
+  const curYear = today.getFullYear()
+  const lastDayOfMonth = new Date(curYear, today.getMonth() + 1, 0).getDate()
+  
+  const isCurrentMonth = selMonthName === curMonthName && selYear === curYear
+  const isPendingCurrentMonth = isCurrentMonth && today.getDate() !== lastDayOfMonth
+
   const monthlyExpenses = expenses.filter(e => e.month === selectedMonth)
-  const totalExpense = monthlyExpenses.reduce((sum, e) => sum + Number(e.amount), 0)
+  const totalExpense = isPendingCurrentMonth ? 0 : monthlyExpenses.reduce((sum, e) => sum + Number(e.amount), 0)
 
   const monthRecord = monthlyRecords.find(r => r.month === selectedMonth)
-  const isNoData = !monthRecord && monthlyExpenses.length === 0
+  const isNoData = isPendingCurrentMonth || (!monthRecord && monthlyExpenses.length === 0)
   
-  const record = monthRecord || {
+  const record = (isPendingCurrentMonth || !monthRecord) ? {
     openingBalance: 0,
     monthlyCollection: 0,
     isManualSaving: false,
     manualSaving: 0,
-  }
+  } : monthRecord
 
   const saving = record.isManualSaving
     ? Number(record.manualSaving)
