@@ -45,6 +45,8 @@ export const calculateTotals = (expenses, settings, monthlyRecords, selectedMont
     monthlyCollection: 0,
     isManualSaving: false,
     manualSaving: 0,
+    cctvExpense: 0, // Default to 0
+    showCctvExpense: false, // Default to false
   } : monthRecord
 
   const saving = record.isManualSaving
@@ -53,7 +55,7 @@ export const calculateTotals = (expenses, settings, monthlyRecords, selectedMont
 
   const totalSaving = isNoData 
     ? 0 
-    : Number(record.openingBalance) + saving - (settings.showCctvExpense ? settings.cctvExpense || 0 : 0)
+    : Number(record.openingBalance) + saving - (record.showCctvExpense ? record.cctvExpense || 0 : 0)
 
   return { totalExpense, saving, totalSaving, record: { ...record, isNoData } }
 }
@@ -75,6 +77,8 @@ const toMonthlyRecord = (row) => ({
   monthlyCollection: Number(row.monthly_collection),
   isManualSaving: row.is_manual_saving,
   manualSaving: Number(row.manual_saving),
+  cctvExpense: Number(row.cctv_expense),
+  showCctvExpense: row.show_cctv_expense,
 })
 
 const toExpense = (row) => ({
@@ -115,11 +119,10 @@ export const loadData = async () => {
 // ─── Settings ────────────────────────────────────────────────
 
 export const updateSettings = async (newSettings) => {
+  // We no longer update cctv_expense or show_cctv_expense in global settings
   const { error } = await supabase.from('settings').upsert({
     id: 1,
     currency: newSettings.currency,
-    cctv_expense: newSettings.cctvExpense,
-    show_cctv_expense: newSettings.showCctvExpense,
     default_opening_balance: newSettings.defaultOpeningBalance,
     default_monthly_collection: newSettings.defaultMonthlyCollection,
   })
@@ -136,6 +139,8 @@ export const addMonthlyRecord = async (record) => {
     monthly_collection: record.monthlyCollection,
     is_manual_saving: record.isManualSaving || false,
     manual_saving: record.manualSaving || 0,
+    cctv_expense: record.cctvExpense || 0,
+    show_cctv_expense: record.showCctvExpense || false,
   })
   if (error) throw error
   return loadData()
@@ -148,6 +153,8 @@ export const updateMonthlyRecord = async (record) => {
     monthly_collection: record.monthlyCollection,
     is_manual_saving: record.isManualSaving || false,
     manual_saving: record.manualSaving || 0,
+    cctv_expense: record.cctvExpense || 0,
+    show_cctv_expense: record.showCctvExpense || false,
   }).eq('id', record.id)
   if (error) throw error
   return loadData()

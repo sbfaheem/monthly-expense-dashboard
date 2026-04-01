@@ -97,10 +97,10 @@ const ExpenseTable = ({ expenses, settings, selectedMonth, totals, onEdit, onDel
           </tr>
 
           {/* CCTV */}
-          {settings.showCctvExpense && (
+          {totals.record.showCctvExpense && (
             <tr className="expense-row">
               <td>Capital Expenditure (CCTV)</td>
-              <td className="amount-cell cctv-amount">{fmt(settings.cctvExpense)}</td>
+              <td className="amount-cell cctv-amount">{fmt(totals.record.cctvExpense)}</td>
               {isAdmin && <td></td>}
             </tr>
           )}
@@ -127,7 +127,7 @@ const ExpenseTable = ({ expenses, settings, selectedMonth, totals, onEdit, onDel
           <p><strong>Nature of Report:</strong><br />
             This document is a Financial Summary of Collections &amp; Expenditures, providing an overview of total receipts and related expenses during the reporting period.
           </p>
-          <p className="formula-note"><strong>Formulae:</strong> 1. Saving = Monthly Collection - Total Expense {settings.showCctvExpense ? <>&nbsp;|&nbsp; 2. Total Saving = (Opening Balance + Saving) - Installed CCTV Camera</> : <>&nbsp;|&nbsp; 2. Total Saving = Opening Balance + Saving</>}</p>
+          <p className="formula-note"><strong>Formulae:</strong> 1. Saving = Monthly Collection - Total Expense {totals.record.showCctvExpense ? <>&nbsp;|&nbsp; 2. Total Saving = (Opening Balance + Saving) - Installed CCTV Camera</> : <>&nbsp;|&nbsp; 2. Total Saving = Opening Balance + Saving</>}</p>
         </div>
       </div>
     </div>

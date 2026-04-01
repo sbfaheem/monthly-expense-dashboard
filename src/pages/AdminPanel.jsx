@@ -36,13 +36,16 @@ export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-  const [recordForm, setRecordForm] = useState({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false })
+  const [recordForm, setRecordForm] = useState({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false, cctvExpense: 0, showCctvExpense: false })
   const [editingRecordId, setEditingRecordId] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState(null)
   const [settingsForm, setSettingsForm] = useState(defaultData.settings)
   const [settingsSaved, setSettingsSaved] = useState(false)
   const [notification, setNotification] = useState(null)
+  const [tempCctv, setTempCctv] = useState(null)
+
+  useEffect(() => { setTempCctv(null) }, [selectedMonth, selectedYear])
 
   // ── Load data on mount ──────────────────────────────────────
   useEffect(() => {
@@ -180,7 +183,7 @@ export default function AdminPanel() {
         isManualSaving: recordForm.isManualSaving
       })
       setData(newData)
-      setRecordForm({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false })
+      setRecordForm({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false, cctvExpense: 0, showCctvExpense: false })
       showNotif('Monthly record added!')
     } catch (err) {
       console.error(err)
@@ -200,7 +203,7 @@ export default function AdminPanel() {
       const newData = await updateMonthlyRecord(recordForm)
       setData(newData)
       setEditingRecordId(null)
-      setRecordForm({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false })
+      setRecordForm({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false, cctvExpense: 0, showCctvExpense: false })
       showNotif('Record updated!')
     } catch (err) {
       console.error(err)
@@ -330,6 +333,22 @@ export default function AdminPanel() {
                     </div>
                   </div>
                 )}
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>CCTV Capital Expense</label>
+                    <input type="number" name="cctvExpense" value={recordForm.cctvExpense} onChange={handleRecordFormChange} />
+                  </div>
+                  <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', marginTop: '20px' }}>
+                    <input
+                      type="checkbox"
+                      name="showCctvExpense"
+                      checked={recordForm.showCctvExpense}
+                      onChange={handleRecordFormChange}
+                      style={{ width: 'auto' }}
+                    />
+                    <label style={{ margin: 0 }}>Show Capital for this month?</label>
+                  </div>
+                </div>
                 <div className="form-actions" style={{ marginTop: '10px' }}>
                   <button type="submit" className="btn-submit">
                     {editingRecordId ? <><Check size={16}/> Save Changes</> : <><Plus size={16}/> Add Month</>}
@@ -504,7 +523,7 @@ export default function AdminPanel() {
                   <div className="capital-icon">📹</div>
                   <div className="capital-info">
                     <div className="capital-label">CCTV Camera Installation</div>
-                    <div className="capital-amount">{Number(data.settings.cctvExpense).toLocaleString()} {data.settings.currency}</div>
+                    <div className="capital-amount">{Number(totals.record.cctvExpense).toLocaleString()} {data.settings.currency}</div>
                   </div>
                 </div>
 
@@ -513,37 +532,60 @@ export default function AdminPanel() {
                     <input
                       type="checkbox"
                       id="showCctv"
-                      checked={settingsForm.showCctvExpense}
+                      disabled={totals.record.isNoData}
+                      checked={totals.record.showCctvExpense}
                       onChange={async (e) => {
-                        const updated = { ...settingsForm, showCctvExpense: e.target.checked }
-                        setSettingsForm(updated)
-                        try {
-                          const newData = await updateSettings(updated)
-                          setData(newData)
-                          showNotif(`Capital Expenses will now be ${e.target.checked ? 'shown' : 'hidden'}`)
-                        } catch (err) {
-                          console.error(err)
+                        if (totals.record.isNoData) {
+                          showNotif('Please add a Monthly Record for this month first.', 'error');
+                          return;
                         }
+                        try {
+                          const newData = await updateMonthlyRecord({ ...totals.record, showCctvExpense: e.target.checked });
+                          setData(newData);
+                          showNotif(`Capital Expenditure for ${currentMonthKey} is now ${e.target.checked ? 'shown' : 'hidden'}`);
+                        } catch (err) { console.error(err); }
                       }}
                       style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                     />
                     <label htmlFor="showCctv" style={{ margin: 0, fontWeight: '600', cursor: 'pointer', color: '#333' }}>
-                      {settingsForm.showCctvExpense ? 'Show' : 'Hide'} Capital Expenditure on Front-end
+                      {totals.record.showCctvExpense ? 'Show' : 'Hide'} Capital Expenditure for {currentMonthKey}
                     </label>
                   </div>
 
-                  <label>Update CCTV Expense Amount</label>
+                  <label>Update Capital Expense for {currentMonthKey}</label>
                   <div className="capital-input-row">
                     <input
                       type="number"
-                      value={settingsForm.cctvExpense}
-                      onChange={e => setSettingsForm({ ...settingsForm, cctvExpense: e.target.value })}
+                      disabled={totals.record.isNoData}
+                      value={tempCctv !== null ? tempCctv : totals.record.cctvExpense}
+                      onChange={(e) => setTempCctv(e.target.value)}
                       min="0"
                     />
-                    <button className="btn-submit" onClick={handleSaveSettings}>
-                      <Save size={16}/> Update
+                    <button 
+                      className="btn-submit" 
+                      disabled={totals.record.isNoData}
+                      onClick={async () => {
+                        if (totals.record.isNoData) {
+                          showNotif('Please add a Monthly Record first.', 'error');
+                          return;
+                        }
+                        try {
+                          const valToSave = tempCctv !== null ? tempCctv : totals.record.cctvExpense;
+                          const newData = await updateMonthlyRecord({ ...totals.record, cctvExpense: Number(valToSave) });
+                          setData(newData);
+                          showNotif('Capital amount updated!');
+                          setTempCctv(null);
+                        } catch (err) { console.error(err); }
+                      }}
+                    >
+                      <Save size={16}/> Update Month
                     </button>
                   </div>
+                  {totals.record.isNoData && (
+                    <p style={{ color: '#ef4444', fontSize: '13px', marginTop: '8px' }}>
+                      ⚠️ No monthly record found for <strong>{currentMonthKey}</strong>. Managing capital for this month requires adding a record in the "Monthly Records" tab first.
+                    </p>
+                  )}
                 </div>
 
                 <div className="capital-expense-list">
@@ -621,15 +663,6 @@ export default function AdminPanel() {
                   </div>
                   <div className="form-row">
                     <div className="form-group">
-                      <label>CCTV Capital Expense ({data.settings.currency})</label>
-                      <input
-                        type="number"
-                        value={settingsForm.cctvExpense}
-                        onChange={e => setSettingsForm({ ...settingsForm, cctvExpense: e.target.value })}
-                        min="0"
-                      />
-                    </div>
-                    <div className="form-group">
                       <label>Currency</label>
                       <select value={settingsForm.currency} onChange={e => setSettingsForm({ ...settingsForm, currency: e.target.value })}>
                         <option>PKR</option>
@@ -637,17 +670,6 @@ export default function AdminPanel() {
                         <option>EUR</option>
                         <option>GBP</option>
                       </select>
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px' }}>
-                      <input
-                        type="checkbox"
-                        checked={settingsForm.showCctvExpense}
-                        onChange={e => setSettingsForm({ ...settingsForm, showCctvExpense: e.target.checked })}
-                        style={{ width: 'auto' }}
-                      />
-                      <label style={{ margin: 0 }}>Show Capital Expenditure on Front-end</label>
                     </div>
                   </div>
                 </div>
