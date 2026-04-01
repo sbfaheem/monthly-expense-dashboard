@@ -100,6 +100,17 @@ export const loadData = async () => {
     supabase.from('expenses').select('*').order('date', { ascending: true }),
   ])
 
+  if (settingsRes.error && settingsRes.error.code !== 'PGRST116') {
+    // PGRST116 is "0 rows" which is fine for first load, otherwise log:
+    console.error("Supabase settings error:", settingsRes.error)
+  }
+  if (recordsRes.error) {
+    console.error("Supabase monthly_records error (RLS enabled?):", recordsRes.error)
+  }
+  if (expensesRes.error) {
+    console.error("Supabase expenses error (RLS enabled?):", expensesRes.error)
+  }
+
   // Default settings in case the row doesn't exist yet
   const defaultSettings = {
     currency: 'PKR',
@@ -110,7 +121,7 @@ export const loadData = async () => {
   }
 
   return {
-    settings: settingsRes.data ? toSettings(settingsRes.data) : defaultSettings,
+    settings: (settingsRes.data && !settingsRes.error) ? toSettings(settingsRes.data) : defaultSettings,
     monthlyRecords: (recordsRes.data || []).map(toMonthlyRecord),
     expenses: (expensesRes.data || []).map(toExpense),
   }
