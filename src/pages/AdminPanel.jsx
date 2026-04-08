@@ -434,11 +434,61 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* Other Tabs Simplified */}
-        {(activeTab === 'reports' || activeTab === 'settings') && (
+        {activeTab === 'reports' && (
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-primary/10">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-primary/10 pb-6 mb-6">
+                 <div>
+                   <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                     <FileBarChart2 size={24} className="text-primary"/> Financial Report
+                   </h3>
+                   <p className="text-sm text-slate-500 font-medium mt-1">Generated statement for {currentMonthKey}</p>
+                 </div>
+                 <div className="flex gap-3">
+                   <button onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)} className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold transition-colors">
+                     <span className="material-symbols-outlined text-[20px]">download</span> Export CSV
+                   </button>
+                   <button onClick={printReport} className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg font-bold transition-colors shadow-sm shadow-primary/30">
+                     <span className="material-symbols-outlined text-[20px]">print</span> Print Report
+                   </button>
+                 </div>
+              </div>
+
+              {/* Pre-Report Summary Block */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Total Expenses</span>
+                  <strong className="text-xl text-slate-800 dark:text-slate-100">{Number(totals.totalExpense).toLocaleString()} {data.settings.currency}</strong>
+                </div>
+                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl border border-green-200 dark:border-green-800">
+                  <span className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider block mb-1">Monthly Saving</span>
+                  <strong className="text-xl text-green-700 dark:text-green-300">{Number(totals.saving).toLocaleString()} {data.settings.currency}</strong>
+                </div>
+                <div className="bg-secondary-gold/10 p-4 rounded-xl border border-secondary-gold/20">
+                  <span className="text-xs font-bold text-secondary-gold uppercase tracking-wider block mb-1">Total Saving</span>
+                  <strong className="text-xl text-secondary-gold">{Number(totals.totalSaving).toLocaleString()} {data.settings.currency}</strong>
+                </div>
+              </div>
+
+              {/* Read-Only Table View for Report */}
+              <div className="border hover:border-primary/20 transition-colors rounded-2xl overflow-hidden bg-slate-50 dark:bg-slate-900/50 p-1">
+                <ExpenseTable
+                  expenses={monthlyExpenses}
+                  settings={data.settings}
+                  selectedMonth={currentMonthKey}
+                  totals={totals}
+                  isAdmin={false}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Settings Tab Placeholder */}
+        {activeTab === 'settings' && (
            <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm text-center">
-             <span className="material-symbols-outlined text-6xl text-slate-200 mb-4 block">construction</span>
-             <h3 className="text-xl font-bold text-slate-800">Advanced View Rendered</h3>
+             <span className="material-symbols-outlined text-6xl text-amber-400 mb-4 block">construction</span>
+             <h3 className="text-xl font-bold text-slate-800">Settings Unavailable</h3>
              <p className="text-slate-500 max-w-md mx-auto mt-2">The layout has been heavily upgraded to Tailwind. Some advanced forms are hidden securely underneath the main layout flow.</p>
            </div>
         )}
