@@ -108,6 +108,22 @@ export default function ViewerDashboard() {
           <div className="space-y-6">
             <Charts expenses={monthlyExpenses} allExpenses={data.expenses} />
             
+            {/* Disclaimer / Report Info Panel */}
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-primary/10 shadow-sm space-y-5">
+              <div>
+                <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Scope of Responsibility:</h4>
+                <p className="text-[13px] text-slate-500 leading-relaxed">
+                  The management has taken over responsibility effective <strong className="text-slate-700 dark:text-slate-300 font-bold">December 01, 2025</strong>. Therefore, this financial summary only covers collections and expenditures from that date onward.
+                </p>
+              </div>
+              <div className="border-t border-primary/5 pt-4">
+                <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Nature of Report:</h4>
+                <p className="text-[13px] text-slate-500 leading-relaxed">
+                  This document is a Financial Summary of Collections & Expenditures, providing an overview of total receipts and related expenses during the reporting period.
+                </p>
+              </div>
+            </div>
+
             {/* Notes/Contact Panel */}
             <div className="bg-primary/5 dark:bg-primary/10 p-6 rounded-2xl border border-primary/20">
               <h4 className="font-bold text-primary mb-4 flex items-center gap-2">
