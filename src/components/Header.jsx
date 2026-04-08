@@ -1,6 +1,4 @@
-import { useState } from 'react'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
-import './Header.css'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
@@ -28,40 +26,54 @@ const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAd
   const monthShort = selectedMonth?.substring(0, 3).toUpperCase()
 
   return (
-    <header className="site-header">
-      <div className="header-left">
-        <div className="header-icon"><Calendar size={22} /></div>
-        <div>
-          <h1 className="header-title">
-            {isEndOfMonth() && !isAdmin
-              ? `Monthly Expense Sheet – ${monthShort} ${selectedYear}`
-              : title || `Monthly Expense Sheet – ${monthShort} ${selectedYear}`}
-          </h1>
-          <p className="header-subtitle">Manage and track your monthly financial health</p>
-        </div>
+    <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+      <div className="space-y-2">
+        <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
+          {isEndOfMonth() && !isAdmin
+            ? <>MONTHLY EXPENSE SHEET – <span className="text-primary">{monthShort} {selectedYear}</span></>
+            : title || <>MONTHLY EXPENSE SHEET – <span className="text-primary">{monthShort} {selectedYear}</span></>}
+        </h1>
+        <p className="text-slate-500 dark:text-slate-400 font-medium">Detailed financial overview for the current billing cycle.</p>
       </div>
-      <div className="header-controls">
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'nowrap' }}>
-          <div className="selector-group">
-            <label>MONTH</label>
-            <select value={selectedMonth} onChange={e => onMonthChange(e.target.value)}>
-              {MONTHS.map(m => <option key={m}>{m}</option>)}
-            </select>
-          </div>
-          <div className="selector-group">
-            <label>YEAR</label>
-            <select value={selectedYear} onChange={e => onYearChange(Number(e.target.value))}>
-              {years.map(y => <option key={y}>{y}</option>)}
-            </select>
-          </div>
+
+      <div className="flex items-center gap-3">
+        {/* Month/Year Dropdowns */}
+        <div className="flex items-center border border-primary/20 rounded-xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm h-10">
+          <select 
+            value={selectedMonth} 
+            onChange={e => onMonthChange(e.target.value)}
+            className="px-3 py-2 text-sm font-bold bg-transparent text-slate-700 dark:text-slate-300 outline-none border-none cursor-pointer"
+          >
+            {MONTHS.map(m => <option key={m}>{m}</option>)}
+          </select>
+          <div className="w-px h-full bg-primary/10"></div>
+          <select 
+            value={selectedYear} 
+            onChange={e => onYearChange(Number(e.target.value))}
+            className="px-3 py-2 text-sm font-bold bg-transparent text-slate-700 dark:text-slate-300 outline-none border-none cursor-pointer"
+          >
+            {years.map(y => <option key={y}>{y}</option>)}
+          </select>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'nowrap', marginTop: 'auto' }}>
-          <button className="btn-outline" onClick={goToPrev}><ChevronLeft size={16}/> Previous</button>
-          <button className="btn-primary" onClick={goToCurrent}><Calendar size={16}/> Current</button>
+        {/* Action Buttons */}
+        <div className="flex items-center border border-primary/20 rounded-xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm h-10">
+          <button 
+            className="px-4 h-full flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-primary hover:bg-primary/5 transition-colors" 
+            onClick={goToPrev}
+          >
+            <ChevronLeft size={16}/> Prev
+          </button>
+          <div className="w-px h-full bg-primary/10"></div>
+          <button 
+            className="px-4 h-full flex items-center gap-1 text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors" 
+            onClick={goToCurrent}
+          >
+            <Calendar size={14}/> Current
+          </button>
         </div>
       </div>
-    </header>
+    </div>
   )
 }
 

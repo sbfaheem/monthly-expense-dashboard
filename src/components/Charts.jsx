@@ -12,7 +12,6 @@ import {
   Title,
   Filler,
 } from 'chart.js'
-import './Charts.css'
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Filler)
 
@@ -48,17 +47,17 @@ const Charts = ({ expenses, allExpenses }) => {
   const barChartData = {
     labels: barLabels,
     datasets: [{
-      label: 'Total Expenses (PKR)',
+      label: 'Expenses (PKR)',
       data: barData,
       backgroundColor: sortedMonths.map((_, i) =>
-        i === sortedMonths.length - 1 ? 'rgba(255,215,0,0.85)' : 'rgba(27,94,32,0.8)'
+        i === sortedMonths.length - 1 ? 'rgba(212,175,55,0.85)' : 'rgba(0,102,0,0.8)'
       ),
       borderColor: sortedMonths.map((_, i) =>
-        i === sortedMonths.length - 1 ? '#e6a800' : '#1b5e20'
+        i === sortedMonths.length - 1 ? '#D4AF37' : '#006600'
       ),
       borderWidth: 2,
       borderRadius: 6,
-      hoverBackgroundColor: '#ffd700',
+      hoverBackgroundColor: '#D4AF37',
     }]
   }
 
@@ -68,7 +67,7 @@ const Charts = ({ expenses, allExpenses }) => {
       data: pieData,
       backgroundColor: COLORS.slice(0, pieLabels.length),
       borderWidth: 2,
-      borderColor: '#fff',
+      borderColor: '#ffffff',
     }]
   }
 
@@ -92,85 +91,87 @@ const Charts = ({ expenses, allExpenses }) => {
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: ctx => ` ${Number(ctx.raw).toLocaleString('en-PK')} PKR`
-        }
-      }
+      tooltip: { callbacks: { label: ctx => ` ${Number(ctx.raw).toLocaleString('en-PK')} PKR` } }
     },
     scales: {
-      y: {
-        ticks: { callback: v => `${(v / 1000).toFixed(0)}k` },
-        grid: { color: '#f0f0f0' },
-        beginAtZero: true,
-      },
-      x: { grid: { display: false } }
+      y: { ticks: { callback: v => `${(v / 1000).toFixed(0)}k`, font: { family: 'Manrope' } }, grid: { color: 'rgba(0,102,0,0.05)' }, beginAtZero: true },
+      x: { grid: { display: false }, ticks: { font: { family: 'Manrope' } } }
     }
   }
 
   const pieOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'bottom', labels: { font: { size: 11 } } },
-      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${Number(ctx.raw).toLocaleString()} PKR` } }
+      legend: { position: 'bottom', labels: { font: { size: 11, family: 'Manrope' } } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${Number(ctx.raw).toLocaleString('en-PK')} PKR` } }
     },
     cutout: '60%',
   }
 
   const lineOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'top', labels: { font: { size: 11 } } },
+      legend: { position: 'top', labels: { font: { size: 11, family: 'Manrope' } } },
     },
     scales: {
-      y: { ticks: { callback: v => `${(v / 1000).toFixed(0)}k` }, grid: { color: '#f0f0f0' } },
-      x: { grid: { display: false } }
+      y: { ticks: { callback: v => `${(v / 1000).toFixed(0)}k`, font: { family: 'Manrope' } }, grid: { color: 'rgba(0,102,0,0.05)' } },
+      x: { grid: { display: false }, ticks: { font: { family: 'Manrope' } } }
     }
   }
 
   return (
-    <div className="charts-wrapper">
-      {/* ── Full-width Bar Chart ── */}
-      <div className="chart-card chart-card-full">
-        <h3 className="chart-title">MONTHLY EXPENSES – ALL MONTHS</h3>
-        <div className="chart-container bar-container">
+    <div className="space-y-6">
+      
+      {/* EXPENSE DISTRIBUTION */}
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-primary/10 shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-4 opacity-5">
+          <span className="material-symbols-outlined text-8xl">pie_chart</span>
+        </div>
+        <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center justify-between">
+          Expense Breakdown 
+          <span className="material-symbols-outlined text-primary text-lg">donut_large</span>
+        </h4>
+        <div className="h-64 flex items-center justify-center">
+          {pieLabels.length > 0 ? (
+            <Pie data={pieChartData} options={pieOptions} />
+          ) : (
+            <span className="text-slate-400 font-medium">No data for selected month</span>
+          )}
+        </div>
+      </div>
+
+      {/* MONTHLY EXPENSES BAR */}
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-primary/10 shadow-sm">
+        <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center justify-between">
+          All Months Comparison
+          <span className="material-symbols-outlined text-primary text-lg">bar_chart</span>
+        </h4>
+        <div className="h-48 flex items-center justify-center">
           {sortedMonths.length > 0 ? (
             <Bar data={barChartData} options={barOptions} />
           ) : (
-            <div className="no-data">No expense data available yet</div>
+            <span className="text-slate-400 font-medium">No expense data available</span>
           )}
         </div>
-        {sortedMonths.length > 0 && (
-          <div className="bar-legend">
-            <span className="bar-legend-dot green" /> Previous months &nbsp;&nbsp;
-            <span className="bar-legend-dot gold" /> Latest month
-          </div>
-        )}
       </div>
 
-      {/* ── Pie + Line side by side ── */}
-      <div className="charts-panel">
-        <div className="chart-card">
-          <h3 className="chart-title">EXPENSE DISTRIBUTION</h3>
-          <div className="chart-container pie-container">
-            {pieLabels.length > 0 ? (
-              <Pie data={pieChartData} options={pieOptions} />
-            ) : (
-              <div className="no-data">No expense data for this month</div>
-            )}
-          </div>
-        </div>
-        <div className="chart-card">
-          <h3 className="chart-title">MONTHLY TREND</h3>
-          <div className="chart-container">
-            {lineLabels.length > 0 ? (
-              <Line data={lineChartData} options={lineOptions} />
-            ) : (
-              <div className="no-data">No trend data available</div>
-            )}
-          </div>
+      {/* MONTHLY TREND LINE */}
+      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-primary/10 shadow-sm">
+        <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center justify-between">
+          Monthly Expense Trend (6M)
+          <span className="material-symbols-outlined text-primary text-lg">ssid_chart</span>
+        </h4>
+        <div className="h-48 flex items-center justify-center">
+          {lineLabels.length > 0 ? (
+            <Line data={lineChartData} options={lineOptions} />
+          ) : (
+             <span className="text-slate-400 font-medium">No trend data available</span>
+          )}
         </div>
       </div>
+
     </div>
   )
 }

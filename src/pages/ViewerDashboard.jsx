@@ -6,7 +6,7 @@ import ExpenseTable from '../components/ExpenseTable'
 import Charts from '../components/Charts'
 import { exportToCSV, printReport } from '../utils/export'
 import { Download, Printer, Eye } from 'lucide-react'
-import './ViewerDashboard.css'
+// CSS import removed
 
 export default function ViewerDashboard() {
   const [data, setData] = useState({ settings: { currency: 'PKR', cctvExpense: 0, showCctvExpense: true, defaultOpeningBalance: 0, defaultMonthlyCollection: 0 }, monthlyRecords: [], expenses: [] })
@@ -33,49 +33,113 @@ export default function ViewerDashboard() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column', gap: '16px', background: '#f8fafc' }}>
-        <div style={{ width: 48, height: 48, border: '4px solid #e2e8f0', borderTop: '4px solid #6366f1', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-        <p style={{ color: '#64748b', fontFamily: 'Inter, sans-serif' }}>Loading dashboard…</p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div className="flex items-center justify-center h-screen flex-col gap-4 bg-background-light">
+        <div className="size-12 border-4 border-slate-200 border-t-primary rounded-full animate-spin" />
+        <p className="text-slate-500 font-medium">Loading dashboard…</p>
       </div>
     )
   }
 
   return (
-    <div className="viewer-layout">
-      <div className="viewer-badge"><Eye size={14}/> Read-Only View</div>
-      <Header
-        selectedMonth={selectedMonth}
-        selectedYear={selectedYear}
-        onMonthChange={setSelectedMonth}
-        onYearChange={setSelectedYear}
-        isAdmin={false}
-      />
-      <SummaryCards
-        openingBalance={totals.record.openingBalance}
-        monthlyCollection={totals.record.monthlyCollection}
-        totalExpense={totals.totalExpense}
-        saving={totals.saving}
-        totalSaving={totals.totalSaving}
-        currency={data.settings.currency}
-        isNoData={totals.record.isNoData}
-      />
-      <Charts expenses={monthlyExpenses} allExpenses={data.expenses} />
-      <div className="action-bar">
-        <button className="btn-action" onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)}>
-          <Download size={16}/> Export CSV
-        </button>
-        <button className="btn-action btn-print" onClick={printReport}>
-          <Printer size={16}/> Print Report
-        </button>
-      </div>
-      <ExpenseTable
-        expenses={monthlyExpenses}
-        settings={data.settings}
-        selectedMonth={currentMonthKey}
-        totals={totals}
-        isAdmin={false}
-      />
+    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+      {/* Top Navigation Bar */}
+      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-primary/10 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-6 py-4 lg:px-10">
+        <div className="flex items-center gap-4 text-primary">
+          <div className="size-8 bg-primary text-white rounded-lg flex items-center justify-center">
+            <span className="material-symbols-outlined">account_balance_wallet</span>
+          </div>
+          <div className="flex flex-col">
+            <h2 className="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight">ExpensePro</h2>
+            <span className="text-primary text-xs font-semibold uppercase tracking-wider">Viewer Mode</span>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-2 bg-slate-100 dark:bg-primary/10 px-3 py-1.5 rounded-full">
+            <span className="material-symbols-outlined text-sm text-primary">visibility</span>
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Read-only Access</span>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)} className="flex items-center justify-center rounded-lg h-10 w-10 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Export CSV">
+              <span className="material-symbols-outlined">download</span>
+            </button>
+            <button onClick={printReport} className="flex items-center justify-center rounded-lg h-10 w-10 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Print Report">
+              <span className="material-symbols-outlined">print</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-8 space-y-8">
+        {/* Header Section with Month Selector */}
+        <Header
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          onMonthChange={setSelectedMonth}
+          onYearChange={setSelectedYear}
+          isAdmin={false}
+        />
+
+        {/* Summary Cards */}
+        <SummaryCards
+          openingBalance={totals.record.openingBalance}
+          monthlyCollection={totals.record.monthlyCollection}
+          totalExpense={totals.totalExpense}
+          saving={totals.saving}
+          totalSaving={totals.totalSaving}
+          currency={data.settings.currency}
+          isNoData={totals.record.isNoData}
+        />
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Table Section */}
+          <div className="lg:col-span-2 space-y-6">
+            <ExpenseTable
+              expenses={monthlyExpenses}
+              settings={data.settings}
+              selectedMonth={currentMonthKey}
+              totals={totals}
+              isAdmin={false}
+            />
+          </div>
+
+          {/* Sidebar Content */}
+          <div className="space-y-6">
+            <Charts expenses={monthlyExpenses} allExpenses={data.expenses} />
+            
+            {/* Notes/Contact Panel */}
+            <div className="bg-primary/5 dark:bg-primary/10 p-6 rounded-2xl border border-primary/20">
+              <h4 className="font-bold text-primary mb-4 flex items-center gap-2">
+                <span className="material-symbols-outlined">contact_support</span> Management Contacts
+              </h4>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="size-8 rounded bg-primary text-white flex items-center justify-center font-bold">M</div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Mr. Majeed</p>
+                    <p className="text-xs text-slate-500">Project Supervisor</p>
+                    <p className="text-xs text-primary font-medium">+92 300 1234567</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="size-8 rounded bg-secondary-gold text-white flex items-center justify-center font-bold">F</div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Mr. Fahad Rizwan</p>
+                    <p className="text-xs text-slate-500">Financial Auditor</p>
+                    <p className="text-xs text-primary font-medium">+92 321 7654321</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+      </main>
+      
+      <footer className="bg-white dark:bg-background-dark border-t border-primary/10 py-6 text-center text-slate-400 text-xs">
+         <p>© 2026 ExpensePro Management System.</p>
+      </footer>
     </div>
   )
 }
