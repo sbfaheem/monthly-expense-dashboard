@@ -41,20 +41,25 @@ const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAd
         </div>
       </div>
       <div className="header-controls">
-        <div className="selector-group">
-          <label>MONTH</label>
-          <select value={selectedMonth} onChange={e => onMonthChange(e.target.value)}>
-            {MONTHS.map(m => <option key={m}>{m}</option>)}
-          </select>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'nowrap' }}>
+          <div className="selector-group">
+            <label>MONTH</label>
+            <select value={selectedMonth} onChange={e => onMonthChange(e.target.value)}>
+              {MONTHS.map(m => <option key={m}>{m}</option>)}
+            </select>
+          </div>
+          <div className="selector-group">
+            <label>YEAR</label>
+            <select value={selectedYear} onChange={e => onYearChange(Number(e.target.value))}>
+              {years.map(y => <option key={y}>{y}</option>)}
+            </select>
+          </div>
         </div>
-        <div className="selector-group">
-          <label>YEAR</label>
-          <select value={selectedYear} onChange={e => onYearChange(Number(e.target.value))}>
-            {years.map(y => <option key={y}>{y}</option>)}
-          </select>
+
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'nowrap', marginTop: 'auto' }}>
+          <button className="btn-outline" onClick={goToPrev}><ChevronLeft size={16}/> Previous</button>
+          <button className="btn-primary" onClick={goToCurrent}><Calendar size={16}/> Current</button>
         </div>
-        <button className="btn-outline" onClick={goToPrev}><ChevronLeft size={16}/> Previous</button>
-        <button className="btn-primary" onClick={goToCurrent}><Calendar size={16}/> Current</button>
       </div>
     </header>
   )
