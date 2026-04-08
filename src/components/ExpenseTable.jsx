@@ -110,9 +110,9 @@ const ExpenseTable = ({ expenses, settings, selectedMonth, totals, onEdit, onDel
              <span className="text-lg font-bold">{fmt(totals.record.cctvExpense)}</span>
            </div>
          )}
-         <div className="px-6 py-4 flex justify-between items-center bg-primary/10">
-           <span className="text-sm font-extrabold text-primary">TOTAL ACCUMULATED SAVING</span>
-           <span className="text-xl font-extrabold text-primary">{fmt(totals.totalSaving)}</span>
+         <div className="px-6 py-4 flex justify-between items-center bg-primary/10 border-t border-primary/20">
+           <span className="text-sm font-bold text-primary">TOTAL ACCUMULATED SAVING</span>
+           <span className="text-lg font-bold text-primary">{fmt(totals.totalSaving)}</span>
          </div>
       </div>
     </>
