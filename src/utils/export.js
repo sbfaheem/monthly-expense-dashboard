@@ -62,10 +62,15 @@ export const exportToCSV = (expenses, totals, selectedMonth) => {
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
+  link.style.display = 'none';
   link.href = url;
   link.download = `Financial_Report_${selectedMonth.replace(' ', '_')}.csv`;
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, 100);
 };
 
 export const printReport = () => {
