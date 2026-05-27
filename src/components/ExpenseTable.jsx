@@ -17,8 +17,14 @@ const ExpenseTable = ({ expenses, settings, selectedMonth, totals, onEdit, onDel
     })).filter(x => x.expense) // Only render if the expense actually exists in db
   }
 
-  const opExpenses = getExpensesByCategory(OPERATIONAL)
-  const miscExpenses = getExpensesByCategory(MISCELLANEOUS)
+  const opExpenses = OPERATIONAL.map(name => {
+    const expense = expenses.find(e => e.name === name)
+    return expense ? { name, amount: expense.amount, expense } : null
+  }).filter(Boolean)
+
+  const miscExpenses = expenses
+    .filter(e => !OPERATIONAL.includes(e.name))
+    .map(e => ({ name: e.name, amount: e.amount, expense: e }))
 
   return (
     <>

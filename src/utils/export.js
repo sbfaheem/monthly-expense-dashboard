@@ -24,8 +24,7 @@ export const exportToCSV = (expenses, totals, selectedMonth) => {
   const MISCELLANEOUS = ['Chair', 'Wire Lock', 'Wooden Stair', 'Transportation for Wooden Stair', 'Ring + Cap Labour Charges', 'Miscellaneous', 'Remaining amount for Water Chamber'];
   
   const opExpenses = expenses.filter(e => OPERATIONAL.includes(e.name));
-  const miscExpenses = expenses.filter(e => MISCELLANEOUS.includes(e.name));
-  const otherExpenses = expenses.filter(e => !OPERATIONAL.includes(e.name) && !MISCELLANEOUS.includes(e.name));
+  const miscExpenses = expenses.filter(e => !OPERATIONAL.includes(e.name));
 
   // Operational Segment
   rows.push(['--- OPERATIONAL EXPENSES ---', '']);
@@ -46,14 +45,6 @@ export const exportToCSV = (expenses, totals, selectedMonth) => {
     miscExpenses.forEach(e => rows.push([e.name, e.amount]));
   }
   rows.push([]);
-
-  // Other Segment (Fallback)
-  if (otherExpenses.length > 0) {
-    rows.push(['--- OTHER EXPENSES ---', '']);
-    rows.push(['Description', 'Amount']);
-    otherExpenses.forEach(e => rows.push([e.name, e.amount]));
-    rows.push([]);
-  }
 
   const csvContent = rows
     .map(row => row.map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(','))
