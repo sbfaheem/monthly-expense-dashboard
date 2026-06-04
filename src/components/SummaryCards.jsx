@@ -43,14 +43,14 @@ const SummaryCards = ({ openingBalance, monthlyCollection, totalExpense, saving,
       borderClass: saving >= 0 ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-red-500'
     },
     {
-      label: 'Total Saving',
-      value: fmt(totalSaving),
-      note: isNoData ? '0% net' : '+15.4%',
+      label: totalSaving >= 0 ? 'Total Saving' : 'Total Deficit',
+      value: fmt(Math.abs(totalSaving)),
+      note: isNoData ? '0% net' : (totalSaving >= 0 ? '+15.4%' : 'Net Deficit'),
       icon: 'account_balance_wallet',
-      iconColor: 'text-secondary-gold',
-      noteIcon: 'stars',
-      noteColor: 'text-primary',
-      borderClass: 'border-l-4 border-l-secondary-gold'
+      iconColor: totalSaving >= 0 ? 'text-secondary-gold' : 'text-red-500',
+      noteIcon: totalSaving >= 0 ? 'stars' : 'warning',
+      noteColor: totalSaving >= 0 ? 'text-primary' : 'text-red-500',
+      borderClass: totalSaving >= 0 ? 'border-l-4 border-l-secondary-gold' : 'border-l-4 border-l-red-500'
     },
   ]
 

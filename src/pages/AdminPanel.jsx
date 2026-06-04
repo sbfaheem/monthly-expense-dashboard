@@ -464,10 +464,10 @@ export default function AdminPanel() {
                   <span className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider block mb-1">Monthly Saving</span>
                   <strong className="text-xl text-green-700 dark:text-green-300">{Number(totals.saving).toLocaleString()} {data.settings.currency}</strong>
                 </div>
-                <div className="bg-secondary-gold/10 p-4 rounded-xl border border-secondary-gold/20">
-                  <span className="text-xs font-bold text-secondary-gold uppercase tracking-wider block mb-1">Total Saving</span>
-                  <strong className="text-xl text-secondary-gold">{Number(totals.totalSaving).toLocaleString()} {data.settings.currency}</strong>
-                </div>
+                 <div className={totals.totalSaving >= 0 ? "bg-secondary-gold/10 p-4 rounded-xl border border-secondary-gold/20" : "bg-red-50 dark:bg-red-900/20 p-4 rounded-xl border border-red-200 dark:border-red-800"}>
+                   <span className={totals.totalSaving >= 0 ? "text-xs font-bold text-secondary-gold uppercase tracking-wider block mb-1" : "text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider block mb-1"}>{totals.totalSaving >= 0 ? 'Total Saving' : 'Total Deficit'}</span>
+                   <strong className={totals.totalSaving >= 0 ? "text-xl text-secondary-gold" : "text-xl text-red-600 dark:text-red-400"}>{Math.abs(totals.totalSaving).toLocaleString()} {data.settings.currency}</strong>
+                 </div>
               </div>
 
               {/* Read-Only Table View for Report */}

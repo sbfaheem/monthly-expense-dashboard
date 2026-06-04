@@ -117,8 +117,8 @@ const ExpenseTable = ({ expenses, settings, selectedMonth, totals, onEdit, onDel
            </div>
          )}
          <div className="px-6 py-4 flex justify-between items-center bg-slate-900 dark:bg-black">
-           <span className="text-sm font-bold text-white">TOTAL ACCUMULATED SAVING</span>
-           <span className="text-lg font-bold text-secondary-gold">{fmt(totals.totalSaving)}</span>
+           <span className="text-sm font-bold text-white">{totals.totalSaving >= 0 ? 'TOTAL ACCUMULATED SAVING' : 'TOTAL ACCUMULATED DEFICIT'}</span>
+           <span className="text-lg font-bold text-secondary-gold">{fmt(Math.abs(totals.totalSaving))}</span>
          </div>
       </div>
     </>
