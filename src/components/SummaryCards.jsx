@@ -10,7 +10,7 @@ const SummaryCards = ({ openingBalance, monthlyCollection, totalExpense, saving,
       iconColor: 'text-slate-400',
       noteIcon: 'trending_flat',
       noteColor: 'text-slate-400',
-      borderClass: ''
+      cardClass: 'bg-white dark:bg-slate-800 border border-primary/10'
     },
     {
       label: 'Monthly Collection',
@@ -20,7 +20,7 @@ const SummaryCards = ({ openingBalance, monthlyCollection, totalExpense, saving,
       iconColor: 'text-orange-500',
       noteIcon: 'trending_down',
       noteColor: 'text-red-500',
-      borderClass: 'border-l-4 border-l-orange-500'
+      cardClass: 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-orange-500'
     },
     {
       label: 'Total Expense',
@@ -30,7 +30,7 @@ const SummaryCards = ({ openingBalance, monthlyCollection, totalExpense, saving,
       iconColor: 'text-primary',
       noteIcon: 'trending_up',
       noteColor: 'text-primary',
-      borderClass: 'border-l-4 border-l-primary'
+      cardClass: 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-primary'
     },
     {
       label: 'Monthly Saving',
@@ -40,7 +40,9 @@ const SummaryCards = ({ openingBalance, monthlyCollection, totalExpense, saving,
       iconColor: saving >= 0 ? 'text-green-500' : 'text-red-500',
       noteIcon: saving >= 0 ? 'check_circle' : 'warning',
       noteColor: saving >= 0 ? 'text-green-500' : 'text-red-500',
-      borderClass: saving >= 0 ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-red-500'
+      cardClass: saving >= 0 
+        ? 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-green-500' 
+        : 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 border-l-4 border-l-red-500'
     },
     {
       label: totalSaving >= 0 ? 'Total Saving' : 'Total Deficit',
@@ -50,15 +52,17 @@ const SummaryCards = ({ openingBalance, monthlyCollection, totalExpense, saving,
       iconColor: totalSaving >= 0 ? 'text-secondary-gold' : 'text-red-500',
       noteIcon: totalSaving >= 0 ? 'stars' : 'warning',
       noteColor: totalSaving >= 0 ? 'text-primary' : 'text-red-500',
-      borderClass: totalSaving >= 0 ? 'border-l-4 border-l-secondary-gold' : 'border-l-4 border-l-red-500',
-      valueColor: totalSaving >= 0 ? 'text-slate-900 dark:text-slate-100' : 'text-red-600 dark:text-red-400'
+      valueColor: totalSaving >= 0 ? 'text-slate-900 dark:text-slate-100' : 'text-red-600 dark:text-red-400',
+      cardClass: totalSaving >= 0 
+        ? 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-secondary-gold' 
+        : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 border-l-4 border-l-red-500'
     },
   ]
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
       {cards.map(card => (
-        <div key={card.label} className={`bg-white dark:bg-slate-800 p-5 rounded-2xl border border-primary/10 shadow-sm hover:shadow-md transition-shadow ${card.borderClass}`}>
+        <div key={card.label} className={`p-5 rounded-2xl shadow-sm hover:shadow-md transition-all ${card.cardClass}`}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">{card.label}</span>
             <span className={`material-symbols-outlined ${card.iconColor}`}>{card.icon}</span>
