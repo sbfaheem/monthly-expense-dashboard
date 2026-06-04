@@ -36,13 +36,13 @@ const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAd
         <p className="text-slate-500 dark:text-slate-400 font-medium">Detailed financial overview for the current billing cycle.</p>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3">
         {/* Month/Year Dropdowns */}
         <div className="flex items-center border border-primary/20 rounded-xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm h-10 flex-shrink-0">
           <select 
             value={selectedMonth} 
             onChange={e => onMonthChange(e.target.value)}
-            className="w-[82px] sm:w-auto px-2 sm:px-3 py-2 text-sm font-bold bg-transparent text-slate-700 dark:text-slate-300 outline-none border-none cursor-pointer text-center"
+            className="w-[78px] sm:w-auto px-1.5 sm:px-3 py-2 text-xs sm:text-sm font-bold bg-transparent text-slate-700 dark:text-slate-300 outline-none border-none cursor-pointer text-center"
           >
             {MONTHS.map(m => <option key={m}>{m}</option>)}
           </select>
@@ -50,7 +50,7 @@ const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAd
           <select 
             value={selectedYear} 
             onChange={e => onYearChange(Number(e.target.value))}
-            className="w-[68px] sm:w-auto px-2 sm:px-3 py-2 text-sm font-bold bg-transparent text-slate-700 dark:text-slate-300 outline-none border-none cursor-pointer text-center"
+            className="w-[64px] sm:w-auto px-1.5 sm:px-3 py-2 text-xs sm:text-sm font-bold bg-transparent text-slate-700 dark:text-slate-300 outline-none border-none cursor-pointer text-center"
           >
             {years.map(y => <option key={y}>{y}</option>)}
           </select>
@@ -59,17 +59,17 @@ const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAd
         {/* Action Buttons */}
         <div className="flex items-center border border-primary/20 rounded-xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm h-10 flex-shrink-0">
           <button 
-            className="px-3 sm:px-4 h-full flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-primary hover:bg-primary/5 transition-colors" 
+            className="px-2.5 sm:px-4 h-full flex items-center gap-1 text-xs sm:text-sm font-bold text-slate-500 hover:text-primary hover:bg-primary/5 transition-colors" 
             onClick={goToPrev}
           >
-            <ChevronLeft size={16}/> Prev
+            <ChevronLeft size={14}/> Prev
           </button>
           <div className="w-px h-full bg-primary/10"></div>
           <button 
-            className="px-3 sm:px-4 h-full flex items-center gap-1 text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors" 
+            className="px-2.5 sm:px-4 h-full flex items-center gap-1 text-xs sm:text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors" 
             onClick={goToCurrent}
           >
-            <Calendar size={14}/> Current
+            <Calendar size={12}/> Current
           </button>
         </div>
       </div>
