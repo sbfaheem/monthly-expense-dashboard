@@ -50,7 +50,8 @@ const SummaryCards = ({ openingBalance, monthlyCollection, totalExpense, saving,
       iconColor: totalSaving >= 0 ? 'text-secondary-gold' : 'text-red-500',
       noteIcon: totalSaving >= 0 ? 'stars' : 'warning',
       noteColor: totalSaving >= 0 ? 'text-primary' : 'text-red-500',
-      borderClass: totalSaving >= 0 ? 'border-l-4 border-l-secondary-gold' : 'border-l-4 border-l-red-500'
+      borderClass: totalSaving >= 0 ? 'border-l-4 border-l-secondary-gold' : 'border-l-4 border-l-red-500',
+      valueColor: totalSaving >= 0 ? 'text-slate-900 dark:text-slate-100' : 'text-red-600 dark:text-red-400'
     },
   ]
 
@@ -62,7 +63,7 @@ const SummaryCards = ({ openingBalance, monthlyCollection, totalExpense, saving,
             <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">{card.label}</span>
             <span className={`material-symbols-outlined ${card.iconColor}`}>{card.icon}</span>
           </div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+          <div className={`text-2xl font-bold tracking-tight ${card.valueColor || 'text-slate-900 dark:text-slate-100'}`}>
             {currency} {card.value}
           </div>
           <div className={`mt-2 text-xs font-semibold flex items-center gap-1 ${card.noteColor}`}>
