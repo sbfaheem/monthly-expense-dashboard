@@ -28,17 +28,17 @@ const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAd
   return (
     <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
       <div className="space-y-2">
-        <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
           {isEndOfMonth() && !isAdmin
-            ? <>MONTHLY EXPENSE SHEET – <span className="text-primary">{monthShort} {selectedYear}</span></>
-            : title || <>MONTHLY EXPENSE SHEET – <span className="text-primary">{monthShort} {selectedYear}</span></>}
+            ? <>MONTHLY EXPENSE SHEET <span className="text-primary whitespace-nowrap">– {monthShort} {selectedYear}</span></>
+            : title || <>MONTHLY EXPENSE SHEET <span className="text-primary whitespace-nowrap">– {monthShort} {selectedYear}</span></>}
         </h1>
         <p className="text-slate-500 dark:text-slate-400 font-medium">Detailed financial overview for the current billing cycle.</p>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
         {/* Month/Year Dropdowns */}
-        <div className="flex items-center border border-primary/20 rounded-xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm h-10">
+        <div className="flex items-center border border-primary/20 rounded-xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm h-10 flex-shrink-0">
           <select 
             value={selectedMonth} 
             onChange={e => onMonthChange(e.target.value)}
