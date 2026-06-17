@@ -80,6 +80,9 @@ export default function ViewerDashboard() {
           isAdmin={false}
         />
 
+        {/* Water Supply Tracker */}
+        <WaterSupplyTracker start={data.settings.waterSupplyStart} end={data.settings.waterSupplyEnd} />
+
         {/* Summary Cards */}
         <SummaryCards
           openingBalance={totals.record.openingBalance}
@@ -151,9 +154,6 @@ export default function ViewerDashboard() {
             
           </div>
         </div>
-
-        {/* Water Supply Tracker */}
-        <WaterSupplyTracker start={data.settings.waterSupplyStart} end={data.settings.waterSupplyEnd} />
 
       </main>
       

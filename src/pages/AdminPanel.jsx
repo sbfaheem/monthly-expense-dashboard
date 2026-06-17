@@ -297,6 +297,7 @@ export default function AdminPanel() {
 
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
+            <WaterSupplyTracker start={data.settings.waterSupplyStart} end={data.settings.waterSupplyEnd} />
             <SummaryCards
               openingBalance={totals.record.openingBalance}
               monthlyCollection={totals.record.monthlyCollection}
@@ -322,7 +323,6 @@ export default function AdminPanel() {
                 <Charts expenses={monthlyExpenses} allExpenses={data.expenses} />
               </div>
             </div>
-            <WaterSupplyTracker start={data.settings.waterSupplyStart} end={data.settings.waterSupplyEnd} />
           </div>
         )}
 
