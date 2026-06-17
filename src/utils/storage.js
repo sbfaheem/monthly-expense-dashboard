@@ -218,3 +218,61 @@ export const deleteExpense = async (id) => {
   await deleteDoc(expenseDocRef)
   return loadData()
 }
+
+export const migrateSupabaseToFirebase = async (supRecords, supExpenses) => {
+  const freshData = await loadData()
+  const existingRecords = freshData.monthlyRecords
+  const existingExpenses = freshData.expenses
+
+  const recordsCol = collection(db, 'monthly_records')
+  const expensesCol = collection(db, 'expenses')
+
+  let recordsAdded = 0
+  let expensesAdded = 0
+
+  // Migrate monthly_records
+  for (const r of supRecords) {
+    const exists = existingRecords.some(er => er.month.toLowerCase() === r.month.toLowerCase())
+    if (!exists) {
+      await addDoc(recordsCol, {
+        month: r.month,
+        openingBalance: Number(r.opening_balance || 0),
+        monthlyCollection: Number(r.monthly_collection || 0),
+        isManualSaving: r.is_manual_saving || false,
+        manualSaving: Number(r.manual_saving || 0),
+        cctvExpense: Number(r.cctv_expense || 0),
+        showCctvExpense: r.show_cctv_expense || false,
+        createdAt: r.created_at ? new Date(r.created_at).getTime() : Date.now(),
+      })
+      recordsAdded++
+    }
+  }
+
+  // Migrate expenses
+  for (const e of supExpenses) {
+    const exists = existingExpenses.some(ee => 
+      ee.date === e.date && 
+      ee.name.toLowerCase() === e.name.toLowerCase() && 
+      Number(ee.amount) === Number(e.amount)
+    )
+    if (!exists) {
+      await addDoc(expensesCol, {
+        date: e.date,
+        month: e.month,
+        category: e.category,
+        name: e.name,
+        amount: Number(e.amount || 0),
+        description: e.description || '',
+        createdAt: e.created_at ? new Date(e.created_at).getTime() : Date.now(),
+      })
+      expensesAdded++
+    }
+  }
+
+  return {
+    recordsAdded,
+    expensesAdded,
+    freshData: await loadData()
+  }
+}
+

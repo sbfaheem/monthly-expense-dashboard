@@ -7,7 +7,8 @@ import {
 import {
   loadData, addExpense, updateExpense, deleteExpense,
   updateSettings, calculateTotals, getMonthYear, getLastDataMonth,
-  addMonthlyRecord, updateMonthlyRecord, deleteMonthlyRecord
+  addMonthlyRecord, updateMonthlyRecord, deleteMonthlyRecord,
+  migrateSupabaseToFirebase
 } from '../utils/storage'
 import Header from '../components/Header'
 import SummaryCards from '../components/SummaryCards'
@@ -41,6 +42,8 @@ export default function AdminPanel() {
   const [settingsSaved, setSettingsSaved] = useState(false)
   const [notification, setNotification] = useState(null)
   const [tempCctv, setTempCctv] = useState(null)
+  const [migrating, setMigrating] = useState(false)
+  const [migrationStatus, setMigrationStatus] = useState(null)
 
   useEffect(() => { setTempCctv(null) }, [selectedMonth, selectedYear])
 
@@ -170,6 +173,46 @@ export default function AdminPanel() {
     const newData = await deleteMonthlyRecord(id)
     setData(newData)
     showNotif('Record deleted.', 'error')
+  }
+
+  const handleMigrateData = async () => {
+    if (!window.confirm('Do you want to start the data migration from Supabase?')) return
+    setMigrating(true)
+    setMigrationStatus({ type: 'info', msg: 'Fetching data from Supabase...' })
+    try {
+      const supabaseUrl = 'https://lxzytxsoxvgavribszpx.supabase.co'
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4enl0eHNveHZnYXZyaWJzenB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwODIyNzksImV4cCI6MjA4ODY1ODI3OX0.Ko8vWFj1Qu9912JEgqUi8aVZaPbdB_HP5fi3e_BZw9Y'
+      
+      const headers = {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json'
+      }
+
+      const recordsRes = await fetch(`${supabaseUrl}/rest/v1/monthly_records?select=*`, { headers })
+      if (!recordsRes.ok) throw new Error('Failed to fetch records from Supabase')
+      const supRecords = await recordsRes.json()
+
+      const expensesRes = await fetch(`${supabaseUrl}/rest/v1/expenses?select=*`, { headers })
+      if (!expensesRes.ok) throw new Error('Failed to fetch expenses from Supabase')
+      const supExpenses = await expensesRes.json()
+
+      setMigrationStatus({ type: 'info', msg: `Data fetched. Migrating ${supRecords.length} records and ${supExpenses.length} expenses to Firebase...` })
+
+      const { recordsAdded, expensesAdded, freshData } = await migrateSupabaseToFirebase(supRecords, supExpenses)
+      setData(freshData)
+      setMigrationStatus({
+        type: 'success',
+        msg: `Migration completed! Added ${recordsAdded} new monthly records and ${expensesAdded} new expenses to Firebase.`
+      })
+      showNotif('Migration completed successfully!')
+    } catch (err) {
+      console.error(err)
+      setMigrationStatus({ type: 'error', msg: `Migration failed: ${err.message}` })
+      showNotif('Migration failed!', 'error')
+    } finally {
+      setMigrating(false)
+    }
   }
 
   const navItems = [
@@ -525,13 +568,47 @@ export default function AdminPanel() {
            </div>
         )}
 
-        {/* Settings Tab Placeholder */}
+        {/* Settings Tab / Data Migration */}
         {activeTab === 'settings' && (
-           <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm text-center">
-             <span className="material-symbols-outlined text-6xl text-amber-400 mb-4 block">construction</span>
-             <h3 className="text-xl font-bold text-slate-800">Settings Unavailable</h3>
-             <p className="text-slate-500 max-w-md mx-auto mt-2">The layout has been heavily upgraded to Tailwind. Some advanced forms are hidden securely underneath the main layout flow.</p>
-           </div>
+          <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm space-y-6">
+            <h3 className="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">database</span> System & Migration Utilities
+            </h3>
+            <p className="text-sm text-slate-500">
+              Manage database settings, system configs, or import legacy data.
+            </p>
+            
+            <div className="border-t border-slate-100 pt-6">
+              <h4 className="text-md font-bold text-slate-700 mb-3">Data Import from Supabase</h4>
+              <p className="text-sm text-slate-500 mb-4">
+                Retrieve historical collections and expenses from January 2026 to May 2026 that reside in Supabase, and copy them directly to Firebase Firestore.
+              </p>
+              
+              {migrationStatus && (
+                <div className={`p-4 rounded-xl mb-4 text-sm font-semibold ${migrationStatus.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : (migrationStatus.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-blue-50 text-blue-700 border border-blue-200')}`}>
+                  {migrationStatus.msg}
+                </div>
+              )}
+
+              <button 
+                onClick={handleMigrateData} 
+                disabled={migrating}
+                className="bg-primary text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50 transition-all"
+              >
+                {migrating ? (
+                  <>
+                    <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Migrating Data...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-md">cloud_sync</span>
+                    Start Migration
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         )}
       </main>
     </div>
