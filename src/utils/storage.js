@@ -1,5 +1,5 @@
 import { db } from './firebase'
-import { collection, doc, getDoc, getDocs, query, orderBy, setDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, query, orderBy, setDoc, addDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore'
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -224,17 +224,22 @@ export const migrateSupabaseToFirebase = async (supRecords, supExpenses) => {
   const existingRecords = freshData.monthlyRecords
   const existingExpenses = freshData.expenses
 
-  const recordsCol = collection(db, 'monthly_records')
-  const expensesCol = collection(db, 'expenses')
-
+  const batch = writeBatch(db)
   let recordsAdded = 0
   let expensesAdded = 0
+
+  const safeGetTime = (dateStr) => {
+    if (!dateStr) return Date.now()
+    const parsed = new Date(dateStr).getTime()
+    return isNaN(parsed) ? Date.now() : parsed
+  }
 
   // Migrate monthly_records
   for (const r of supRecords) {
     const exists = existingRecords.some(er => er.month.toLowerCase() === r.month.toLowerCase())
     if (!exists) {
-      await addDoc(recordsCol, {
+      const docRef = doc(collection(db, 'monthly_records'))
+      batch.set(docRef, {
         month: r.month,
         openingBalance: Number(r.opening_balance || 0),
         monthlyCollection: Number(r.monthly_collection || 0),
@@ -242,7 +247,7 @@ export const migrateSupabaseToFirebase = async (supRecords, supExpenses) => {
         manualSaving: Number(r.manual_saving || 0),
         cctvExpense: Number(r.cctv_expense || 0),
         showCctvExpense: r.show_cctv_expense || false,
-        createdAt: r.created_at ? new Date(r.created_at).getTime() : Date.now(),
+        createdAt: safeGetTime(r.created_at),
       })
       recordsAdded++
     }
@@ -256,17 +261,22 @@ export const migrateSupabaseToFirebase = async (supRecords, supExpenses) => {
       Number(ee.amount) === Number(e.amount)
     )
     if (!exists) {
-      await addDoc(expensesCol, {
+      const docRef = doc(collection(db, 'expenses'))
+      batch.set(docRef, {
         date: e.date,
         month: e.month,
         category: e.category,
         name: e.name,
         amount: Number(e.amount || 0),
         description: e.description || '',
-        createdAt: e.created_at ? new Date(e.created_at).getTime() : Date.now(),
+        createdAt: safeGetTime(e.created_at),
       })
       expensesAdded++
     }
+  }
+
+  if (recordsAdded > 0 || expensesAdded > 0) {
+    await batch.commit()
   }
 
   return {

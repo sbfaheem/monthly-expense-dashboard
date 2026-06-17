@@ -179,6 +179,11 @@ export default function AdminPanel() {
     if (!window.confirm('Do you want to start the data migration from Supabase?')) return
     setMigrating(true)
     setMigrationStatus({ type: 'info', msg: 'Fetching data from Supabase...' })
+
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Firebase connection timed out. Please check that Vercel config keys are correct and database write rules permit this action.')), 25000)
+    )
+
     try {
       const supabaseUrl = 'https://lxzytxsoxvgavribszpx.supabase.co'
       const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4enl0eHNveHZnYXZyaWJzenB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwODIyNzksImV4cCI6MjA4ODY1ODI3OX0.Ko8vWFj1Qu9912JEgqUi8aVZaPbdB_HP5fi3e_BZw9Y'
@@ -189,17 +194,24 @@ export default function AdminPanel() {
         'Content-Type': 'application/json'
       }
 
-      const recordsRes = await fetch(`${supabaseUrl}/rest/v1/monthly_records?select=*`, { headers })
-      if (!recordsRes.ok) throw new Error('Failed to fetch records from Supabase')
-      const supRecords = await recordsRes.json()
+      const fetchPromise = (async () => {
+        const recordsRes = await fetch(`${supabaseUrl}/rest/v1/monthly_records?select=*`, { headers })
+        if (!recordsRes.ok) throw new Error('Failed to fetch records from Supabase')
+        const supRecords = await recordsRes.json()
 
-      const expensesRes = await fetch(`${supabaseUrl}/rest/v1/expenses?select=*`, { headers })
-      if (!expensesRes.ok) throw new Error('Failed to fetch expenses from Supabase')
-      const supExpenses = await expensesRes.json()
+        const expensesRes = await fetch(`${supabaseUrl}/rest/v1/expenses?select=*`, { headers })
+        if (!expensesRes.ok) throw new Error('Failed to fetch expenses from Supabase')
+        const supExpenses = await expensesRes.json()
+        return { supRecords, supExpenses }
+      })()
+
+      const { supRecords, supExpenses } = await Promise.race([fetchPromise, timeout])
 
       setMigrationStatus({ type: 'info', msg: `Data fetched. Migrating ${supRecords.length} records and ${supExpenses.length} expenses to Firebase...` })
 
-      const { recordsAdded, expensesAdded, freshData } = await migrateSupabaseToFirebase(supRecords, supExpenses)
+      const migrationPromise = migrateSupabaseToFirebase(supRecords, supExpenses)
+      const { recordsAdded, expensesAdded, freshData } = await Promise.race([migrationPromise, timeout])
+
       setData(freshData)
       setMigrationStatus({
         type: 'success',
