@@ -88,27 +88,7 @@ export default function WaterSupplyTracker({ entries = [] }) {
               )}
             </div>
           </div>
-        ))}
       </div>
-
-      {totalMs > 0 && (
-        <div className="mt-6 p-4 bg-blue-100 dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-700/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5 text-blue-800 dark:text-blue-300">
-            <Clock size={20} className="text-blue-500" />
-            <div>
-              <h4 className="text-sm font-bold uppercase tracking-wider text-[11px] text-blue-700 dark:text-blue-400">Total Duration</h4>
-              <p className="font-extrabold text-blue-900 dark:text-blue-200 text-lg">
-                {cumDays} Days, {cumHours} Hours, {cumMinutes} Minutes
-              </p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-blue-700 dark:text-blue-400 font-semibold">
-              Total duration = {cumTotalHours} hours {cumMinutes} minutes (or {cumTotalHoursDecimal} hours).
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
