@@ -82,8 +82,13 @@ export default function ViewerDashboard() {
 
         {/* Water Supply Tracker */}
         <WaterSupplyTracker 
-          start={data.waterSupply?.find(ws => ws.id === currentMonthKey)?.start} 
-          end={data.waterSupply?.find(ws => ws.id === currentMonthKey)?.end} 
+          entries={(() => {
+            const ws = data.waterSupply?.find(item => item.id === currentMonthKey)
+            if (!ws) return []
+            if (ws.entries) return ws.entries
+            if (ws.start) return [{ id: 'legacy', start: ws.start, end: ws.end }]
+            return []
+          })()} 
         />
 
         {/* Summary Cards */}

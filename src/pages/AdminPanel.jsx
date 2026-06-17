@@ -45,19 +45,7 @@ export default function AdminPanel() {
   const [tempCctv, setTempCctv] = useState(null)
   const [migrating, setMigrating] = useState(false)
   const [migrationStatus, setMigrationStatus] = useState(null)
-  const [waterForm, setWaterForm] = useState({ start: '', end: '' })
-
-  useEffect(() => {
-    const currentMonthKey = `${selectedMonth} ${selectedYear}`
-    const currentWaterSupply = data.waterSupply?.find(ws => ws.id === currentMonthKey) || { start: '', end: '' }
-    setWaterForm({ start: currentWaterSupply.start, end: currentWaterSupply.end })
-  }, [selectedMonth, selectedYear, data.waterSupply])
-
-  const handleSaveWaterSupply = async () => {
-    const newData = await updateWaterSupply(currentMonthKey, waterForm.start, waterForm.end)
-    setData(newData)
-    showNotif('Water supply dates saved for ' + currentMonthKey)
-  }
+  const [newWaterEntry, setNewWaterEntry] = useState({ start: '', end: '' })
 
   useEffect(() => { setTempCctv(null) }, [selectedMonth, selectedYear])
 
@@ -80,6 +68,38 @@ export default function AdminPanel() {
   const currentMonthKey = `${selectedMonth} ${selectedYear}`
   const monthlyExpenses = data.expenses.filter(e => e.month === currentMonthKey)
   const totals = calculateTotals(data.expenses, data.settings, data.monthlyRecords, currentMonthKey)
+
+  const monthWaterData = data.waterSupply?.find(ws => ws.id === currentMonthKey)
+  const currentEntries = monthWaterData?.entries || (monthWaterData?.start ? [{ id: 'legacy', start: monthWaterData.start, end: monthWaterData.end }] : [])
+
+  const handleAddWaterEntry = async (e) => {
+    e.preventDefault()
+    if (!newWaterEntry.start || !newWaterEntry.end) return
+    if (newWaterEntry.end < newWaterEntry.start) {
+      alert("End date must be after start date")
+      return
+    }
+
+    const newEntryObj = {
+      id: Date.now().toString(),
+      start: newWaterEntry.start,
+      end: newWaterEntry.end
+    }
+
+    const updatedEntries = [...currentEntries, newEntryObj]
+    const newData = await updateWaterSupply(currentMonthKey, updatedEntries)
+    setData(newData)
+    setNewWaterEntry({ start: '', end: '' })
+    showNotif('Water supply period added!')
+  }
+
+  const handleDeleteWaterEntry = async (entryId) => {
+    if (!window.confirm('Are you sure you want to delete this water supply period?')) return
+    const updatedEntries = currentEntries.filter(entry => entry.id !== entryId)
+    const newData = await updateWaterSupply(currentMonthKey, updatedEntries)
+    setData(newData)
+    showNotif('Water supply period deleted!', 'error')
+  }
 
   const showNotif = (msg, type = 'success') => {
     setNotification({ msg, type })
@@ -312,8 +332,13 @@ export default function AdminPanel() {
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             <WaterSupplyTracker 
-              start={data.waterSupply?.find(ws => ws.id === currentMonthKey)?.start} 
-              end={data.waterSupply?.find(ws => ws.id === currentMonthKey)?.end} 
+              entries={(() => {
+                const ws = data.waterSupply?.find(item => item.id === currentMonthKey)
+                if (!ws) return []
+                if (ws.entries) return ws.entries
+                if (ws.start) return [{ id: 'legacy', start: ws.start, end: ws.end }]
+                return []
+              })()} 
             />
             <SummaryCards
               openingBalance={totals.record.openingBalance}
@@ -563,39 +588,116 @@ export default function AdminPanel() {
 
         {/* Water Supply Tracker Tab */}
         {activeTab === 'water' && (
-           <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm">
-             <h3 className="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
-               <Droplet size={24} className="text-blue-500"/> Water Supply Tracking
-             </h3>
-             <p className="text-sm text-slate-500 mb-6">
-               Configure the water supply start and end date/time for the selected month: <strong className="text-primary font-bold">{currentMonthKey}</strong>
-             </p>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4 bg-slate-50 p-6 rounded-xl border border-slate-200">
-                  <div>
-                    <label className="block text-sm font-bold text-slate-500 mb-1">Water Supply Start Date & Time</label>
-                    <input 
-                      type="datetime-local" 
-                      className="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary"
-                      value={waterForm.start || ''} 
-                      onChange={e => setWaterForm({...waterForm, start: e.target.value})} 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-500 mb-1">Water Supply End Date & Time</label>
-                    <input 
-                      type="datetime-local" 
-                      className="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary"
-                      value={waterForm.end || ''} 
-                      onChange={e => setWaterForm({...waterForm, end: e.target.value})} 
-                    />
-                  </div>
-                </div>
+           <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm space-y-6">
+             <div>
+               <h3 className="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
+                 <Droplet size={24} className="text-blue-500"/> Water Supply Tracking
+               </h3>
+               <p className="text-sm text-slate-500">
+                 Manage water supply periods for the selected month: <strong className="text-primary font-bold">{currentMonthKey}</strong>
+               </p>
              </div>
-             <div className="mt-8 pt-6 border-t border-slate-100 flex items-center gap-4">
-                <button onClick={handleSaveWaterSupply} className="bg-primary text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-primary/90">
-                  <Save size={18}/> Save Settings
-                </button>
+
+             {/* Existing entries list */}
+             <div className="border border-slate-100 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm bg-slate-50/50 p-4">
+               <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                 <Clock size={16} className="text-slate-500"/> Configured Periods
+               </h4>
+               {currentEntries.length === 0 ? (
+                 <p className="text-sm text-slate-500 italic p-4 text-center">No water supply periods configured for this month.</p>
+               ) : (
+                 <div className="space-y-3">
+                   {currentEntries.map((entry, idx) => {
+                     const dStart = entry.start ? new Date(entry.start) : null
+                     const dEnd = entry.end ? new Date(entry.end) : null
+                     let durationText = 'Pending...'
+                     if (dStart && dEnd && dEnd >= dStart) {
+                       const diffMs = dEnd - dStart
+                       const d = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+                       const h = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+                       const m = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+                       durationText = `${d}d ${h}h ${m}m`
+                     }
+
+                     const formatTimeShort = (dtStr) => {
+                       if (!dtStr) return ''
+                       const date = new Date(dtStr)
+                       return date.toLocaleString('en-US', { 
+                         month: 'short', day: 'numeric', 
+                         hour: 'numeric', minute: '2-digit', hour12: true 
+                       })
+                     }
+
+                     return (
+                       <div key={entry.id || idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm">
+                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1">
+                           <div>
+                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Period</span>
+                             <span className="text-sm font-bold text-slate-800 dark:text-slate-100">Period #{idx + 1}</span>
+                           </div>
+                           <div>
+                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Start</span>
+                             <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{formatTimeShort(entry.start)}</span>
+                           </div>
+                           <div>
+                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">End</span>
+                             <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{formatTimeShort(entry.end)}</span>
+                           </div>
+                         </div>
+                         <div className="flex items-center justify-between sm:justify-end gap-6 border-t sm:border-t-0 pt-2 sm:pt-0">
+                           <div className="text-right">
+                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Duration</span>
+                             <span className="text-sm font-extrabold text-blue-600 dark:text-blue-400">{durationText}</span>
+                           </div>
+                           <button 
+                             onClick={() => handleDeleteWaterEntry(entry.id)} 
+                             className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+                             title="Delete Period"
+                           >
+                             <Trash2 size={16}/>
+                           </button>
+                         </div>
+                       </div>
+                     )
+                   })}
+                 </div>
+               )}
+             </div>
+
+             {/* Add New Entry Form */}
+             <div className="border border-slate-100 dark:border-slate-700 rounded-2xl p-6 bg-slate-50/50 shadow-sm">
+               <h4 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+                 <Plus size={16} className="text-slate-500"/> Add Water Supply Period
+               </h4>
+               <form onSubmit={handleAddWaterEntry} className="space-y-4">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   <div>
+                     <label className="block text-sm font-bold text-slate-500 mb-1">Start Date & Time</label>
+                     <input 
+                       type="datetime-local" 
+                       className="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary"
+                       value={newWaterEntry.start || ''} 
+                       onChange={e => setNewWaterEntry({...newWaterEntry, start: e.target.value})} 
+                       required
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-sm font-bold text-slate-500 mb-1">End Date & Time</label>
+                     <input 
+                       type="datetime-local" 
+                       className="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary"
+                       value={newWaterEntry.end || ''} 
+                       onChange={e => setNewWaterEntry({...newWaterEntry, end: e.target.value})} 
+                       required
+                     />
+                   </div>
+                 </div>
+                 <div className="pt-4 flex items-center gap-4">
+                   <button type="submit" className="bg-primary text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-primary/90">
+                     <Plus size={18}/> Add Period
+                   </button>
+                 </div>
+               </form>
              </div>
            </div>
         )}

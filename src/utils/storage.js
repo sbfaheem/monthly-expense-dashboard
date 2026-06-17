@@ -136,6 +136,7 @@ export const loadData = async () => {
       id: d.id,
       start: data.start || '',
       end: data.end || '',
+      entries: data.entries || [],
     }
   }) : []
 
@@ -154,11 +155,12 @@ export const updateSettings = async (newSettings) => {
   return loadData()
 }
 
-export const updateWaterSupply = async (monthKey, start, end) => {
+export const updateWaterSupply = async (monthKey, entries) => {
   const docRef = doc(db, 'water_supply', monthKey)
   await setDoc(docRef, {
-    start: start || '',
-    end: end || '',
+    entries: entries || [],
+    start: null,
+    end: null,
     updatedAt: Date.now()
   }, { merge: true })
   return loadData()
