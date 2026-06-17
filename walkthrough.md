@@ -30,12 +30,17 @@ App runs at **http://localhost:5173**
   - **Capital** – CCTV capital expense management with **Visibility Toggle**.
   - **Reports** – Monthly report view with CSV export + print.
   - **Water Supply** – Dedicated tab to configure and track when the water supply starts and ends using date-time calendars.
-  - **Settings** – Defaults for new months, CCTV, Currency, Categories, Roles.
+  - **Settings** – System configurations and database utilities, including the **Supabase to Firebase Data Migrator** tool.
 
 ### Water Supply Tracker Details 💧
 - **Calendar Selection:** Admins can set exact start and end dates/times via the "Water Supply" tab.
 - **Duration Calculation:** Automatically calculates the elapsed time in days and hours (e.g. "3 Days, 0 Hours").
 - **Real-Time Synchronization:** Persists dates globally to Firebase Firestore and displays the calculated duration at the bottom of both the Admin and Viewer dashboards.
+
+### Supabase to Firebase Data Migrator ☁️
+- **Direct REST Sync:** Fetch historical monthly records and expenses from Supabase.
+- **Prevent Duplicates:** Check and skip already migrated records to avoid duplicate data in Firestore.
+- **Admin Panel Utility:** Easily trigger the migration with one click from the Admin Settings tab.
 
 ### Build & Lint Fixes ✅
 - **Duplicate Code Fix:** Resolved a compilation-blocking syntax error in `src/components/ExpenseTable.jsx` where duplicate code blocks were present.
