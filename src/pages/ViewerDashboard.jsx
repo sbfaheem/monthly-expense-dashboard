@@ -6,7 +6,6 @@ import ExpenseTable from '../components/ExpenseTable'
 import Charts from '../components/Charts'
 import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import { exportToCSV, printReport } from '../utils/export'
-import { Download, Printer, Eye } from 'lucide-react'
 // CSS import removed
 
 export default function ViewerDashboard() {
