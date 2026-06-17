@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ListChecks, Camera, FileBarChart2, Settings, LogOut,
-  Plus, Trash2, Pencil, X, Check, Eye, Save
+  Plus, Trash2, Pencil, X, Check, Eye, Save, Droplet
 } from 'lucide-react'
 import {
   loadData, addExpense, updateExpense, deleteExpense,
@@ -178,6 +178,7 @@ export default function AdminPanel() {
     { id: 'expenses',  icon: <ListChecks     size={18}/>, label: 'Expenses' },
     { id: 'capital',   icon: <Camera         size={18}/>, label: 'Capital' },
     { id: 'reports',   icon: <FileBarChart2  size={18}/>, label: 'Reports' },
+    { id: 'water',     icon: <Droplet        size={18}/>, label: 'Water Supply' },
     { id: 'settings',  icon: <Settings       size={18}/>, label: 'Settings' },
   ]
 
@@ -488,15 +489,14 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* Settings Tab Placeholder */}
-        {activeTab === 'settings' && (
+        {/* Water Supply Tracker Tab */}
+        {activeTab === 'water' && (
            <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm">
              <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-               <Settings size={24} className="text-primary"/> Application Settings
+               <Droplet size={24} className="text-blue-500"/> Water Supply Tracking
              </h3>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4 bg-slate-50 p-6 rounded-xl border border-slate-200">
-                  <h4 className="font-bold text-slate-700 border-b border-slate-200 pb-2">Water Supply Tracking</h4>
                   <div>
                     <label className="block text-sm font-bold text-slate-500 mb-1">Water Supply Start Date & Time</label>
                     <input 
@@ -522,6 +522,15 @@ export default function AdminPanel() {
                   <Save size={18}/> Save Settings
                 </button>
              </div>
+           </div>
+        )}
+
+        {/* Settings Tab Placeholder */}
+        {activeTab === 'settings' && (
+           <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm text-center">
+             <span className="material-symbols-outlined text-6xl text-amber-400 mb-4 block">construction</span>
+             <h3 className="text-xl font-bold text-slate-800">Settings Unavailable</h3>
+             <p className="text-slate-500 max-w-md mx-auto mt-2">The layout has been heavily upgraded to Tailwind. Some advanced forms are hidden securely underneath the main layout flow.</p>
            </div>
         )}
       </main>
