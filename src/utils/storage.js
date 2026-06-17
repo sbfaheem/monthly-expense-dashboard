@@ -72,13 +72,17 @@ export const loadData = async () => {
   const expensesQuery = query(expensesCol, orderBy('date', 'asc'))
   const expensesPromise = getDocs(expensesQuery)
 
-  const [settingsDoc, recordsSnapshot, expensesSnapshot] = await Promise.all([
+  const waterSupplyCol = collection(db, 'water_supply')
+  const waterSupplyPromise = getDocs(waterSupplyCol)
+
+  const [settingsDoc, recordsSnapshot, expensesSnapshot, waterSupplySnapshot] = await Promise.all([
     settingsDocPromise,
     recordsPromise,
-    expensesPromise
+    expensesPromise,
+    waterSupplyPromise
   ]).catch(err => {
     console.error("Firebase data load error:", err)
-    return [null, null, null]
+    return [null, null, null, null]
   })
 
   let settings = {
@@ -87,8 +91,6 @@ export const loadData = async () => {
     showCctvExpense: true,
     defaultOpeningBalance: 50400,
     defaultMonthlyCollection: 284750,
-    waterSupplyStart: '',
-    waterSupplyEnd: '',
   }
 
   if (settingsDoc && settingsDoc.exists()) {
@@ -98,8 +100,6 @@ export const loadData = async () => {
       currency: data.currency || settings.currency,
       defaultOpeningBalance: Number(data.defaultOpeningBalance || settings.defaultOpeningBalance),
       defaultMonthlyCollection: Number(data.defaultMonthlyCollection || settings.defaultMonthlyCollection),
-      waterSupplyStart: data.waterSupplyStart || '',
-      waterSupplyEnd: data.waterSupplyEnd || '',
     }
   }
 
@@ -130,7 +130,16 @@ export const loadData = async () => {
     }
   }) : []
 
-  return { settings, monthlyRecords, expenses }
+  const waterSupply = waterSupplySnapshot ? waterSupplySnapshot.docs.map(d => {
+    const data = d.data()
+    return {
+      id: d.id,
+      start: data.start || '',
+      end: data.end || '',
+    }
+  }) : []
+
+  return { settings, monthlyRecords, expenses, waterSupply }
 }
 
 // ─── Settings ────────────────────────────────────────────────
@@ -141,8 +150,16 @@ export const updateSettings = async (newSettings) => {
     currency: newSettings.currency,
     defaultOpeningBalance: newSettings.defaultOpeningBalance,
     defaultMonthlyCollection: newSettings.defaultMonthlyCollection,
-    waterSupplyStart: newSettings.waterSupplyStart || '',
-    waterSupplyEnd: newSettings.waterSupplyEnd || '',
+  }, { merge: true })
+  return loadData()
+}
+
+export const updateWaterSupply = async (monthKey, start, end) => {
+  const docRef = doc(db, 'water_supply', monthKey)
+  await setDoc(docRef, {
+    start: start || '',
+    end: end || '',
+    updatedAt: Date.now()
   }, { merge: true })
   return loadData()
 }

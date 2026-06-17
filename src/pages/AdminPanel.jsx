@@ -8,7 +8,7 @@ import {
   loadData, addExpense, updateExpense, deleteExpense,
   updateSettings, calculateTotals, getMonthYear, getLastDataMonth,
   addMonthlyRecord, updateMonthlyRecord, deleteMonthlyRecord,
-  migrateSupabaseToFirebase
+  migrateSupabaseToFirebase, updateWaterSupply
 } from '../utils/storage'
 import Header from '../components/Header'
 import SummaryCards from '../components/SummaryCards'
@@ -25,6 +25,7 @@ const defaultData = {
   settings: { cctvExpense: 0, currency: 'PKR', defaultOpeningBalance: 0, defaultMonthlyCollection: 0, showCctvExpense: true },
   monthlyRecords: [],
   expenses: [],
+  waterSupply: [],
 }
 
 export default function AdminPanel() {
@@ -44,6 +45,19 @@ export default function AdminPanel() {
   const [tempCctv, setTempCctv] = useState(null)
   const [migrating, setMigrating] = useState(false)
   const [migrationStatus, setMigrationStatus] = useState(null)
+  const [waterForm, setWaterForm] = useState({ start: '', end: '' })
+
+  useEffect(() => {
+    const currentMonthKey = `${selectedMonth} ${selectedYear}`
+    const currentWaterSupply = data.waterSupply?.find(ws => ws.id === currentMonthKey) || { start: '', end: '' }
+    setWaterForm({ start: currentWaterSupply.start, end: currentWaterSupply.end })
+  }, [selectedMonth, selectedYear, data.waterSupply])
+
+  const handleSaveWaterSupply = async () => {
+    const newData = await updateWaterSupply(currentMonthKey, waterForm.start, waterForm.end)
+    setData(newData)
+    showNotif('Water supply dates saved for ' + currentMonthKey)
+  }
 
   useEffect(() => { setTempCctv(null) }, [selectedMonth, selectedYear])
 
@@ -297,7 +311,10 @@ export default function AdminPanel() {
 
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
-            <WaterSupplyTracker start={data.settings.waterSupplyStart} end={data.settings.waterSupplyEnd} />
+            <WaterSupplyTracker 
+              start={data.waterSupply?.find(ws => ws.id === currentMonthKey)?.start} 
+              end={data.waterSupply?.find(ws => ws.id === currentMonthKey)?.end} 
+            />
             <SummaryCards
               openingBalance={totals.record.openingBalance}
               monthlyCollection={totals.record.monthlyCollection}
@@ -547,9 +564,12 @@ export default function AdminPanel() {
         {/* Water Supply Tracker Tab */}
         {activeTab === 'water' && (
            <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm">
-             <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+             <h3 className="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
                <Droplet size={24} className="text-blue-500"/> Water Supply Tracking
              </h3>
+             <p className="text-sm text-slate-500 mb-6">
+               Configure the water supply start and end date/time for the selected month: <strong className="text-primary font-bold">{currentMonthKey}</strong>
+             </p>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4 bg-slate-50 p-6 rounded-xl border border-slate-200">
                   <div>
@@ -557,8 +577,8 @@ export default function AdminPanel() {
                     <input 
                       type="datetime-local" 
                       className="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary"
-                      value={settingsForm.waterSupplyStart || ''} 
-                      onChange={e => setSettingsForm({...settingsForm, waterSupplyStart: e.target.value})} 
+                      value={waterForm.start || ''} 
+                      onChange={e => setWaterForm({...waterForm, start: e.target.value})} 
                     />
                   </div>
                   <div>
@@ -566,14 +586,14 @@ export default function AdminPanel() {
                     <input 
                       type="datetime-local" 
                       className="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary"
-                      value={settingsForm.waterSupplyEnd || ''} 
-                      onChange={e => setSettingsForm({...settingsForm, waterSupplyEnd: e.target.value})} 
+                      value={waterForm.end || ''} 
+                      onChange={e => setWaterForm({...waterForm, end: e.target.value})} 
                     />
                   </div>
                 </div>
              </div>
              <div className="mt-8 pt-6 border-t border-slate-100 flex items-center gap-4">
-                <button onClick={handleSaveSettings} className="bg-primary text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-primary/90">
+                <button onClick={handleSaveWaterSupply} className="bg-primary text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-primary/90">
                   <Save size={18}/> Save Settings
                 </button>
              </div>

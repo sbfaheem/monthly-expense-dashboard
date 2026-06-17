@@ -9,7 +9,7 @@ import { exportToCSV, printReport } from '../utils/export'
 // CSS import removed
 
 export default function ViewerDashboard() {
-  const [data, setData] = useState({ settings: { currency: 'PKR', cctvExpense: 0, showCctvExpense: true, defaultOpeningBalance: 0, defaultMonthlyCollection: 0 }, monthlyRecords: [], expenses: [] })
+  const [data, setData] = useState({ settings: { currency: 'PKR', cctvExpense: 0, showCctvExpense: true, defaultOpeningBalance: 0, defaultMonthlyCollection: 0 }, monthlyRecords: [], expenses: [], waterSupply: [] })
   const [loading, setLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
@@ -81,7 +81,10 @@ export default function ViewerDashboard() {
         />
 
         {/* Water Supply Tracker */}
-        <WaterSupplyTracker start={data.settings.waterSupplyStart} end={data.settings.waterSupplyEnd} />
+        <WaterSupplyTracker 
+          start={data.waterSupply?.find(ws => ws.id === currentMonthKey)?.start} 
+          end={data.waterSupply?.find(ws => ws.id === currentMonthKey)?.end} 
+        />
 
         {/* Summary Cards */}
         <SummaryCards
