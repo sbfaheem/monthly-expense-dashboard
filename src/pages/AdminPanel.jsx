@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ListChecks, Camera, FileBarChart2, Settings, LogOut,
-  Plus, Trash2, Pencil, Check, Eye, Save, Droplet
+  Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock
 } from 'lucide-react'
 import {
   loadData, addExpense, updateExpense, deleteExpense,
