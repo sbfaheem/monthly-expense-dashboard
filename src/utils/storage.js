@@ -1,11 +1,9 @@
-import { supabase } from './supabase'
+import { db } from './firebase'
+import { collection, doc, getDoc, getDocs, query, orderBy, setDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore'
 
 // ─── Helpers ────────────────────────────────────────────────
 
 export const getMonthYear = (dateString) => {
-  // Parse date parts directly to avoid UTC timezone shift.
-  // new Date('YYYY-MM-DD') is UTC midnight — in UTC+5 (Pakistan) that
-  // shifts March 1 back to Feb 28. Local construction avoids this.
   const [year, month, day] = dateString.split('-').map(Number)
   const date = new Date(year, month - 1, day)
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
@@ -45,8 +43,8 @@ export const calculateTotals = (expenses, settings, monthlyRecords, selectedMont
     monthlyCollection: 0,
     isManualSaving: false,
     manualSaving: 0,
-    cctvExpense: 0, // Default to 0
-    showCctvExpense: false, // Default to false
+    cctvExpense: 0,
+    showCctvExpense: false,
   } : monthRecord
 
   const saving = record.isManualSaving
@@ -60,59 +58,30 @@ export const calculateTotals = (expenses, settings, monthlyRecords, selectedMont
   return { totalExpense, saving, totalSaving, record: { ...record, isNoData } }
 }
 
-// ─── Map DB row → app shape ──────────────────────────────────
-
-const toSettings = (row) => ({
-  currency: row.currency,
-  cctvExpense: Number(row.cctv_expense),
-  showCctvExpense: row.show_cctv_expense,
-  defaultOpeningBalance: Number(row.default_opening_balance),
-  defaultMonthlyCollection: Number(row.default_monthly_collection),
-})
-
-const toMonthlyRecord = (row) => ({
-  id: row.id,
-  month: row.month,
-  openingBalance: Number(row.opening_balance),
-  monthlyCollection: Number(row.monthly_collection),
-  isManualSaving: row.is_manual_saving,
-  manualSaving: Number(row.manual_saving),
-  cctvExpense: Number(row.cctv_expense),
-  showCctvExpense: row.show_cctv_expense,
-})
-
-const toExpense = (row) => ({
-  id: row.id,
-  date: row.date,
-  month: row.month,
-  category: row.category,
-  name: row.name,
-  amount: Number(row.amount),
-  description: row.description || '',
-})
-
 // ─── Load all data ───────────────────────────────────────────
 
 export const loadData = async () => {
-  const [settingsRes, recordsRes, expensesRes] = await Promise.all([
-    supabase.from('settings').select('*').eq('id', 1).single(),
-    supabase.from('monthly_records').select('*').order('created_at', { ascending: true }),
-    supabase.from('expenses').select('*').order('date', { ascending: true }),
-  ])
+  const settingsDocRef = doc(db, 'settings', '1')
+  const settingsDocPromise = getDoc(settingsDocRef)
 
-  if (settingsRes.error && settingsRes.error.code !== 'PGRST116') {
-    // PGRST116 is "0 rows" which is fine for first load, otherwise log:
-    console.error("Supabase settings error:", settingsRes.error)
-  }
-  if (recordsRes.error) {
-    console.error("Supabase monthly_records error (RLS enabled?):", recordsRes.error)
-  }
-  if (expensesRes.error) {
-    console.error("Supabase expenses error (RLS enabled?):", expensesRes.error)
-  }
+  const recordsCol = collection(db, 'monthly_records')
+  const recordsQuery = query(recordsCol, orderBy('createdAt', 'asc'))
+  const recordsPromise = getDocs(recordsQuery)
 
-  // Default settings in case the row doesn't exist yet
-  const defaultSettings = {
+  const expensesCol = collection(db, 'expenses')
+  const expensesQuery = query(expensesCol, orderBy('date', 'asc'))
+  const expensesPromise = getDocs(expensesQuery)
+
+  const [settingsDoc, recordsSnapshot, expensesSnapshot] = await Promise.all([
+    settingsDocPromise,
+    recordsPromise,
+    expensesPromise
+  ]).catch(err => {
+    console.error("Firebase data load error:", err)
+    return [null, null, null]
+  })
+
+  let settings = {
     currency: 'PKR',
     cctvExpense: 38800,
     showCctvExpense: true,
@@ -120,93 +89,126 @@ export const loadData = async () => {
     defaultMonthlyCollection: 284750,
   }
 
-  return {
-    settings: (settingsRes.data && !settingsRes.error) ? toSettings(settingsRes.data) : defaultSettings,
-    monthlyRecords: (recordsRes.data || []).map(toMonthlyRecord),
-    expenses: (expensesRes.data || []).map(toExpense),
+  if (settingsDoc && settingsDoc.exists()) {
+    const data = settingsDoc.data()
+    settings = {
+      ...settings,
+      currency: data.currency || settings.currency,
+      defaultOpeningBalance: Number(data.defaultOpeningBalance || settings.defaultOpeningBalance),
+      defaultMonthlyCollection: Number(data.defaultMonthlyCollection || settings.defaultMonthlyCollection),
+    }
   }
+
+  const monthlyRecords = recordsSnapshot ? recordsSnapshot.docs.map(d => {
+    const data = d.data()
+    return {
+      id: d.id,
+      month: data.month,
+      openingBalance: Number(data.openingBalance),
+      monthlyCollection: Number(data.monthlyCollection),
+      isManualSaving: data.isManualSaving || false,
+      manualSaving: Number(data.manualSaving || 0),
+      cctvExpense: Number(data.cctvExpense || 0),
+      showCctvExpense: data.showCctvExpense || false,
+    }
+  }) : []
+
+  const expenses = expensesSnapshot ? expensesSnapshot.docs.map(d => {
+    const data = d.data()
+    return {
+      id: d.id,
+      date: data.date,
+      month: data.month,
+      category: data.category,
+      name: data.name,
+      amount: Number(data.amount),
+      description: data.description || '',
+    }
+  }) : []
+
+  return { settings, monthlyRecords, expenses }
 }
 
 // ─── Settings ────────────────────────────────────────────────
 
 export const updateSettings = async (newSettings) => {
-  // We no longer update cctv_expense or show_cctv_expense in global settings
-  const { error } = await supabase.from('settings').upsert({
-    id: 1,
+  const settingsDocRef = doc(db, 'settings', '1')
+  await setDoc(settingsDocRef, {
     currency: newSettings.currency,
-    default_opening_balance: newSettings.defaultOpeningBalance,
-    default_monthly_collection: newSettings.defaultMonthlyCollection,
-  })
-  if (error) throw error
+    defaultOpeningBalance: newSettings.defaultOpeningBalance,
+    defaultMonthlyCollection: newSettings.defaultMonthlyCollection,
+  }, { merge: true })
   return loadData()
 }
 
 // ─── Monthly Records CRUD ────────────────────────────────────
 
 export const addMonthlyRecord = async (record) => {
-  const { error } = await supabase.from('monthly_records').insert({
+  const recordsCol = collection(db, 'monthly_records')
+  await addDoc(recordsCol, {
     month: record.month,
-    opening_balance: record.openingBalance,
-    monthly_collection: record.monthlyCollection,
-    is_manual_saving: record.isManualSaving || false,
-    manual_saving: record.manualSaving || 0,
-    cctv_expense: record.cctvExpense || 0,
-    show_cctv_expense: record.showCctvExpense || false,
+    openingBalance: Number(record.openingBalance),
+    monthlyCollection: Number(record.monthlyCollection),
+    isManualSaving: record.isManualSaving || false,
+    manualSaving: Number(record.manualSaving || 0),
+    cctvExpense: Number(record.cctvExpense || 0),
+    showCctvExpense: record.showCctvExpense || false,
+    createdAt: Date.now(),
   })
-  if (error) throw error
   return loadData()
 }
 
 export const updateMonthlyRecord = async (record) => {
-  const { error } = await supabase.from('monthly_records').update({
+  const recordDocRef = doc(db, 'monthly_records', record.id)
+  await updateDoc(recordDocRef, {
     month: record.month,
-    opening_balance: record.openingBalance,
-    monthly_collection: record.monthlyCollection,
-    is_manual_saving: record.isManualSaving || false,
-    manual_saving: record.manualSaving || 0,
-    cctv_expense: record.cctvExpense || 0,
-    show_cctv_expense: record.showCctvExpense || false,
-  }).eq('id', record.id)
-  if (error) throw error
+    openingBalance: Number(record.openingBalance),
+    monthlyCollection: Number(record.monthlyCollection),
+    isManualSaving: record.isManualSaving || false,
+    manualSaving: Number(record.manualSaving || 0),
+    cctvExpense: Number(record.cctvExpense || 0),
+    showCctvExpense: record.showCctvExpense || false,
+  })
   return loadData()
 }
 
 export const deleteMonthlyRecord = async (id) => {
-  const { error } = await supabase.from('monthly_records').delete().eq('id', id)
-  if (error) throw error
+  const recordDocRef = doc(db, 'monthly_records', id)
+  await deleteDoc(recordDocRef)
   return loadData()
 }
 
 // ─── Expenses CRUD ───────────────────────────────────────────
 
 export const addExpense = async (expense) => {
-  const { error } = await supabase.from('expenses').insert({
+  const expensesCol = collection(db, 'expenses')
+  await addDoc(expensesCol, {
     date: expense.date,
     month: getMonthYear(expense.date),
     category: expense.category,
     name: expense.name,
-    amount: expense.amount,
+    amount: Number(expense.amount),
     description: expense.description || '',
+    createdAt: Date.now(),
   })
-  if (error) throw error
   return loadData()
 }
 
 export const updateExpense = async (expense) => {
-  const { error } = await supabase.from('expenses').update({
+  const expenseDocRef = doc(db, 'expenses', expense.id)
+  await updateDoc(expenseDocRef, {
     date: expense.date,
     month: getMonthYear(expense.date),
     category: expense.category,
     name: expense.name,
-    amount: expense.amount,
+    amount: Number(expense.amount),
     description: expense.description || '',
-  }).eq('id', expense.id)
-  if (error) throw error
+  })
   return loadData()
 }
 
 export const deleteExpense = async (id) => {
-  const { error } = await supabase.from('expenses').delete().eq('id', id)
-  if (error) throw error
+  const expenseDocRef = doc(db, 'expenses', id)
+  await deleteDoc(expenseDocRef)
   return loadData()
 }
