@@ -35,7 +35,7 @@ export default function WaterSupplyTracker({ entries = [] }) {
       dStart,
       dEnd,
       duration,
-      label: `Period #${idx + 1}`
+      label: `Supply ${idx + 1}`
     }
   })
 

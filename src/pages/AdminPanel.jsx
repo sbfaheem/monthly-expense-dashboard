@@ -633,7 +633,7 @@ export default function AdminPanel() {
                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1">
                            <div>
                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Period</span>
-                             <span className="text-sm font-bold text-slate-800 dark:text-slate-100">Period #{idx + 1}</span>
+                             <span className="text-sm font-bold text-slate-800 dark:text-slate-100">Supply {idx + 1}</span>
                            </div>
                            <div>
                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Start</span>
@@ -694,7 +694,7 @@ export default function AdminPanel() {
                  </div>
                  <div className="pt-4 flex items-center gap-4">
                    <button type="submit" className="bg-primary text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-primary/90">
-                     <Plus size={18}/> Add Period
+                     <Plus size={18}/> Add Supply
                    </button>
                  </div>
                </form>
