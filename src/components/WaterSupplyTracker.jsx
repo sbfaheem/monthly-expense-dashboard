@@ -88,6 +88,7 @@ export default function WaterSupplyTracker({ entries = [] }) {
               )}
             </div>
           </div>
+        ))}
       </div>
     </div>
   )
