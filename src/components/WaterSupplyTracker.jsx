@@ -11,7 +11,10 @@ export default function WaterSupplyTracker({ start, end }) {
     const diffMs = dEnd - dStart
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
     const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-    duration = { days, hours }
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+    const totalHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const totalHoursDecimal = (diffMs / (1000 * 60 * 60)).toFixed(2)
+    duration = { days, hours, minutes, totalHours, totalHoursDecimal }
   }
 
   const formatDateTime = (dateObj) => {
@@ -49,9 +52,14 @@ export default function WaterSupplyTracker({ start, end }) {
           </div>
           <p className="font-extrabold text-blue-900 dark:text-blue-200 text-lg">
             {duration 
-              ? `${duration.days} Days, ${duration.hours} Hours`
+              ? `${duration.days} Days, ${duration.hours} Hours, ${duration.minutes} Minutes`
               : 'Pending...'}
           </p>
+          {duration && (
+            <p className="text-xs text-blue-700 dark:text-blue-400 mt-1 font-medium">
+              Total duration = {duration.totalHours} hours {duration.minutes} minutes (or {duration.totalHoursDecimal} hours).
+            </p>
+          )}
         </div>
       </div>
     </div>
