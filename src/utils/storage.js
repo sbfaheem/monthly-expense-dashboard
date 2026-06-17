@@ -87,6 +87,8 @@ export const loadData = async () => {
     showCctvExpense: true,
     defaultOpeningBalance: 50400,
     defaultMonthlyCollection: 284750,
+    waterSupplyStart: '',
+    waterSupplyEnd: '',
   }
 
   if (settingsDoc && settingsDoc.exists()) {
@@ -96,6 +98,8 @@ export const loadData = async () => {
       currency: data.currency || settings.currency,
       defaultOpeningBalance: Number(data.defaultOpeningBalance || settings.defaultOpeningBalance),
       defaultMonthlyCollection: Number(data.defaultMonthlyCollection || settings.defaultMonthlyCollection),
+      waterSupplyStart: data.waterSupplyStart || '',
+      waterSupplyEnd: data.waterSupplyEnd || '',
     }
   }
 
@@ -137,6 +141,8 @@ export const updateSettings = async (newSettings) => {
     currency: newSettings.currency,
     defaultOpeningBalance: newSettings.defaultOpeningBalance,
     defaultMonthlyCollection: newSettings.defaultMonthlyCollection,
+    waterSupplyStart: newSettings.waterSupplyStart || '',
+    waterSupplyEnd: newSettings.waterSupplyEnd || '',
   }, { merge: true })
   return loadData()
 }

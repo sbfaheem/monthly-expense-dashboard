@@ -4,6 +4,7 @@ import Header from '../components/Header'
 import SummaryCards from '../components/SummaryCards'
 import ExpenseTable from '../components/ExpenseTable'
 import Charts from '../components/Charts'
+import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import { exportToCSV, printReport } from '../utils/export'
 import { Download, Printer, Eye } from 'lucide-react'
 // CSS import removed
@@ -151,6 +152,10 @@ export default function ViewerDashboard() {
             
           </div>
         </div>
+
+        {/* Water Supply Tracker */}
+        <WaterSupplyTracker start={data.settings.waterSupplyStart} end={data.settings.waterSupplyEnd} />
+
       </main>
       
       <footer className="bg-white dark:bg-background-dark border-t border-primary/10 py-6 text-center text-slate-400 text-xs">

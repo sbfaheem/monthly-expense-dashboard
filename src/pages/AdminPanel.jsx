@@ -13,6 +13,7 @@ import Header from '../components/Header'
 import SummaryCards from '../components/SummaryCards'
 import ExpenseTable from '../components/ExpenseTable'
 import Charts from '../components/Charts'
+import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import { exportToCSV, printReport } from '../utils/export'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
@@ -121,6 +122,8 @@ export default function AdminPanel() {
       cctvExpense: Number(settingsForm.cctvExpense),
       showCctvExpense: settingsForm.showCctvExpense,
       currency: settingsForm.currency,
+      waterSupplyStart: settingsForm.waterSupplyStart || '',
+      waterSupplyEnd: settingsForm.waterSupplyEnd || '',
     })
     setData(newData)
     setSettingsSaved(true)
@@ -263,6 +266,7 @@ export default function AdminPanel() {
                 <Charts expenses={monthlyExpenses} allExpenses={data.expenses} />
               </div>
             </div>
+            <WaterSupplyTracker start={data.settings.waterSupplyStart} end={data.settings.waterSupplyEnd} />
           </div>
         )}
 
@@ -486,10 +490,38 @@ export default function AdminPanel() {
 
         {/* Settings Tab Placeholder */}
         {activeTab === 'settings' && (
-           <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm text-center">
-             <span className="material-symbols-outlined text-6xl text-amber-400 mb-4 block">construction</span>
-             <h3 className="text-xl font-bold text-slate-800">Settings Unavailable</h3>
-             <p className="text-slate-500 max-w-md mx-auto mt-2">The layout has been heavily upgraded to Tailwind. Some advanced forms are hidden securely underneath the main layout flow.</p>
+           <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm">
+             <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+               <Settings size={24} className="text-primary"/> Application Settings
+             </h3>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4 bg-slate-50 p-6 rounded-xl border border-slate-200">
+                  <h4 className="font-bold text-slate-700 border-b border-slate-200 pb-2">Water Supply Tracking</h4>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-500 mb-1">Water Supply Start Date & Time</label>
+                    <input 
+                      type="datetime-local" 
+                      className="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary"
+                      value={settingsForm.waterSupplyStart || ''} 
+                      onChange={e => setSettingsForm({...settingsForm, waterSupplyStart: e.target.value})} 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-500 mb-1">Water Supply End Date & Time</label>
+                    <input 
+                      type="datetime-local" 
+                      className="w-full p-3 bg-white border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary"
+                      value={settingsForm.waterSupplyEnd || ''} 
+                      onChange={e => setSettingsForm({...settingsForm, waterSupplyEnd: e.target.value})} 
+                    />
+                  </div>
+                </div>
+             </div>
+             <div className="mt-8 pt-6 border-t border-slate-100 flex items-center gap-4">
+                <button onClick={handleSaveSettings} className="bg-primary text-white px-6 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-primary/90">
+                  <Save size={18}/> Save Settings
+                </button>
+             </div>
            </div>
         )}
       </main>
