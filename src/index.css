@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;700&display=swap');
 
 @theme {
   --color-primary: #006600;
@@ -6,10 +7,15 @@
   --color-background-light: #f5f8f5;
   --color-background-dark: #0f230f;
   --font-display: 'Manrope', sans-serif;
+  --font-urdu: 'Noto Naskh Arabic', serif;
 }
 
 body {
   font-family: var(--font-display);
+}
+
+.font-urdu {
+  font-family: var(--font-urdu), 'Manrope', sans-serif;
 }
 
 .material-symbols-outlined { 

@@ -35,7 +35,7 @@ export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-  const [recordForm, setRecordForm] = useState({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false, cctvExpense: 0, showCctvExpense: false })
+  const [recordForm, setRecordForm] = useState({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false, cctvExpense: 0, showCctvExpense: false, note: '' })
   const [editingRecordId, setEditingRecordId] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState(null)
@@ -180,16 +180,20 @@ export default function AdminPanel() {
       openingBalance: Number(recordForm.openingBalance),
       monthlyCollection: Number(recordForm.monthlyCollection),
       manualSaving: Number(recordForm.manualSaving),
-      isManualSaving: recordForm.isManualSaving
+      isManualSaving: recordForm.isManualSaving,
+      note: recordForm.note || ''
     })
     setData(newData)
-    setRecordForm({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false, cctvExpense: 0, showCctvExpense: false })
+    setRecordForm({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false, cctvExpense: 0, showCctvExpense: false, note: '' })
     showNotif('Monthly record added!')
   }
 
   const handleEditRecordStart = (record) => {
     setEditingRecordId(record.id)
-    setRecordForm({ ...record })
+    setRecordForm({
+      ...record,
+      note: record.note || ''
+    })
     setActiveTab('records')
   }
 
@@ -198,7 +202,7 @@ export default function AdminPanel() {
     const newData = await updateMonthlyRecord(recordForm)
     setData(newData)
     setEditingRecordId(null)
-    setRecordForm({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false, cctvExpense: 0, showCctvExpense: false })
+    setRecordForm({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false, cctvExpense: 0, showCctvExpense: false, note: '' })
     showNotif('Record updated!')
   }
 
@@ -349,6 +353,20 @@ export default function AdminPanel() {
               currency={data.settings.currency}
               isNoData={totals.record.isNoData}
             />
+
+            {/* Monthly Note / Urdu Management Announcement */}
+            {totals.record.note && (
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-6 shadow-sm flex items-start gap-4" dir="rtl">
+                <div className="size-10 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined text-[22px]">campaign</span>
+                </div>
+                <div className="flex-1 text-right">
+                  <h4 className="text-sm font-extrabold text-amber-800 dark:text-amber-300 mb-1 tracking-wide">انتظامیہ کی طرف سے اہم نوٹ:</h4>
+                  <p className="text-[15px] font-semibold text-amber-900 dark:text-amber-200 leading-relaxed font-urdu">{totals.record.note}</p>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-6">
                 <ExpenseTable
@@ -396,6 +414,10 @@ export default function AdminPanel() {
                        <input type="number" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg" name="manualSaving" value={recordForm.manualSaving} onChange={handleRecordFormChange} required />
                      </div>
                    )}
+                   <div className="md:col-span-2">
+                     <label className="block text-sm font-bold text-slate-500 mb-1">Month Note (Urdu / Optional)</label>
+                     <textarea className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none text-right font-urdu" dir="rtl" name="note" value={recordForm.note || ''} onChange={handleRecordFormChange} rows={2} placeholder="ادائیگی سے متعلق نوٹ یہاں لکھیں۔۔۔" />
+                   </div>
                  </div>
                  <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-100">
                     <button type="submit" className="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:bg-primary/90 flex items-center gap-2">

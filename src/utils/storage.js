@@ -114,6 +114,7 @@ export const loadData = async () => {
       manualSaving: Number(data.manualSaving || 0),
       cctvExpense: Number(data.cctvExpense || 0),
       showCctvExpense: data.showCctvExpense || false,
+      note: data.note || '',
     }
   }) : []
 
@@ -178,6 +179,7 @@ export const addMonthlyRecord = async (record) => {
     manualSaving: Number(record.manualSaving || 0),
     cctvExpense: Number(record.cctvExpense || 0),
     showCctvExpense: record.showCctvExpense || false,
+    note: record.note || '',
     createdAt: Date.now(),
   })
   return loadData()
@@ -193,6 +195,7 @@ export const updateMonthlyRecord = async (record) => {
     manualSaving: Number(record.manualSaving || 0),
     cctvExpense: Number(record.cctvExpense || 0),
     showCctvExpense: record.showCctvExpense || false,
+    note: record.note || '',
   })
   return loadData()
 }
@@ -266,6 +269,7 @@ export const migrateSupabaseToFirebase = async (supRecords, supExpenses) => {
         manualSaving: Number(r.manual_saving || 0),
         cctvExpense: Number(r.cctv_expense || 0),
         showCctvExpense: r.show_cctv_expense || false,
+        note: r.note || '',
         createdAt: safeGetTime(r.created_at),
       })
       recordsAdded++
