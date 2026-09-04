@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ListChecks, Camera, FileBarChart2, Settings, LogOut,
-  Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock
+  Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff
 } from 'lucide-react'
 import {
   loadData, addExpense, updateExpense, deleteExpense,
   updateSettings, calculateTotals, getMonthYear, getLastDataMonth,
   addMonthlyRecord, updateMonthlyRecord, deleteMonthlyRecord,
-  migrateSupabaseToFirebase, updateWaterSupply
+  migrateSupabaseToFirebase, updateWaterSupply, updateAdminPassword
 } from '../utils/storage'
 import Header from '../components/Header'
 import SummaryCards from '../components/SummaryCards'
@@ -46,6 +46,10 @@ export default function AdminPanel() {
   const [migrating, setMigrating] = useState(false)
   const [migrationStatus, setMigrationStatus] = useState(null)
   const [newWaterEntry, setNewWaterEntry] = useState({ start: '', end: '' })
+  const [passwordForm, setPasswordForm] = useState({ current: '', newPass: '', confirm: '' })
+  const [showCurrentPass, setShowCurrentPass] = useState(false)
+  const [showNewPass, setShowNewPass] = useState(false)
+  const [passwordSaving, setPasswordSaving] = useState(false)
 
   useEffect(() => { setTempCctv(null) }, [selectedMonth, selectedYear])
 
@@ -262,6 +266,36 @@ export default function AdminPanel() {
       showNotif('Migration failed!', 'error')
     } finally {
       setMigrating(false)
+    }
+  }
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault()
+    const storedPass = data.settings.adminPassword || 'admin123'
+    if (passwordForm.current !== storedPass) {
+      showNotif('Current password is incorrect.', 'error')
+      return
+    }
+    if (passwordForm.newPass.length < 6) {
+      showNotif('New password must be at least 6 characters.', 'error')
+      return
+    }
+    if (passwordForm.newPass !== passwordForm.confirm) {
+      showNotif('New passwords do not match.', 'error')
+      return
+    }
+    setPasswordSaving(true)
+    try {
+      await updateAdminPassword(passwordForm.newPass)
+      // Reload data so in-memory settings has the new password
+      const freshData = await loadData()
+      setData(freshData)
+      setPasswordForm({ current: '', newPass: '', confirm: '' })
+      showNotif('Password changed successfully!')
+    } catch (err) {
+      showNotif('Failed to change password. Try again.', 'error')
+    } finally {
+      setPasswordSaving(false)
     }
   }
 
@@ -726,43 +760,122 @@ export default function AdminPanel() {
 
         {/* Settings Tab / Data Migration */}
         {activeTab === 'settings' && (
-          <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm space-y-6">
-            <h3 className="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">database</span> System & Migration Utilities
-            </h3>
-            <p className="text-sm text-slate-500">
-              Manage database settings, system configs, or import legacy data.
-            </p>
-            
-            <div className="border-t border-slate-100 pt-6">
-              <h4 className="text-md font-bold text-slate-700 mb-3">Data Import from Supabase</h4>
-              <p className="text-sm text-slate-500 mb-4">
-                Retrieve historical collections and expenses from January 2026 to May 2026 that reside in Supabase, and copy them directly to Firebase Firestore.
-              </p>
-              
-              {migrationStatus && (
-                <div className={`p-4 rounded-xl mb-4 text-sm font-semibold ${migrationStatus.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : (migrationStatus.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-blue-50 text-blue-700 border border-blue-200')}`}>
-                  {migrationStatus.msg}
+          <div className="space-y-6">
+            {/* Change Password Section */}
+            <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <KeyRound size={20} className="text-primary" />
                 </div>
-              )}
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">Change Admin Password</h3>
+                  <p className="text-sm text-slate-500">Update your admin panel login password securely.</p>
+                </div>
+              </div>
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-500 mb-1">Current Password</label>
+                    <div className="relative">
+                      <input
+                        type={showCurrentPass ? 'text' : 'password'}
+                        className="w-full p-3 pr-10 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                        value={passwordForm.current}
+                        onChange={e => setPasswordForm(f => ({ ...f, current: e.target.value }))}
+                        placeholder="Current password"
+                        required
+                      />
+                      <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" onClick={() => setShowCurrentPass(s => !s)}>
+                        {showCurrentPass ? <EyeOff size={16}/> : <Eye size={16}/>}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-500 mb-1">New Password</label>
+                    <div className="relative">
+                      <input
+                        type={showNewPass ? 'text' : 'password'}
+                        className="w-full p-3 pr-10 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                        value={passwordForm.newPass}
+                        onChange={e => setPasswordForm(f => ({ ...f, newPass: e.target.value }))}
+                        placeholder="Min. 6 characters"
+                        required
+                        minLength={6}
+                      />
+                      <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" onClick={() => setShowNewPass(s => !s)}>
+                        {showNewPass ? <EyeOff size={16}/> : <Eye size={16}/>}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-500 mb-1">Confirm New Password</label>
+                    <input
+                      type="password"
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                      value={passwordForm.confirm}
+                      onChange={e => setPasswordForm(f => ({ ...f, confirm: e.target.value }))}
+                      placeholder="Re-enter new password"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={passwordSaving}
+                    className="bg-primary text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50 transition-all"
+                  >
+                    {passwordSaving ? (
+                      <><div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving...</>
+                    ) : (
+                      <><KeyRound size={16}/> Update Password</>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
 
-              <button 
-                onClick={handleMigrateData} 
-                disabled={migrating}
-                className="bg-primary text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50 transition-all"
-              >
-                {migrating ? (
-                  <>
-                    <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Migrating Data...
-                  </>
-                ) : (
-                  <>
-                    <span className="material-symbols-outlined text-md">cloud_sync</span>
-                    Start Migration
-                  </>
+            {/* Data Migration Section */}
+            <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-slate-500">database</span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">System &amp; Migration Utilities</h3>
+                  <p className="text-sm text-slate-500">Manage database settings or import legacy data.</p>
+                </div>
+              </div>
+              <div className="border-t border-slate-100 pt-6">
+                <h4 className="text-md font-bold text-slate-700 mb-3">Data Import from Supabase</h4>
+                <p className="text-sm text-slate-500 mb-4">
+                  Retrieve historical collections and expenses from January 2026 to May 2026 that reside in Supabase, and copy them directly to Firebase Firestore.
+                </p>
+                
+                {migrationStatus && (
+                  <div className={`p-4 rounded-xl mb-4 text-sm font-semibold ${migrationStatus.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : (migrationStatus.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-blue-50 text-blue-700 border border-blue-200')}`}>
+                    {migrationStatus.msg}
+                  </div>
                 )}
-              </button>
+
+                <button 
+                  onClick={handleMigrateData} 
+                  disabled={migrating}
+                  className="bg-primary text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50 transition-all"
+                >
+                  {migrating ? (
+                    <>
+                      <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Migrating Data...
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-md">cloud_sync</span>
+                      Start Migration
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -1,25 +1,33 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Lock, Eye, EyeOff } from 'lucide-react'
+import { getAdminPassword } from '../utils/storage'
 import './AdminLogin.css'
-
-const ADMIN_PASSWORD = 'admin123' // Simple demo password
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState('')
+  const [adminPassword, setAdminPassword] = useState(null)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    getAdminPassword().then(setAdminPassword).catch(() => setAdminPassword('admin123'))
+  }, [])
 
   const handleLogin = (e) => {
     e.preventDefault()
-    if (username === 'admin' && password === ADMIN_PASSWORD) {
+    if (adminPassword === null) {
+      setError('System is loading, please try again.')
+      return
+    }
+    if (username === 'admin' && password === adminPassword) {
       sessionStorage.setItem('admin_auth', 'true')
       navigate('/admin')
     } else {
-      setError('Invalid credentials. Try admin / admin123')
-      setTimeout(() => setError(''), 3000)
+      setError('Invalid username or password. Please try again.')
+      setTimeout(() => setError(''), 4000)
     }
   }
 
@@ -41,7 +49,7 @@ export default function AdminLogin() {
               type="text"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              placeholder="admin"
+              placeholder="Enter username"
               required
             />
           </div>
@@ -60,12 +68,11 @@ export default function AdminLogin() {
               </button>
             </div>
           </div>
-          <button type="submit" className="btn-login">Login to Admin Panel</button>
+          <button type="submit" className="btn-login" disabled={adminPassword === null}>
+            {adminPassword === null ? 'Loading...' : 'Login to Admin Panel'}
+          </button>
         </form>
 
-        <div className="login-hint">
-          <strong>Demo credentials:</strong> admin / admin123
-        </div>
         <a href="/view" className="back-to-viewer">← Back to Viewer Dashboard</a>
       </div>
     </div>

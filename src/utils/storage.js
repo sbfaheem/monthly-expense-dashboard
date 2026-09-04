@@ -100,6 +100,7 @@ export const loadData = async () => {
       currency: data.currency || settings.currency,
       defaultOpeningBalance: Number(data.defaultOpeningBalance || settings.defaultOpeningBalance),
       defaultMonthlyCollection: Number(data.defaultMonthlyCollection || settings.defaultMonthlyCollection),
+      adminPassword: data.adminPassword || 'admin123',
     }
   }
 
@@ -154,6 +155,20 @@ export const updateSettings = async (newSettings) => {
     defaultMonthlyCollection: newSettings.defaultMonthlyCollection,
   }, { merge: true })
   return loadData()
+}
+
+export const getAdminPassword = async () => {
+  const settingsDocRef = doc(db, 'settings', '1')
+  const snap = await getDoc(settingsDocRef)
+  if (snap.exists()) {
+    return snap.data().adminPassword || 'admin123'
+  }
+  return 'admin123'
+}
+
+export const updateAdminPassword = async (newPassword) => {
+  const settingsDocRef = doc(db, 'settings', '1')
+  await setDoc(settingsDocRef, { adminPassword: newPassword }, { merge: true })
 }
 
 export const updateWaterSupply = async (monthKey, entries) => {
