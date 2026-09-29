@@ -440,7 +440,7 @@ export default function AdminPanel() {
                 />
               </div>
               <div className="space-y-6">
-                <Charts expenses={monthlyExpenses} allExpenses={data.expenses} />
+                <Charts expenses={monthlyExpenses} allExpenses={data.expenses} selectedMonth={currentMonthKey} />
               </div>
             </div>
           </div>

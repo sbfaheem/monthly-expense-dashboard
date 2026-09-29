@@ -1,4 +1,5 @@
-import { Pie, Line, Bar } from 'react-chartjs-2'
+import React from 'react'
+import { Doughnut, Line, Bar } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
   ArcElement,
@@ -17,17 +18,85 @@ import { getParentCategory } from '../utils/normalizeExpense'
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Filler)
 
-const COLORS = ['#10b981', '#2563eb', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899', '#14b8a6']
+const CATEGORY_COLORS = {
+  'Salaries & Payroll': '#2563eb', // Blue
+  'Community & Utilities': '#8b5cf6', // Purple
+  'Electrical & Infrastructure': '#f59e0b', // Amber
+  'Supplies & Hardware': '#10b981', // Emerald
+  'Capital Expenditures (CapEx)': '#ef4444', // Red
+}
 
-const Charts = ({ expenses, allExpenses }) => {
-  // ── Pie chart: expense by 2-tier parent category for selected month ──
+const FALLBACK_PALETTE = ['#2563eb', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4', '#ec4899', '#6366f1']
+
+// Persistent Center Metric Plugin for Donut Hole
+const centerTextPlugin = {
+  id: 'centerText',
+  afterDraw(chart) {
+    if (!chart.config.options.plugins?.centerText?.display) return
+    const { ctx, chartArea } = chart
+    if (!chartArea) return
+
+    const centerX = (chartArea.left + chartArea.right) / 2
+    const centerY = (chartArea.top + chartArea.bottom) / 2
+
+    const primaryText = chart.config.options.plugins.centerText.primaryText || ''
+    const subText = chart.config.options.plugins.centerText.subText || ''
+
+    const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+
+    ctx.save()
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    // Primary centered text (bold PKR amount)
+    ctx.font = '700 18px Manrope, Inter, sans-serif'
+    ctx.fillStyle = isDark ? '#f8fafc' : '#0f172a'
+    ctx.fillText(primaryText, centerX, centerY - 8)
+
+    // Sub-label text (Total Spend (Month)) in muted gray #6B7280
+    if (subText) {
+      ctx.font = '600 12px Manrope, Inter, sans-serif'
+      ctx.fillStyle = '#6B7280'
+      ctx.fillText(subText, centerX, centerY + 14)
+    }
+
+    ctx.restore()
+  }
+}
+
+function formatShortMonth(monthStr) {
+  if (!monthStr) return ''
+  const parts = monthStr.trim().split(/\s+/)
+  if (parts.length >= 2) {
+    const month = parts[0].slice(0, 3)
+    const year = parts[1].length === 4 ? `'${parts[1].slice(2)}` : parts[1]
+    return `${month} ${year}`
+  }
+  return monthStr
+}
+
+const Charts = ({ expenses = [], allExpenses = [], selectedMonth = '' }) => {
+  const currentMonth = selectedMonth || expenses[0]?.month || ''
+  const shortMonth = formatShortMonth(currentMonth)
+
+  // ── Donut chart: expense by 2-tier parent category for selected month ──
+  const totalExpense = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0)
+
   const catMap = {}
   expenses.forEach(e => {
     const category = getParentCategory(e.name, e.category)
-    catMap[category] = (catMap[category] || 0) + Number(e.amount)
+    catMap[category] = (catMap[category] || 0) + Number(e.amount || 0)
   })
-  const pieLabels = Object.keys(catMap)
-  const pieData = Object.values(catMap)
+
+  // Sort categories descending by spend
+  const sortedCategories = Object.entries(catMap).sort((a, b) => b[1] - a[1])
+
+  const donutLabels = sortedCategories.map(([cat, amt]) => {
+    const pct = totalExpense > 0 ? ((amt / totalExpense) * 100).toFixed(1) : '0.0'
+    return `${cat}: PKR ${amt.toLocaleString('en-PK')} (${pct}%)`
+  })
+  const donutData = sortedCategories.map(([, amt]) => amt)
+  const donutColors = sortedCategories.map(([cat], i) => CATEGORY_COLORS[cat] || FALLBACK_PALETTE[i % FALLBACK_PALETTE.length])
 
   // ── Build sorted chronological month order for bar + line ──
   const monthOrder = {}
@@ -36,10 +105,13 @@ const Charts = ({ expenses, allExpenses }) => {
       const d = new Date(e.date)
       monthOrder[e.month] = { ts: d.getFullYear() * 100 + (d.getMonth() + 1), total: 0 }
     }
-    monthOrder[e.month].total += Number(e.amount)
+    monthOrder[e.month].total += Number(e.amount || 0)
   })
   const sortedMonths = Object.keys(monthOrder).sort((a, b) => monthOrder[a].ts - monthOrder[b].ts)
-  const barLabels = sortedMonths.map(m => m.split(' ')[0] + ' ' + m.split(' ')[1].slice(2)) // "February 2026" → "February 26"
+  const barLabels = sortedMonths.map(m => {
+    const parts = m.split(' ')
+    return parts.length >= 2 ? `${parts[0]} '${parts[1].slice(2)}` : m
+  })
   const barData = sortedMonths.map(m => monthOrder[m].total)
 
   // ── Line chart labels (last 6 months) ──
@@ -64,13 +136,14 @@ const Charts = ({ expenses, allExpenses }) => {
     }]
   }
 
-  const pieChartData = {
-    labels: pieLabels,
+  const donutChartData = {
+    labels: donutLabels,
     datasets: [{
-      data: pieData,
-      backgroundColor: COLORS.slice(0, pieLabels.length),
+      data: donutData,
+      backgroundColor: donutColors,
       borderWidth: 2,
       borderColor: '#ffffff',
+      hoverOffset: 6,
     }]
   }
 
@@ -89,6 +162,35 @@ const Charts = ({ expenses, allExpenses }) => {
   }
 
   // Chart options
+  const donutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '70%',
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: {
+          usePointStyle: true,
+          pointStyle: 'rectRounded',
+          padding: 14,
+          font: { size: 12, family: 'Manrope', weight: '600' },
+          boxWidth: 10,
+          boxHeight: 10,
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.label}`
+        }
+      },
+      centerText: {
+        display: true,
+        primaryText: `PKR ${totalExpense.toLocaleString('en-PK')}`,
+        subText: shortMonth ? `Total Spend (${shortMonth})` : 'Total Spend'
+      }
+    }
+  }
+
   const barOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -100,16 +202,6 @@ const Charts = ({ expenses, allExpenses }) => {
       y: { ticks: { callback: v => `${(v / 1000).toFixed(0)}k`, font: { family: 'Manrope' } }, grid: { color: 'rgba(0,102,0,0.05)' }, beginAtZero: true },
       x: { grid: { display: false }, ticks: { font: { family: 'Manrope' } } }
     }
-  }
-
-  const pieOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'bottom', labels: { font: { size: 11, family: 'Manrope' } } },
-      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${Number(ctx.raw).toLocaleString('en-PK')} PKR` } }
-    },
-    cutout: '60%',
   }
 
   const lineOptions = {
@@ -127,18 +219,18 @@ const Charts = ({ expenses, allExpenses }) => {
   return (
     <div className="space-y-6">
       
-      {/* EXPENSE DISTRIBUTION */}
+      {/* EXPENSE DISTRIBUTION DONUT CHART */}
       <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-primary/10 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 p-4 opacity-5">
-          <span className="material-symbols-outlined text-8xl">pie_chart</span>
+          <span className="material-symbols-outlined text-8xl">donut_large</span>
         </div>
         <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center justify-between">
           Expense Breakdown 
           <span className="material-symbols-outlined text-primary text-lg">donut_large</span>
         </h4>
-        <div className="h-64 flex items-center justify-center">
-          {pieLabels.length > 0 ? (
-            <Pie data={pieChartData} options={pieOptions} />
+        <div className="min-h-[300px] h-80 flex items-center justify-center relative">
+          {donutData.length > 0 ? (
+            <Doughnut data={donutChartData} options={donutOptions} plugins={[centerTextPlugin]} />
           ) : (
             <span className="text-slate-400 font-medium">No data for selected month</span>
           )}

@@ -558,7 +558,7 @@ export default function ViewerDashboard() {
 
           {/* Sidebar Content */}
           <div className="space-y-6">
-            <Charts expenses={monthlyExpenses} allExpenses={data.expenses} />
+            <Charts expenses={monthlyExpenses} allExpenses={data.expenses} selectedMonth={currentMonthKey} />
             
             {/* Disclaimer / Report Info Panel */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-primary/10 shadow-sm space-y-5">
