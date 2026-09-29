@@ -56,7 +56,7 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
 
     const msg = [
       `💧 *WATER SUPPLY FORECAST & UPDATE*`,
-      `📍 *North Town Residents*`,
+      `📍 *Sector 7D/1 Residents*`,
       ``,
       `✅ *Last Known Supply:* ${last.formattedStart} to ${last.formattedEnd}`,
       `🔮 *Next Predicted Arrival:* *${p.windowFormatted}*`,

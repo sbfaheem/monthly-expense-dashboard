@@ -360,7 +360,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
   const handleChatWithVisitor = (v) => {
     const cleanPhone = (v.displayPhone || '').replace(/[^0-9]/g, '')
     if (!cleanPhone) return
-    const text = `السلام علیکم ${v.displayName} صاحب! نارتھ ٹاؤن ریذیڈنٹس (${v.displayGroup}) کی انتظامیہ کی طرف سے رابطہ کر رہے ہیں۔`
+    const text = `السلام علیکم ${v.displayName} صاحب! سیکٹر 7D/1 ریذیڈنٹس (${v.displayGroup}) کی انتظامیہ کی طرف سے رابطہ کر رہے ہیں۔`
     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank')
   }
 
@@ -427,10 +427,10 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
     const trackedUrl = `https://monthly-expense-dashboard.vercel.app/view?u=${cleanPhone}&name=${nameParam}&addr=${addrParam}&grp=${groupSlug}`
     
     let text = `السلام علیکم ${contact.name} صاحب!\n`
-    text += `نارتھ ٹاؤن ریذیڈنٹس (${groupName}) کی انتظامیہ کی طرف سے سلام۔\n\n`
+    text += `سیکٹر 7D/1 ریذیڈنٹس (${groupName}) کی انتظامیہ کی طرف سے سلام۔\n\n`
     text += `ماہانہ اخراجات، سیکیورٹی و سویپرز کی کلیکشن اور پانی کی سپلائی کا مکمل حساب کتاب آن لائن پورٹل پر اپ ڈیٹ کر دیا گیا ہے۔\n\n`
     text += `برائے مہربانی اپنا تفصیلی اسٹیٹمنٹ دیکھنے کے لیے نیچے دیے گئے لنک پر کلک فرمائیں:\n${trackedUrl}\n\n`
-    text += `جزاکم اللہ خیراً،\nانتظامیہ کمیٹی نارتھ ٹاؤن ریذیڈنٹس`
+    text += `جزاکم اللہ خیراً،\nانتظامیہ کمیٹی سیکٹر 7D/1 ریذیڈنٹس`
 
     const encoded = encodeURIComponent(text)
     window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encoded}`, '_blank')

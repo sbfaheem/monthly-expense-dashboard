@@ -604,7 +604,7 @@ export default function ViewerDashboard() {
                 )}
               </div>
               <h3 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                What North Town Residents Are Saying
+                What Sector 7D/1 Residents Are Saying
               </h3>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
                 Ratings, reviews, and suggestions shared by verified residents of Asad Hanzalla Street &amp; Sector 7D/1 on monthly accounts and community services.

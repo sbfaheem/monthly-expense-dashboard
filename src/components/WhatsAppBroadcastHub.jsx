@@ -64,7 +64,7 @@ export default function WhatsAppBroadcastHub({
     if (templateKey === 'water') {
       if (lang === 'ur') {
         let text = `💧 *پانی کی سپلائی کا شیڈول اور متوقع پیشگوئی*\n`
-        text += `📍 *نارتھ ٹاؤن ریذیڈنٹس (North Town Residents)*\n\n`
+        text += `📍 *سیکٹر 7D/1 ریذیڈنٹس (Sector 7D/1 Residents)*\n\n`
         if (predictionData.hasEnoughData) {
           text += `✅ *گزشتہ سپلائی:* ${last.formattedStart} تا ${last.formattedEnd}\n`
           text += `🔮 *اگلی متوقع سپلائی:* *${p.windowFormatted}*\n`
@@ -79,7 +79,7 @@ export default function WhatsAppBroadcastHub({
         return text
       } else {
         let text = `💧 *WATER SUPPLY ANNOUNCEMENT & FORECAST*\n`
-        text += `📍 *North Town Residents*\n\n`
+        text += `📍 *Sector 7D/1 Residents*\n\n`
         if (predictionData.hasEnoughData) {
           text += `✅ *Recent Supply:* ${last.formattedStart} – ${last.formattedEnd}\n`
           text += `🔮 *Next Expected Arrival:* *${p.windowFormatted}*\n`
@@ -99,7 +99,7 @@ export default function WhatsAppBroadcastHub({
     if (templateKey === 'expense') {
       if (lang === 'ur') {
         let text = `📊 *ماہانہ مالیاتی رپورٹ: ${currentMonthKey}*\n`
-        text += `📍 *نارتھ ٹاؤن ریذیڈنٹس مینجمنٹ کمیٹی*\n\n`
+        text += `📍 *سیکٹر 7D/1 ریذیڈنٹس مینجمنٹ کمیٹی*\n\n`
         text += `💵 *ابتدائی بیلنس (Opening):* PKR ${Number(rec.openingBalance || 0).toLocaleString('en-PK')}\n`
         text += `📥 *ماہانہ کلیکشن (Collection):* PKR ${Number(rec.monthlyCollection || 0).toLocaleString('en-PK')}\n`
         text += `🛒 *کل اخراجات (Total Expense):* PKR ${Number(totals.totalExpense || 0).toLocaleString('en-PK')}\n`
@@ -112,7 +112,7 @@ export default function WhatsAppBroadcastHub({
         return text
       } else {
         let text = `📊 *MONTHLY FINANCIAL STATEMENT: ${currentMonthKey.toUpperCase()}*\n`
-        text += `📍 *North Town Residents*\n\n`
+        text += `📍 *Sector 7D/1 Residents*\n\n`
         text += `💵 *Opening Balance:* PKR ${Number(rec.openingBalance || 0).toLocaleString('en-PK')}\n`
         text += `📥 *Monthly Collection:* PKR ${Number(rec.monthlyCollection || 0).toLocaleString('en-PK')}\n`
         text += `🛒 *Total Expenses:* PKR ${Number(totals.totalExpense || 0).toLocaleString('en-PK')}\n`
@@ -128,7 +128,7 @@ export default function WhatsAppBroadcastHub({
     if (templateKey === 'dues') {
       if (lang === 'ur') {
         let text = `🔔 *یاددہانی: ماہانہ مینٹیننس و سیکیورٹی فیس*\n`
-        text += `📍 *نارتھ ٹاؤن ریذیڈنٹس (North Town Residents)*\n\n`
+        text += `📍 *سیکٹر 7D/1 ریذیڈنٹس (Sector 7D/1 Residents)*\n\n`
         text += `معزز رہائشی بھائیو اور بہنو،\nالسلام علیکم!\n\n`
         text += `آپ سے مؤدبانہ گزارش ہے کہ برائے مہربانی ماہ *${currentMonthKey}* کی ماہانہ مینٹیننس و سیکیورٹی فیس جلد از جلد جمع کروا دیں۔\n\n`
         text += `بروقت ادائیگی سے سیکیورٹی گارڈز، سویپرز کی تنخواہیں اور گلی کے انتظامات بلاتعطل جاری رہتے ہیں۔\n\n`
@@ -140,7 +140,7 @@ export default function WhatsAppBroadcastHub({
         return text
       } else {
         let text = `🔔 *REMINDER: MONTHLY MAINTENANCE DUES*\n`
-        text += `📍 *North Town Residents*\n\n`
+        text += `📍 *Sector 7D/1 Residents*\n\n`
         text += `Dear Residents,\n`
         text += `Please clear your monthly maintenance collection for *${currentMonthKey}* at your earliest convenience.\n\n`
         text += `Timely payments ensure uninterrupted security, sweeper cleanliness, and neighborhood maintenance.\n\n`
@@ -153,9 +153,9 @@ export default function WhatsAppBroadcastHub({
 
     // ─── 4. CUSTOM / IMPORTANT NOTICE ───
     if (lang === 'ur') {
-      return `📢 *انتظامیہ کی طرف سے ضروری اطلاع*\n📍 *نارتھ ٹاؤن ریذیڈنٹس (North Town Residents)*\n\nمعزز رہائشیوں،\nالسلام علیکم!\n\n[یہاں اپنا پیغام درج کریں]\n\nشکریہ،\nانتظامیہ کمیٹی نارتھ ٹاؤن ریذیڈنٹس\n🌐 ${websiteUrl}`
+      return `📢 *انتظامیہ کی طرف سے ضروری اطلاع*\n📍 *سیکٹر 7D/1 ریذیڈنٹس (Sector 7D/1 Residents)*\n\nمعزز رہائشیوں،\nالسلام علیکم!\n\n[یہاں اپنا پیغام درج کریں]\n\nشکریہ،\nانتظامیہ کمیٹی سیکٹر 7D/1 ریذیڈنٹس\n🌐 ${websiteUrl}`
     } else {
-      return `📢 *IMPORTANT NOTICE*\n📍 *North Town Residents*\n\nDear Residents,\n\n[Write your announcement here]\n\nThank you,\nManagement Committee\n🌐 ${websiteUrl}`
+      return `📢 *IMPORTANT NOTICE*\n📍 *Sector 7D/1 Residents*\n\nDear Residents,\n\n[Write your announcement here]\n\nThank you,\nManagement Committee\n🌐 ${websiteUrl}`
     }
   }
 
@@ -708,10 +708,10 @@ export default function WhatsAppBroadcastHub({
             <div className="bg-slate-900 text-white rounded-2xl overflow-hidden shadow-xl border border-slate-800">
               <div className="bg-emerald-800 px-4 py-3 flex items-center gap-3">
                 <div className="size-8 rounded-full bg-white/20 flex items-center justify-center font-bold text-xs">
-                  NT
+                  7D
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold leading-tight">North Town Residents</h4>
+                  <h4 className="text-sm font-bold leading-tight">Sector 7D/1 Residents</h4>
                   <p className="text-[10px] text-emerald-200 font-medium">Community Broadcast Preview</p>
                 </div>
               </div>
