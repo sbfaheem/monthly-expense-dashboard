@@ -50,7 +50,7 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
   }
 
   const handleShareToWhatsApp = () => {
-    if (!predictionData.hasEnoughData) return
+    if (!isAdmin || !predictionData.hasEnoughData) return
     const p = predictionData.prediction
     const last = predictionData.lastSupply
 
@@ -162,14 +162,16 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
               <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${predictionData.prediction.statusBadge.color}`}>
                 {predictionData.prediction.statusBadge.label}
               </span>
-              <button
-                onClick={handleShareToWhatsApp}
-                className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-sm shadow-emerald-900/40 active:scale-95"
-                title="Broadcast this prediction to community WhatsApp groups"
-              >
-                {copied ? <Check size={14} /> : <Share2 size={14} />}
-                <span>{copied ? 'Opening WhatsApp...' : 'Share to WhatsApp'}</span>
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={handleShareToWhatsApp}
+                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-sm shadow-emerald-900/40 active:scale-95"
+                  title="Broadcast this prediction to community WhatsApp groups"
+                >
+                  {copied ? <Check size={14} /> : <Share2 size={14} />}
+                  <span>{copied ? 'Opening WhatsApp...' : 'Share to WhatsApp'}</span>
+                </button>
+              )}
             </div>
           </div>
 

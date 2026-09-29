@@ -511,6 +511,7 @@ export default function ViewerDashboard() {
             return []
           })()} 
           allWaterSupply={data.waterSupply || []}
+          isAdmin={false}
         />
 
         {/* Summary Cards */}
