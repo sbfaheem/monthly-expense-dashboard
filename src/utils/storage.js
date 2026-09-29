@@ -9,6 +9,18 @@ export const getMonthYear = (dateString) => {
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 }
 
+export const resolveGroupName = (grpStr) => {
+  if (!grpStr) return null
+  const s = grpStr.toLowerCase()
+  if (s.includes('7d') || s.includes('ntrc') || s.includes('sector 7d/1')) {
+    return 'N.T.R.C Sector 7D/1'
+  }
+  if (s.includes('hanzalla') || s.includes('ntrg') || s.includes('asad')) {
+    return 'NTRG 2 Asad Hanzalla street'
+  }
+  return grpStr
+}
+
 export const getLastDataMonth = (data) => {
   if (data.monthlyRecords && data.monthlyRecords.length > 0) {
     const sorted = [...data.monthlyRecords].sort((a, b) => new Date(b.month) - new Date(a.month))
@@ -164,6 +176,7 @@ export const loadData = async () => {
       phone: data.phone || '',
       houseNo: data.houseNo || '',
       tag: data.tag || 'Resident',
+      group: data.group || 'NTRG 2 Asad Hanzalla street',
       createdAt: data.createdAt || 0
     }
   }) : []
@@ -188,6 +201,7 @@ export const loadData = async () => {
       name: data.name || '',
       phone: data.phone || '',
       houseNo: data.houseNo || '',
+      group: data.group || '',
       tag: data.tag || 'Resident',
       device: data.device || 'Desktop',
       monthViewed: data.monthViewed || '',
@@ -388,6 +402,7 @@ export const addWhatsAppContact = async (contact) => {
     phone: contact.phone || '',
     houseNo: contact.houseNo || '',
     tag: contact.tag || 'Resident',
+    group: contact.group || 'NTRG 2 Asad Hanzalla street',
     createdAt: Date.now()
   })
   return loadData()
@@ -399,7 +414,8 @@ export const updateWhatsAppContact = async (contact) => {
     name: contact.name || '',
     phone: contact.phone || '',
     houseNo: contact.houseNo || '',
-    tag: contact.tag || 'Resident'
+    tag: contact.tag || 'Resident',
+    group: contact.group || 'NTRG 2 Asad Hanzalla street'
   })
   return loadData()
 }
@@ -421,6 +437,7 @@ export const bulkAddWhatsAppContacts = async (contactsList = []) => {
       phone: c.phone || '',
       houseNo: c.houseNo || '',
       tag: c.tag || 'Resident',
+      group: c.group || 'NTRG 2 Asad Hanzalla street',
       createdAt: Date.now()
     })
   })
@@ -444,6 +461,7 @@ export const logVisitor = async (visitorData = {}) => {
       name: visitorData.name || 'Anonymous Resident',
       phone: visitorData.phone || '',
       houseNo: visitorData.houseNo || '',
+      group: visitorData.group || '',
       tag: visitorData.tag || 'Resident',
       device: visitorData.device || (window.innerWidth < 768 ? 'Mobile' : 'Desktop'),
       monthViewed: visitorData.monthViewed || '',

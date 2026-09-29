@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
-import { loadData, calculateTotals, getLastDataMonth, logVisitor } from '../utils/storage'
+import { loadData, calculateTotals, getLastDataMonth, logVisitor, resolveGroupName } from '../utils/storage'
 import Header from '../components/Header'
 import SummaryCards from '../components/SummaryCards'
 import ExpenseTable from '../components/ExpenseTable'
 import Charts from '../components/Charts'
 import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import { exportToCSV, printReport } from '../utils/export'
-import { UserCheck, User, Search, X, Check, ArrowRight } from 'lucide-react'
+import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2 } from 'lucide-react'
 
 // Helper to normalize phone numbers for robust matching (last 10 digits)
 const normalizePhone = (p) => (p || '').replace(/[^0-9]/g, '').slice(-10)
@@ -23,8 +23,10 @@ export default function ViewerDashboard() {
   const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
-  // Resident Identity state
+  // Resident Identity state & WhatsApp Group tracking
   const [resident, setResident] = useState(null)
+  const [detectedGroup, setDetectedGroup] = useState('')
+  const [selectedModalGroup, setSelectedModalGroup] = useState('NTRG 2 Asad Hanzalla street')
   const [showCheckInModal, setShowCheckInModal] = useState(false)
   const [residentSearchQuery, setResidentSearchQuery] = useState('')
   const [manualName, setManualName] = useState('')
@@ -37,11 +39,18 @@ export default function ViewerDashboard() {
       setSelectedMonth(last.month)
       setSelectedYear(last.year)
 
-      // Resolve resident identity
+      // Resolve resident identity and WhatsApp group
       const params = new URLSearchParams(window.location.search)
       const queryUser = params.get('u') || params.get('user') || params.get('phone') || params.get('ref')
-      const storedIdentity = localStorage.getItem('resident_identity')
+      const rawGroup = params.get('grp') || params.get('group')
+      const resolvedGroup = resolveGroupName(rawGroup)
 
+      if (resolvedGroup) {
+        setDetectedGroup(resolvedGroup)
+        setSelectedModalGroup(resolvedGroup)
+      }
+
+      const storedIdentity = localStorage.getItem('resident_identity')
       let matched = null
 
       if (queryUser && freshData.contacts?.length) {
@@ -67,8 +76,10 @@ export default function ViewerDashboard() {
       }
 
       if (matched) {
-        setResident(matched)
-        localStorage.setItem('resident_identity', JSON.stringify(matched))
+        const finalGroup = resolvedGroup || matched.group || 'NTRG 2 Asad Hanzalla street'
+        const fullResident = { ...matched, group: finalGroup }
+        setResident(fullResident)
+        localStorage.setItem('resident_identity', JSON.stringify(fullResident))
       }
     }).catch(err => {
       console.error('Failed to load data:', err)
@@ -85,7 +96,7 @@ export default function ViewerDashboard() {
   useEffect(() => {
     if (loading || !selectedMonth) return
 
-    const sessionKey = `visited_${currentMonthKey}_${resident?.phone || 'anon'}`
+    const sessionKey = `visited_${currentMonthKey}_${resident?.phone || 'anon'}_${resident?.group || detectedGroup || 'general'}`
     if (sessionStorage.getItem(sessionKey)) return
 
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
@@ -93,6 +104,7 @@ export default function ViewerDashboard() {
       name: resident?.name || 'Guest / Unverified Resident',
       phone: resident?.phone || '',
       houseNo: resident?.houseNo || '',
+      group: resident?.group || detectedGroup || 'Unspecified Group',
       tag: resident?.tag || 'Resident',
       monthViewed: currentMonthKey,
       device: isMobile ? 'Mobile' : 'Desktop'
@@ -101,32 +113,41 @@ export default function ViewerDashboard() {
     logVisitor(logPayload).then(() => {
       sessionStorage.setItem(sessionKey, 'true')
     })
-  }, [loading, currentMonthKey, resident])
+  }, [loading, currentMonthKey, resident, detectedGroup])
 
-  // Filter contacts for check-in modal
+  // Filter contacts for check-in modal based on group & search query
   const filteredDirectoryContacts = useMemo(() => {
     if (!data.contacts) return []
-    if (!residentSearchQuery.trim()) return data.contacts.slice(0, 20)
+    let list = data.contacts
+    if (selectedModalGroup) {
+      list = list.filter(c => (c.group || 'NTRG 2 Asad Hanzalla street') === selectedModalGroup)
+    }
+    if (!residentSearchQuery.trim()) return list.slice(0, 30)
     const q = residentSearchQuery.toLowerCase()
-    return data.contacts.filter(c =>
+    return list.filter(c =>
       c.name?.toLowerCase().includes(q) ||
       c.phone?.includes(q) ||
       c.houseNo?.toLowerCase().includes(q)
     )
-  }, [data.contacts, residentSearchQuery])
+  }, [data.contacts, selectedModalGroup, residentSearchQuery])
 
   const handleSelectResident = (c) => {
-    setResident(c)
-    localStorage.setItem('resident_identity', JSON.stringify(c))
+    const fullContact = {
+      ...c,
+      group: c.group || selectedModalGroup || detectedGroup || 'NTRG 2 Asad Hanzalla street'
+    }
+    setResident(fullContact)
+    localStorage.setItem('resident_identity', JSON.stringify(fullContact))
     setShowCheckInModal(false)
 
-    // Immediately log visit for newly identified resident
+    // Immediately log visit for newly identified resident with group
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
     logVisitor({
-      name: c.name,
-      phone: c.phone,
-      houseNo: c.houseNo || '',
-      tag: c.tag || 'Resident',
+      name: fullContact.name,
+      phone: fullContact.phone,
+      houseNo: fullContact.houseNo || '',
+      group: fullContact.group,
+      tag: fullContact.tag || 'Resident',
       monthViewed: currentMonthKey,
       device: isMobile ? 'Mobile' : 'Desktop'
     })
@@ -139,7 +160,8 @@ export default function ViewerDashboard() {
       name: manualName.trim(),
       phone: manualPhone.trim() || '',
       houseNo: '7D/1',
-      tag: 'Resident'
+      tag: 'Resident',
+      group: selectedModalGroup || detectedGroup || 'NTRG 2 Asad Hanzalla street'
     }
     handleSelectResident(customResident)
     setManualName('')
@@ -191,24 +213,32 @@ export default function ViewerDashboard() {
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-8 space-y-8">
-        {/* Resident Identity / Welcome Banner */}
+        {/* Resident Identity & WhatsApp Group Welcome Banner */}
         {resident ? (
           <div className="bg-emerald-50/90 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
             <div className="flex items-center gap-3.5">
-              <div className="size-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-emerald-600/20 flex-shrink-0">
-                <UserCheck size={20} />
+              <div className="size-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-emerald-600/20 flex-shrink-0">
+                <UserCheck size={22} />
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm sm:text-base font-extrabold text-emerald-950 dark:text-emerald-100">
-                    Welcome, {resident.name}
+                  <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-slate-100">
+                    Welcome, {resident.name}!
                   </span>
-                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100 border border-emerald-300 dark:border-emerald-700">
+                  <span className={`text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                    (resident.group || detectedGroup || '').includes('7D')
+                      ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/60 dark:text-blue-200 dark:border-blue-800'
+                      : 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/60 dark:text-emerald-200 dark:border-emerald-800'
+                  }`}>
+                    Group: {resident.group || detectedGroup || 'NTRG 2 Asad Hanzalla street'}
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
                     Verified Resident
                   </span>
                 </div>
-                <p className="text-xs text-emerald-800/80 dark:text-emerald-300 mt-0.5">
-                  {resident.houseNo ? `House: ${resident.houseNo} • ` : ''}WhatsApp: {resident.phone}
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                  You are visiting from WhatsApp Group: <strong className="text-slate-800 dark:text-slate-200">{resident.group || detectedGroup || 'NTRG 2 Asad Hanzalla street'}</strong>
+                  {resident.houseNo ? ` • House: ${resident.houseNo}` : ''} • Contact: {resident.phone}
                 </p>
               </div>
             </div>
@@ -229,18 +259,45 @@ export default function ViewerDashboard() {
               </button>
             </div>
           </div>
+        ) : detectedGroup ? (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800/80 border border-blue-200/80 dark:border-slate-700 rounded-2xl p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-3.5">
+              <div className="size-11 rounded-2xl bg-primary text-white flex items-center justify-center font-bold text-sm shadow-md shadow-primary/20 flex-shrink-0">
+                <MessageSquare size={22} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm sm:text-base font-extrabold text-slate-800 dark:text-slate-100">
+                    Welcome! Visiting from WhatsApp Group:
+                  </span>
+                  <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    {detectedGroup}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Tap &ldquo;Identify Yourself&rdquo; to select or enter your name so management knows you have reviewed this month&apos;s financial summary.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowCheckInModal(true)}
+              className="bg-primary hover:bg-primary-hover text-white text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 self-start sm:self-auto active:scale-98"
+            >
+              <UserCheck size={15} /> Identify Yourself
+            </button>
+          </div>
         ) : (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800/80 border border-blue-200/80 dark:border-slate-700 rounded-2xl p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
             <div className="flex items-center gap-3.5">
-              <div className="size-10 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-sm shadow-md shadow-primary/20 flex-shrink-0">
-                <User size={20} />
+              <div className="size-11 rounded-2xl bg-primary text-white flex items-center justify-center font-bold text-sm shadow-md shadow-primary/20 flex-shrink-0">
+                <User size={22} />
               </div>
               <div>
                 <p className="text-sm font-extrabold text-slate-800 dark:text-slate-100">
-                  Resident of NTRC 7D/1 or Asad Hanzalla Street?
+                  Resident of NTRC Sector 7D/1 or NTRG 2 Asad Hanzalla Street?
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Check in with your name so management knows you have reviewed this month&apos;s financial summary.
+                  Check in with your name and WhatsApp group so management knows you have reviewed this month&apos;s financial summary.
                 </p>
               </div>
             </div>
@@ -387,13 +444,44 @@ export default function ViewerDashboard() {
               </button>
             </div>
 
+            {/* WhatsApp Group Selector */}
+            <div className="pt-3">
+              <label className="block text-[11px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+                Select Your WhatsApp Group
+              </label>
+              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-750">
+                <button
+                  type="button"
+                  onClick={() => setSelectedModalGroup('N.T.R.C Sector 7D/1')}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    selectedModalGroup === 'N.T.R.C Sector 7D/1'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  <Building2 size={13} /> Sector 7D/1
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedModalGroup('NTRG 2 Asad Hanzalla street')}
+                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    selectedModalGroup === 'NTRG 2 Asad Hanzalla street'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  <MessageSquare size={13} /> Asad Hanzalla
+                </button>
+              </div>
+            </div>
+
             {/* Search Box */}
-            <div className="py-4">
+            <div className="py-3">
               <div className="relative">
                 <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search your name, phone, or house #..."
+                  placeholder={`Search ${selectedModalGroup} residents...`}
                   value={residentSearchQuery}
                   onChange={(e) => setResidentSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-primary outline-none"

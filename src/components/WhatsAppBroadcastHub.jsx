@@ -31,7 +31,7 @@ export default function WhatsAppBroadcastHub({
 
   const [searchTerm, setSearchTerm] = useState('')
   const [editingContact, setEditingContact] = useState(null)
-  const [contactForm, setContactForm] = useState({ name: '', phone: '', houseNo: '', tag: 'Resident' })
+  const [contactForm, setContactForm] = useState({ name: '', phone: '', houseNo: '', tag: 'Resident', group: 'NTRG 2 Asad Hanzalla street' })
   const [showAddModal, setShowAddModal] = useState(false)
   const [showBulkModal, setShowBulkModal] = useState(false)
   const [bulkText, setBulkText] = useState('')
@@ -181,10 +181,15 @@ export default function WhatsAppBroadcastHub({
   }
 
   const handleShareToGroup = (group) => {
+    let groupMessageText = messageText
+    const groupSlug = group.name.includes('7D') ? '7d1' : 'ntrg2'
+    if (groupMessageText.includes('/view') && !groupMessageText.includes('?grp=')) {
+      groupMessageText = groupMessageText.replace(/\/view(?!\?)/g, `/view?grp=${groupSlug}`)
+    }
     try {
-      navigator.clipboard.writeText(messageText)
+      navigator.clipboard.writeText(groupMessageText)
     } catch (e) {}
-    const encoded = encodeURIComponent(messageText)
+    const encoded = encodeURIComponent(groupMessageText)
     const url = `https://api.whatsapp.com/send?text=${encoded}`
     window.open(url, '_blank')
     showNotif(`Message copied! Select "${group.name}" in WhatsApp and click Send.`)
@@ -194,10 +199,11 @@ export default function WhatsAppBroadcastHub({
     const current = filteredContacts[queueIndex]
     if (!current) return
     const cleanPhone = current.phone.replace(/[^0-9]/g, '')
+    const groupSlug = (current.group || '').includes('7D') ? '7d1' : 'ntrg2'
     // Personalize link for direct tracking if present
     let personalizedText = messageText
     if (personalizedText.includes('/view') && !personalizedText.includes('?u=')) {
-      personalizedText = personalizedText.replace(/\/view(?!\?)/g, `/view?u=${cleanPhone}`)
+      personalizedText = personalizedText.replace(/\/view(?!\?)/g, `/view?u=${cleanPhone}&grp=${groupSlug}`)
     }
     const encoded = encodeURIComponent(personalizedText)
     const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encoded}`
@@ -797,6 +803,7 @@ export default function WhatsAppBroadcastHub({
                 <tr>
                   <th className="p-3.5">Name</th>
                   <th className="p-3.5">WhatsApp Number</th>
+                  <th className="p-3.5">Group</th>
                   <th className="p-3.5">House / Street</th>
                   <th className="p-3.5">Tag</th>
                   <th className="p-3.5 text-center">Actions</th>
@@ -805,7 +812,7 @@ export default function WhatsAppBroadcastHub({
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {filteredContacts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-6 text-center text-slate-400 italic">
+                    <td colSpan={6} className="p-6 text-center text-slate-400 italic">
                       {contacts.length === 0 ? 'No contacts added yet. Click "Add Contact" or "Bulk Paste Import" to get started.' : 'No contacts matching search filter.'}
                     </td>
                   </tr>
@@ -823,6 +830,15 @@ export default function WhatsAppBroadcastHub({
                           {c.phone} <ExternalLink size={12} />
                         </a>
                       </td>
+                      <td className="p-3.5">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${
+                          (c.group || '').includes('7D')
+                            ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        }`}>
+                          {c.group || 'NTRG 2 Asad Hanzalla street'}
+                        </span>
+                      </td>
                       <td className="p-3.5 font-medium text-slate-600 dark:text-slate-300">{c.houseNo || '—'}</td>
                       <td className="p-3.5">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${c.tag === 'Committee' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>
@@ -833,7 +849,13 @@ export default function WhatsAppBroadcastHub({
                         <button
                           onClick={() => {
                             setEditingContact(c)
-                            setContactForm({ name: c.name, phone: c.phone, houseNo: c.houseNo || '', tag: c.tag || 'Resident' })
+                            setContactForm({
+                              name: c.name,
+                              phone: c.phone,
+                              houseNo: c.houseNo || '',
+                              tag: c.tag || 'Resident',
+                              group: c.group || 'NTRG 2 Asad Hanzalla street'
+                            })
                             setShowAddModal(true)
                           }}
                           className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
@@ -980,6 +1002,18 @@ export default function WhatsAppBroadcastHub({
                     <option value="Shopkeeper">Shop / Commercial</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">WhatsApp Group</label>
+                <select
+                  value={contactForm.group || 'NTRG 2 Asad Hanzalla street'}
+                  onChange={e => setContactForm({ ...contactForm, group: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-primary font-bold"
+                >
+                  <option value="N.T.R.C Sector 7D/1">N.T.R.C Sector 7D/1</option>
+                  <option value="NTRG 2 Asad Hanzalla street">NTRG 2 Asad Hanzalla street</option>
+                </select>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t">

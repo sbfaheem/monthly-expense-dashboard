@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import {
   Users, Eye, Smartphone, Monitor, Clock, ArrowUpRight,
   Search, Filter, Download, RefreshCw, Send, CheckCircle2,
-  AlertCircle, ChevronRight, Sparkles, Trash2, Calendar, UserCheck, MessageSquare, ExternalLink, X
+  AlertCircle, ChevronRight, Sparkles, Trash2, Calendar, UserCheck, MessageSquare, ExternalLink, X, Building2
 } from 'lucide-react'
 import { loadData, clearVisitorLogs } from '../utils/storage'
 
@@ -25,6 +25,7 @@ const timeAgo = (timestamp) => {
 
 export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
   const [filterTab, setFilterTab] = useState('all') // 'all' | 'visited' | 'unvisited'
+  const [groupFilter, setGroupFilter] = useState('all') // 'all' | 'N.T.R.C Sector 7D/1' | 'NTRG 2 Asad Hanzalla street'
   const [searchTerm, setSearchTerm] = useState('')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedContactHistory, setSelectedContactHistory] = useState(null)
@@ -76,6 +77,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
 
       return {
         ...contact,
+        group: contact.group || 'NTRG 2 Asad Hanzalla street',
         hasVisited,
         visitCount,
         latestLog,
@@ -95,16 +97,24 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
       if (filterTab === 'visited' && !c.hasVisited) return false
       if (filterTab === 'unvisited' && c.hasVisited) return false
 
+      // Group filter
+      if (groupFilter !== 'all') {
+        const cGroup = c.group || 'NTRG 2 Asad Hanzalla street'
+        if (groupFilter === 'N.T.R.C Sector 7D/1' && !cGroup.includes('7D')) return false
+        if (groupFilter === 'NTRG 2 Asad Hanzalla street' && cGroup.includes('7D')) return false
+      }
+
       // Search filter
       if (!searchTerm.trim()) return true
       const q = searchTerm.toLowerCase()
       return (
         c.name?.toLowerCase().includes(q) ||
         c.phone?.includes(q) ||
-        c.houseNo?.toLowerCase().includes(q)
+        c.houseNo?.toLowerCase().includes(q) ||
+        c.group?.toLowerCase().includes(q)
       )
     })
-  }, [mappedContacts, filterTab, searchTerm])
+  }, [mappedContacts, filterTab, groupFilter, searchTerm])
 
   // ─── Analytics Summary KPI Computations ───────────────────────
   const totalVisits = visitorLogs.length
@@ -117,6 +127,15 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
 
   const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000
   const activeLast24h = visitorLogs.filter(l => (l.timestamp || 0) >= oneDayAgo).length
+
+  // WhatsApp Group Breakdown Metrics
+  const sector7D1Contacts = mappedContacts.filter(c => (c.group || '').includes('7D'))
+  const sector7D1Visited = sector7D1Contacts.filter(c => c.hasVisited).length
+  const sector7D1Logs = visitorLogs.filter(l => (l.group || '').includes('7D')).length
+
+  const hanzallaContacts = mappedContacts.filter(c => !(c.group || '').includes('7D'))
+  const hanzallaVisited = hanzallaContacts.filter(c => c.hasVisited).length
+  const hanzallaLogs = visitorLogs.filter(l => !(l.group || '').includes('7D')).length
 
   // Month frequency
   const monthCounts = useMemo(() => {
@@ -136,10 +155,12 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
   // ─── One-Click WhatsApp Reminder for Unvisited Residents ──────
   const handleSendReminder = (contact) => {
     const cleanPhone = contact.phone.replace(/[^0-9]/g, '')
-    const trackedUrl = `https://monthly-expense-dashboard.vercel.app/view?u=${cleanPhone}`
+    const groupName = contact.group || 'NTRG 2 Asad Hanzalla street'
+    const groupSlug = groupName.includes('7D') ? '7d1' : 'ntrg2'
+    const trackedUrl = `https://monthly-expense-dashboard.vercel.app/view?u=${cleanPhone}&grp=${groupSlug}`
     
     let text = `السلام علیکم ${contact.name} صاحب!\n`
-    text += `نارتھ ٹاؤن ریذیڈنٹس (NTRC / اسد حنظلہ اسٹریٹ) کی انتظامیہ کی طرف سے سلام۔\n\n`
+    text += `نارتھ ٹاؤن ریذیڈنٹس (${groupName}) کی انتظامیہ کی طرف سے سلام۔\n\n`
     text += `ماہانہ اخراجات، سیکیورٹی و سویپرز کی کلیکشن اور پانی کی سپلائی کا مکمل حساب کتاب آن لائن پورٹل پر اپ ڈیٹ کر دیا گیا ہے۔\n\n`
     text += `برائے مہربانی اپنا تفصیلی اسٹیٹمنٹ دیکھنے کے لیے نیچے دیے گئے لنک پر کلک فرمائیں:\n${trackedUrl}\n\n`
     text += `جزاکم اللہ خیراً،\nانتظامیہ کمیٹی نارتھ ٹاؤن ریذیڈنٹس`
@@ -150,10 +171,11 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
 
   // ─── Export CSV of Resident Engagement ────────────────────────
   const exportEngagementCSV = () => {
-    const headers = ['Name', 'Phone', 'House No', 'Tag', 'Status', 'Total Visits', 'Last Visited At', 'Last Device', 'Month Viewed']
+    const headers = ['Name', 'Phone', 'WhatsApp Group', 'House No', 'Tag', 'Status', 'Total Visits', 'Last Visited At', 'Last Device', 'Month Viewed']
     const rows = mappedContacts.map(c => [
       `"${c.name}"`,
       `"${c.phone}"`,
+      `"${c.group || 'NTRG 2 Asad Hanzalla street'}"`,
       `"${c.houseNo || ''}"`,
       `"${c.tag || 'Resident'}"`,
       c.hasVisited ? 'Visited' : 'Not Visited',
@@ -187,7 +209,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
                 Resident Visitor Analytics
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Monitor which residents have viewed the Monthly Expense Dashboard and follow up with unvisited households.
+                Track which resident from which WhatsApp Group visited the Monthly Expense Dashboard.
               </p>
             </div>
           </div>
@@ -222,6 +244,55 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
               Reset Logs
             </button>
           )}
+        </div>
+      </div>
+
+      {/* ─── WhatsApp Group Comparison Cards ─── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Group 1: NTRG 2 Asad Hanzalla street */}
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50/50 dark:from-emerald-950/20 dark:to-slate-800 p-5 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/50 shadow-sm flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+              <h4 className="text-sm font-extrabold text-emerald-950 dark:text-emerald-100">
+                NTRG 2 Asad Hanzalla street
+              </h4>
+            </div>
+            <p className="text-xs text-emerald-800/80 dark:text-emerald-300">
+              {hanzallaVisited} of {hanzallaContacts.length} residents visited • {hanzallaLogs} total group visits
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="text-2xl font-black text-emerald-700 dark:text-emerald-300">
+              {hanzallaContacts.length > 0 ? Math.round((hanzallaVisited / hanzallaContacts.length) * 100) : 0}%
+            </span>
+            <span className="block text-[10px] font-bold text-emerald-600 uppercase tracking-wider">
+              Engagement
+            </span>
+          </div>
+        </div>
+
+        {/* Group 2: N.T.R.C Sector 7D/1 */}
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50/50 dark:from-blue-950/20 dark:to-slate-800 p-5 rounded-2xl border border-blue-200/80 dark:border-blue-800/50 shadow-sm flex items-center justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="size-2 rounded-full bg-blue-500 animate-pulse" />
+              <h4 className="text-sm font-extrabold text-blue-950 dark:text-blue-100">
+                N.T.R.C Sector 7D/1
+              </h4>
+            </div>
+            <p className="text-xs text-blue-800/80 dark:text-blue-300">
+              {sector7D1Visited} of {sector7D1Contacts.length} residents visited • {sector7D1Logs} total group visits
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="text-2xl font-black text-blue-700 dark:text-blue-300">
+              {sector7D1Contacts.length > 0 ? Math.round((sector7D1Visited / sector7D1Contacts.length) * 100) : 0}%
+            </span>
+            <span className="block text-[10px] font-bold text-blue-600 uppercase tracking-wider">
+              Engagement
+            </span>
+          </div>
         </div>
       </div>
 
@@ -342,12 +413,46 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
               </span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Mapped against all 70 contacts from WhatsApp groups (NTRC 7D/1 &amp; NTRG 2 Asad Hanzalla street).
+              Mapped against WhatsApp groups (NTRC Sector 7D/1 &amp; NTRG 2 Asad Hanzalla street).
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            {/* Filter Tabs */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
+            {/* Group Filter Selector */}
+            <div className="flex items-center bg-slate-100 dark:bg-slate-700/50 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+              <button
+                onClick={() => setGroupFilter('all')}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  groupFilter === 'all'
+                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-primary'
+                }`}
+              >
+                All Groups
+              </button>
+              <button
+                onClick={() => setGroupFilter('NTRG 2 Asad Hanzalla street')}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  groupFilter === 'NTRG 2 Asad Hanzalla street'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600'
+                }`}
+              >
+                Asad Hanzalla
+              </button>
+              <button
+                onClick={() => setGroupFilter('N.T.R.C Sector 7D/1')}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  groupFilter === 'N.T.R.C Sector 7D/1'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-blue-600'
+                }`}
+              >
+                Sector 7D/1
+              </button>
+            </div>
+
+            {/* Visit Status Filter Tabs */}
             <div className="flex items-center bg-slate-100 dark:bg-slate-700/50 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
               <button
                 onClick={() => setFilterTab('all')}
@@ -386,7 +491,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
               <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search resident, phone, house..."
+                placeholder="Search resident, phone, group..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-primary outline-none w-full sm:w-56"
@@ -402,6 +507,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
               <tr>
                 <th className="p-4">Resident</th>
                 <th className="p-4">WhatsApp Contact</th>
+                <th className="p-4">WhatsApp Group</th>
                 <th className="p-4">House #</th>
                 <th className="p-4">Status &amp; Visits</th>
                 <th className="p-4">Last Seen</th>
@@ -411,7 +517,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {filteredContacts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-slate-400 italic">
+                  <td colSpan={7} className="p-8 text-center text-slate-400 italic">
                     No residents found matching the selected filter.
                   </td>
                 </tr>
@@ -449,6 +555,17 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
                         {c.phone}
                         <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                       </a>
+                    </td>
+
+                    {/* WhatsApp Group */}
+                    <td className="p-4">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
+                        (c.group || '').includes('7D')
+                          ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                      }`}>
+                        {(c.group || '').includes('7D') ? 'Sector 7D/1' : 'Asad Hanzalla'}
+                      </span>
                     </td>
 
                     {/* House No */}
@@ -548,10 +665,19 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
                     {log.device === 'Mobile' ? <Smartphone size={14} /> : <Monitor size={14} />}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-extrabold text-xs text-slate-800 dark:text-slate-100">
                         {log.name || 'Anonymous Resident'}
                       </span>
+                      {log.group && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          log.group.includes('7D')
+                            ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        }`}>
+                          {log.group}
+                        </span>
+                      )}
                       {log.houseNo && (
                         <span className="text-[10px] text-slate-500 font-semibold">
                           ({log.houseNo})
@@ -593,7 +719,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
                   {selectedContactHistory.name}
                 </h3>
                 <p className="text-xs text-slate-500 font-mono">
-                  {selectedContactHistory.phone} • House {selectedContactHistory.houseNo || '7D/1'}
+                  {selectedContactHistory.phone} • {selectedContactHistory.group} • House {selectedContactHistory.houseNo || '7D/1'}
                 </p>
               </div>
               <button
@@ -616,7 +742,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
                     </span>
                     <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
                       {log.device === 'Mobile' ? <Smartphone size={11} /> : <Monitor size={11} />}
-                      {log.device} • {log.dateStr}
+                      {log.device} • {log.group || 'General'} • {log.dateStr}
                     </p>
                   </div>
                   <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
