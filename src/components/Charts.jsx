@@ -13,15 +13,18 @@ import {
   Filler,
 } from 'chart.js'
 
+import { getParentCategory } from '../utils/normalizeExpense'
+
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Filler)
 
-const COLORS = ['#1b5e20','#ffd700','#ff9800','#e53935','#2196f3','#9c27b0','#00bcd4','#8bc34a']
+const COLORS = ['#10b981', '#2563eb', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899', '#14b8a6']
 
 const Charts = ({ expenses, allExpenses }) => {
-  // ── Pie chart: expense by category for selected month ──
+  // ── Pie chart: expense by 2-tier parent category for selected month ──
   const catMap = {}
   expenses.forEach(e => {
-    catMap[e.category] = (catMap[e.category] || 0) + Number(e.amount)
+    const category = getParentCategory(e.name, e.category)
+    catMap[category] = (catMap[category] || 0) + Number(e.amount)
   })
   const pieLabels = Object.keys(catMap)
   const pieData = Object.values(catMap)
