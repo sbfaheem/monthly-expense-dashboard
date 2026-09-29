@@ -3,7 +3,7 @@ import {
   MessageSquare, Send, Users, UserPlus, Megaphone, Copy,
   Check, ExternalLink, Trash2, Pencil, Search, Sparkles,
   Droplet, FileText, AlertTriangle, ArrowRight, RotateCcw,
-  Plus, CheckCheck, Smartphone, Globe
+  Plus, CheckCheck, Smartphone, Globe, Link2, X
 } from 'lucide-react'
 import {
   addWhatsAppContact, updateWhatsAppContact, deleteWhatsAppContact,
@@ -40,6 +40,8 @@ export default function WhatsAppBroadcastHub({
   // ─── Groups State ────────────────────────────────────────────
   const [newGroupName, setNewGroupName] = useState('')
   const [newGroupLink, setNewGroupLink] = useState('')
+  const [groupLinkModal, setGroupLinkModal] = useState(null) // { group, pendingText, linkInput }
+  const [savingGroupLink, setSavingGroupLink] = useState(false)
 
   // ─── Composer State ──────────────────────────────────────────
   const [activeTemplate, setActiveTemplate] = useState('water') // 'water' | 'expense' | 'dues' | 'custom'
@@ -189,10 +191,68 @@ export default function WhatsAppBroadcastHub({
     try {
       navigator.clipboard.writeText(groupMessageText)
     } catch (e) {}
-    const encoded = encodeURIComponent(groupMessageText)
-    const url = `https://api.whatsapp.com/send?text=${encoded}`
-    window.open(url, '_blank')
-    showNotif(`Message copied! Select "${group.name}" in WhatsApp and click Send.`)
+
+    // If group has an invite link configured, open that exact group chat directly!
+    if (group.link && group.link.trim()) {
+      let targetUrl = group.link.trim()
+      if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+        targetUrl = 'https://' + targetUrl
+      }
+      window.open(targetUrl, '_blank')
+      showNotif(`Announcement copied! Opening "${group.name}" — just paste (Ctrl+V) and send.`)
+    } else {
+      // Prompt modal to configure or paste the group invite link
+      setGroupLinkModal({
+        group,
+        pendingText: groupMessageText,
+        linkInput: ''
+      })
+    }
+  }
+
+  const handleSaveAndOpenGroupLink = async (e) => {
+    if (e) e.preventDefault()
+    if (!groupLinkModal) return
+    const { group, pendingText, linkInput } = groupLinkModal
+    if (!linkInput.trim()) {
+      showNotif('Please enter a WhatsApp group link', 'error')
+      return
+    }
+
+    let cleanLink = linkInput.trim()
+    if (!cleanLink.startsWith('http://') && !cleanLink.startsWith('https://')) {
+      cleanLink = 'https://' + cleanLink
+    }
+
+    setSavingGroupLink(true)
+    try {
+      const updated = groups.map(g => g.id === group.id ? { ...g, link: cleanLink } : g)
+      const fresh = await updateWhatsAppGroups(updated)
+      setData(fresh)
+
+      if (pendingText) {
+        try {
+          await navigator.clipboard.writeText(pendingText)
+        } catch (err) {}
+      }
+
+      window.open(cleanLink, '_blank')
+      showNotif(`Link saved! Opening ${group.name} — paste (Ctrl+V) directly in the group chat.`)
+      setGroupLinkModal(null)
+    } catch (err) {
+      showNotif('Failed to save group link', 'error')
+    } finally {
+      setSavingGroupLink(false)
+    }
+  }
+
+  const handleOpenFallbackShare = () => {
+    if (!groupLinkModal) return
+    const { group, pendingText } = groupLinkModal
+    const encoded = encodeURIComponent(pendingText || messageText)
+    window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank')
+    showNotif(`Notice copied! Select "${group.name}" in WhatsApp and click Send.`)
+    setGroupLinkModal(null)
   }
 
   const handleSendToCurrentContact = () => {
@@ -583,16 +643,16 @@ export default function WhatsAppBroadcastHub({
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  Click a group button below. WhatsApp will open with your announcement already typed — simply tap the group and press <strong>Send</strong>:
+                  Click a group below to automatically copy the announcement and open that WhatsApp group chat directly:
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {groups.map(g => (
-                  <button
+                  <div
                     key={g.id}
                     onClick={() => handleShareToGroup(g)}
-                    className="flex items-center justify-between p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all text-emerald-900 dark:text-emerald-200 group active:scale-98 shadow-sm"
+                    className="flex items-center justify-between p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100/90 dark:hover:bg-emerald-900/40 transition-all text-emerald-900 dark:text-emerald-200 group active:scale-98 shadow-sm cursor-pointer"
                   >
                     <div className="flex items-center gap-3 text-left">
                       <div className="size-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
@@ -601,19 +661,43 @@ export default function WhatsAppBroadcastHub({
                       <div>
                         <span className="text-xs font-black block group-hover:text-emerald-700">{g.name}</span>
                         <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                          Click to Send to Group <ArrowRight size={10} />
+                          {g.link ? (
+                            <>Open Direct Group Chat &amp; Paste <ArrowRight size={10} /></>
+                          ) : (
+                            <>Connect Group Link &amp; Open <ArrowRight size={10} /></>
+                          )}
                         </span>
                       </div>
                     </div>
-                    <Send size={16} className="text-emerald-600 group-hover:translate-x-1 transition-transform" />
-                  </button>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setGroupLinkModal({
+                            group: g,
+                            pendingText: messageText,
+                            linkInput: g.link || ''
+                          })
+                        }}
+                        className="p-1.5 rounded-lg text-emerald-700/60 hover:text-emerald-900 hover:bg-emerald-200/50 dark:hover:bg-emerald-800/50 transition-colors"
+                        title="Configure WhatsApp Group Link"
+                      >
+                        <Link2 size={15} />
+                      </button>
+                      <div className="size-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
+                        <Send size={14} />
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
 
               <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-slate-800 flex items-start gap-2.5 text-xs text-slate-600 dark:text-slate-400">
                 <span className="text-base flex-shrink-0">💡</span>
                 <p className="leading-relaxed">
-                  <strong>How It Works:</strong> When you click <strong>Post to Group</strong>, WhatsApp opens with your chosen notice pre-filled. Tap the group (<strong>N.T.R.C Sector 7D/1</strong> or <strong>NTRG 2 Asad Hanzalla street</strong>) and press Send. Everyone in the group receives it instantly! The text is also auto-copied to your clipboard if you prefer to paste directly.
+                  <strong>Direct Group Access:</strong> Clicking a group button copies the announcement to your clipboard and opens that specific WhatsApp group chat directly. When WhatsApp opens, simply paste (<strong>Ctrl+V</strong>) and hit Send! Click the link icon (<Link2 size={12} className="inline mx-0.5 text-emerald-600" />) to update any group invite link anytime.
                 </p>
               </div>
             </div>
@@ -905,20 +989,39 @@ export default function WhatsAppBroadcastHub({
                     <h4 className="text-sm font-extrabold text-slate-800 dark:text-slate-100">{g.name}</h4>
                     <p className="text-[11px] text-slate-500 font-mono">
                       {g.link ? (
-                        <a href={g.link} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                          Group Invite Link <ExternalLink size={10} />
+                        <a href={g.link} target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline flex items-center gap-1 font-semibold">
+                          Group Chat Linked <ExternalLink size={10} />
                         </a>
-                      ) : 'Default Community Group'}
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setGroupLinkModal({ group: g, linkInput: '' })}
+                          className="text-amber-600 hover:underline font-bold text-[10px]"
+                        >
+                          + Set Group Invite Link
+                        </button>
+                      )}
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDeleteGroup(g.id)}
-                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                  title="Remove Group"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setGroupLinkModal({ group: g, linkInput: g.link || '' })}
+                    className="p-2 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition-colors"
+                    title="Configure WhatsApp Group Link"
+                  >
+                    <Link2 size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteGroup(g.id)}
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Remove Group"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -928,7 +1031,7 @@ export default function WhatsAppBroadcastHub({
             <h4 className="text-xs font-extrabold text-primary uppercase tracking-wider flex items-center gap-1.5">
               <Plus size={14} /> Add Another WhatsApp Group
             </h4>
-            <form onSubmit={handleAddGroup} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <form onSubmit={handleAddGroup} className="grid grid-cols-1 sm:grid-cols-5 gap-3">
               <input
                 type="text"
                 placeholder="Group Name (e.g. NTRG 3 Sector 7D)"
@@ -936,6 +1039,13 @@ export default function WhatsAppBroadcastHub({
                 onChange={e => setNewGroupName(e.target.value)}
                 required
                 className="sm:col-span-2 p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-2 focus:ring-primary"
+              />
+              <input
+                type="url"
+                placeholder="WhatsApp Group Invite Link (https://chat.whatsapp.com/...)"
+                value={newGroupLink}
+                onChange={e => setNewGroupLink(e.target.value)}
+                className="sm:col-span-2 p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs outline-none focus:ring-2 focus:ring-primary font-mono"
               />
               <button
                 type="submit"
@@ -1088,6 +1198,100 @@ export default function WhatsAppBroadcastHub({
                 Import {bulkParsed.length} Contacts
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: Connect / Configure WhatsApp Group Link ─── */}
+      {groupLinkModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
+              <div className="flex items-center gap-2.5">
+                <div className="size-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-bold">
+                  <Link2 size={18} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                    Connect Direct Group Chat
+                  </h3>
+                  <p className="text-[11px] text-slate-500 truncate max-w-[240px]">
+                    {groupLinkModal.group?.name}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setGroupLinkModal(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Paste the <strong>WhatsApp Group Invite Link</strong> for <strong>{groupLinkModal.group?.name}</strong>. Once saved, clicking this group button will immediately open this specific group chat directly in WhatsApp!
+            </p>
+
+            <form onSubmit={handleSaveAndOpenGroupLink} className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                  WhatsApp Group Invite Link
+                </label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://chat.whatsapp.com/..."
+                    value={groupLinkModal.linkInput}
+                    onChange={e => setGroupLinkModal({ ...groupLinkModal, linkInput: e.target.value })}
+                    className="w-full pl-3 pr-20 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const clip = await navigator.clipboard.readText()
+                        if (clip) setGroupLinkModal(prev => ({ ...prev, linkInput: clip.trim() }))
+                      } catch (err) {}
+                    }}
+                    className="absolute right-2 top-2 text-[10px] font-bold px-2 py-1 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300"
+                  >
+                    Paste
+                  </button>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl border border-emerald-200/70 dark:border-emerald-800/40 text-[11px] text-emerald-900 dark:text-emerald-200 space-y-1">
+                <span className="font-extrabold block">💡 How to get this link in WhatsApp:</span>
+                <ol className="list-decimal list-inside space-y-0.5 opacity-90 pl-1 text-[11px]">
+                  <li>Open the group in WhatsApp (Mobile or Web).</li>
+                  <li>Tap the Group Name at the top for <strong>Group Info</strong>.</li>
+                  <li>Tap <strong>Invite via link</strong> &gt; <strong>Copy link</strong>.</li>
+                </ol>
+              </div>
+
+              <div className="flex flex-col gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+                <button
+                  type="submit"
+                  disabled={savingGroupLink || !groupLinkModal.linkInput?.trim()}
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-extrabold rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5"
+                >
+                  <Send size={14} />
+                  <span>{savingGroupLink ? 'Saving...' : 'Save Link & Open Group Chat Directly'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenFallbackShare}
+                  className="w-full py-2 text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 text-xs font-semibold hover:underline"
+                >
+                  Or Open WhatsApp Share Picker (Forward) →
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
