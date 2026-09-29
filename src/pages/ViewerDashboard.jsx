@@ -375,15 +375,6 @@ export default function ViewerDashboard() {
         </div>
         
         <div className="flex items-center gap-3">
-          <button
-            onClick={handleOpenFeedback}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500 hover:text-white transition-all text-xs font-extrabold border border-amber-500/25 shadow-xs active:scale-95"
-            title="Give Resident Feedback & Rating"
-          >
-            <Star size={15} className="fill-amber-400 text-amber-500 group-hover:fill-white" />
-            <span>Feedback &amp; Rating</span>
-          </button>
-
           <div className="hidden md:flex items-center gap-2 bg-slate-100 dark:bg-primary/10 px-3 py-1.5 rounded-full">
             <span className="material-symbols-outlined text-sm text-primary">visibility</span>
             <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Read-only Access</span>
@@ -433,12 +424,6 @@ export default function ViewerDashboard() {
             </div>
             <div className="flex items-center gap-3 self-end sm:self-auto flex-wrap">
               <button
-                onClick={handleOpenFeedback}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500 hover:text-white text-amber-800 dark:text-amber-300 text-xs font-bold border border-amber-500/25 transition-all shadow-xs active:scale-95"
-              >
-                <Star size={13} className="fill-amber-400" /> Rate &amp; Feedback
-              </button>
-              <button
                 onClick={() => setShowCheckInModal(true)}
                 className="text-xs font-bold text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 hover:underline"
               >
@@ -470,17 +455,11 @@ export default function ViewerDashboard() {
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Tap &ldquo;Identify Yourself&rdquo; to link your Name &amp; House Address, or leave a review below.
+                  Tap &ldquo;Identify Yourself&rdquo; to link your Name &amp; House Address to this device.
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 self-start sm:self-auto">
-              <button
-                onClick={handleOpenFeedback}
-                className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold px-3.5 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-98"
-              >
-                <Star size={14} className="fill-white" /> Rate &amp; Feedback
-              </button>
               <button
                 onClick={() => setShowCheckInModal(true)}
                 className="bg-primary hover:bg-primary-hover text-white text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 active:scale-98"
@@ -500,17 +479,11 @@ export default function ViewerDashboard() {
                   Welcome to the Community Expense Portal
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  No WhatsApp group membership required! Browse monthly financial accounts, check water schedule, and share your feedback.
+                  No WhatsApp group membership required! Browse monthly financial accounts, check water schedule, and community records.
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 self-start sm:self-auto">
-              <button
-                onClick={handleOpenFeedback}
-                className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold px-3.5 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-98"
-              >
-                <Star size={14} className="fill-white" /> Give Feedback
-              </button>
               <button
                 onClick={() => setShowCheckInModal(true)}
                 className="bg-primary hover:bg-primary-hover text-white text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 active:scale-98"
@@ -624,51 +597,31 @@ export default function ViewerDashboard() {
                 </div>
               </div>
             </div>
-            
-            {/* Resident Feedback & Rating Trigger Card */}
-            <div className="bg-gradient-to-br from-amber-50 via-orange-50/30 to-amber-100/40 dark:from-slate-800 dark:to-slate-800/90 p-5 rounded-2xl border border-amber-200/80 dark:border-amber-900/40 shadow-sm space-y-3">
-              <div className="flex items-center gap-2.5">
-                <div className="size-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-sm shadow-amber-500/20">
-                  <Star size={18} className="fill-white" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-extrabold text-slate-800 dark:text-slate-100">Resident Feedback &amp; Rating</h4>
-                  <p className="text-[11px] text-amber-700 dark:text-amber-400 font-semibold">Your rating helps improve community services</p>
-                </div>
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                Have feedback or suggestions regarding water supply, street cleaning, security, or expenses? Share your rating &amp; comments directly with the management committee.
-              </p>
-              <button
-                onClick={handleOpenFeedback}
-                className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98"
-              >
-                <Star size={14} className="fill-white" /> Rate Dashboard &amp; Leave Feedback
-              </button>
-            </div>
 
           </div>
         </div>
 
         {/* ─── Resident Reviews & Community Feedback Section ─── */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-blue-600/10 via-indigo-600/5 to-purple-600/10 dark:from-slate-800/90 dark:to-slate-900/90 rounded-3xl p-6 sm:p-8 lg:p-10 border border-blue-500/20 dark:border-slate-700 shadow-sm space-y-6">
+        <section className="relative overflow-hidden bg-gradient-to-br from-blue-600/10 via-indigo-600/5 to-purple-600/10 dark:from-slate-800/90 dark:to-slate-900/90 rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-9 border border-blue-500/20 dark:border-slate-700 shadow-sm space-y-6">
           {/* Subtle glow decorative background */}
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
           {/* Section Header */}
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-primary/10 dark:border-slate-700/60 pb-6">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-primary/10 dark:border-slate-700/60 pb-5">
             <div>
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 shadow-2xs">
                   <Sparkles size={12} className="text-blue-600 dark:text-blue-400" />
                   Community Reviews &amp; Feedback
                 </span>
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                  <CheckCircle2 size={12} /> {feedbackList.length}+ Positive Reviews
-                </span>
+                {feedbackList.length > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                    <CheckCircle2 size={12} /> {feedbackList.length} Verified {feedbackList.length === 1 ? 'Review' : 'Reviews'}
+                  </span>
+                )}
               </div>
-              <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+              <h3 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
                 What North Town Residents Are Saying
               </h3>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
@@ -676,24 +629,25 @@ export default function ViewerDashboard() {
               </p>
             </div>
 
-            <div className="flex items-center gap-3 flex-wrap">
-              {/* Average Rating Pill */}
-              <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/60 px-3.5 py-2 rounded-2xl shadow-xs">
-                <div className="flex items-center gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={15} className="fill-amber-400 text-amber-400" />
-                  ))}
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+              {feedbackList.length > 0 && (
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/60 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl shadow-xs">
+                  <div className="flex items-center gap-0.5">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} size={14} className="fill-amber-400 text-amber-400" />
+                    ))}
+                  </div>
+                  <div className="border-l border-slate-200 dark:border-slate-700 pl-2 text-left">
+                    <p className="text-xs font-black text-slate-800 dark:text-slate-200 leading-none">{avgRating} / 5.0</p>
+                    <p className="text-[9px] text-amber-600 dark:text-amber-400 font-bold leading-none mt-0.5">Top Rated</p>
+                  </div>
                 </div>
-                <div className="border-l border-slate-200 dark:border-slate-700 pl-2 text-left">
-                  <p className="text-xs font-black text-slate-800 dark:text-slate-200 leading-none">{avgRating} / 5.0</p>
-                  <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold leading-none mt-0.5">Top Rated</p>
-                </div>
-              </div>
+              )}
 
-              {/* Leave Review Action Button */}
+              {/* Single ONLY Review Button */}
               <button
                 onClick={handleOpenFeedback}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-extrabold rounded-2xl shadow-sm shadow-primary/25 transition-all active:scale-95"
+                className="inline-flex items-center gap-2 px-4 py-2 sm:py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-extrabold rounded-2xl shadow-sm shadow-primary/25 transition-all active:scale-95 whitespace-nowrap"
               >
                 <Star size={14} className="fill-white" />
                 <span>+ Rate &amp; Leave Review</span>
@@ -701,102 +655,105 @@ export default function ViewerDashboard() {
             </div>
           </div>
 
-          {/* Cards Grid */}
-          <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {feedbackList.map((f, idx) => {
-              const rating = Number(f.rating) || 5
-              const initials = (f.name || 'R').charAt(0).toUpperCase()
-              return (
-                <div
-                  key={f.id || idx}
-                  className="bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-700 shadow-md shadow-blue-500/5 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
-                >
-                  {/* Card Top: Avatar, Name, House Address & Community Badge */}
-                  <div>
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-3">
-                        {/* Avatar with Blue Verified Checkmark Overlay */}
-                        <div className="relative size-11 rounded-full bg-gradient-to-tr from-primary to-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-md shadow-primary/20 flex-shrink-0">
-                          {initials}
-                          <div
-                            className="absolute -bottom-1 -right-1 size-5 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800 shadow-xs"
-                            title="Verified Resident Profile"
-                          >
-                            <Check size={11} strokeWidth={3} />
+          {/* Cards Grid or Empty State */}
+          {feedbackList.length === 0 ? (
+            <div className="relative z-10 text-center py-10 px-4 bg-white/70 dark:bg-slate-800/70 rounded-2xl sm:rounded-3xl border border-dashed border-slate-200 dark:border-slate-700 max-w-lg mx-auto space-y-3">
+              <div className="size-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
+                <Star size={24} className="fill-amber-400" />
+              </div>
+              <h4 className="text-base font-extrabold text-slate-800 dark:text-slate-100">
+                No Resident Reviews Yet
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-md mx-auto">
+                Be the first resident to rate this month&apos;s financial summary, water supply schedule, or community services. Tap &ldquo;+ Rate &amp; Leave Review&rdquo; above!
+              </p>
+            </div>
+          ) : (
+            <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+              {feedbackList.map((f, idx) => {
+                const rating = Number(f.rating) || 5
+                const initials = (f.name || 'R').charAt(0).toUpperCase()
+                return (
+                  <div
+                    key={f.id || idx}
+                    className="bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl p-5 border border-slate-200/80 dark:border-slate-700 shadow-md shadow-blue-500/5 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
+                  >
+                    <div>
+                      {/* Card Top: Avatar, Name, House Address & Verified Badge */}
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          {/* Avatar with Blue Verified Checkmark Overlay */}
+                          <div className="relative size-10 sm:size-11 rounded-full bg-gradient-to-tr from-primary to-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-md shadow-primary/20 flex-shrink-0">
+                            {initials}
+                            <div
+                              className="absolute -bottom-1 -right-1 size-4 sm:size-5 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800 shadow-xs"
+                              title="Verified Resident Profile"
+                            >
+                              <Check size={10} strokeWidth={3} />
+                            </div>
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="font-extrabold text-sm text-slate-800 dark:text-slate-100 leading-tight truncate">
+                                {f.name}
+                              </p>
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/50 flex-shrink-0">
+                                Verified
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1 truncate font-medium">
+                              <Home size={11} className="text-purple-500 flex-shrink-0" />
+                              <span className="truncate">{f.houseAddress || 'Sector 7D/1'}</span>
+                            </p>
                           </div>
                         </div>
 
-                        <div>
-                          <p className="font-extrabold text-sm sm:text-base text-slate-800 dark:text-slate-100 leading-tight">
-                            {f.name}
-                          </p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1 font-medium">
-                            <Home size={11} className="text-purple-500 flex-shrink-0" />
-                            <span>{f.houseAddress || 'Sector 7D/1'}</span>
-                            <span className="text-slate-300 dark:text-slate-600">•</span>
-                            <span className="text-blue-600 dark:text-blue-400 font-bold">Verified Resident</span>
-                          </p>
+                        {/* Verified Shield Icon */}
+                        <div
+                          className="size-7 sm:size-8 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/60 flex items-center justify-center text-blue-600 dark:text-blue-400 flex-shrink-0"
+                          title="Verified Community Review"
+                        >
+                          <ShieldCheck size={16} />
                         </div>
                       </div>
 
-                      {/* Verified Shield Icon */}
-                      <div
-                        className="size-8 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/60 flex items-center justify-center text-blue-600 dark:text-blue-400 flex-shrink-0"
-                        title="Verified Community Review"
-                      >
-                        <ShieldCheck size={17} />
+                      {/* Star Rating & Relative Time */}
+                      <div className="flex items-center gap-2 my-2.5">
+                        <div className="flex items-center gap-0.5">
+                          {[...Array(5)].map((_, sIdx) => (
+                            <Star
+                              key={sIdx}
+                              size={15}
+                              className={sIdx < rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200 dark:text-slate-600'}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs font-semibold text-slate-400">
+                          {timeAgo(f.timestamp) || f.dateStr || 'Recently'}
+                        </span>
                       </div>
+
+                      {/* Review Text / Quote */}
+                      <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-normal mt-2">
+                        &ldquo;{f.comment || 'Accounts are clear and well managed. Complete financial transparency.'}&rdquo;
+                      </p>
                     </div>
 
-                    {/* Star Rating & Relative Time */}
-                    <div className="flex items-center gap-2 my-2">
-                      <div className="flex items-center gap-0.5">
-                        {[...Array(5)].map((_, sIdx) => (
-                          <Star
-                            key={sIdx}
-                            size={16}
-                            className={sIdx < rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200 dark:text-slate-600'}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-xs font-semibold text-slate-400">
-                        {timeAgo(f.timestamp) || f.dateStr || 'Recently'}
+                    {/* Card Bottom Meta */}
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-[11px]">
+                      <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-800/40">
+                        <CheckCircle2 size={11} /> Verified Review
+                      </span>
+                      <span className="text-slate-400 font-semibold">
+                        {f.monthViewed || currentMonthKey}
                       </span>
                     </div>
-
-                    {/* Review Text / Quote */}
-                    <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-normal mt-2.5">
-                      &ldquo;{f.comment || 'Accounts are clear and well managed. Complete financial transparency.'}&rdquo;
-                    </p>
                   </div>
-
-                  {/* Card Bottom Meta */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-[11px]">
-                    <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-800/40">
-                      <CheckCircle2 size={11} /> Verified Review
-                    </span>
-                    <span className="text-slate-400 font-semibold">
-                      {f.monthViewed || currentMonthKey}
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Bottom Prompt Call to Action */}
-          <div className="relative z-10 pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 border-t border-primary/10 dark:border-slate-700/60">
-            <p>
-              Have feedback on water supply schedule, security, or expenses? Share your rating to help the management committee improve services.
-            </p>
-            <button
-              onClick={handleOpenFeedback}
-              className="font-extrabold text-primary hover:underline flex items-center gap-1 flex-shrink-0"
-            >
-              <span>Submit your review</span>
-              <ArrowRight size={13} />
-            </button>
-          </div>
+                )
+              })}
+            </div>
+          )}
         </section>
 
       </main>
