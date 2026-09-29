@@ -2,14 +2,118 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/dashboard-icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="description" content="Society Monthly Expense Dashboard - Real-time financial transparency, water supply tracker, and resident feedback." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <title>Monthly Expense Dashboard</title>
+    <title>Society Monthly Expense Dashboard</title>
+    <style>
+      /* Lightweight inline styles for initial loading shell */
+      #app-skeleton {
+        font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+        min-height: 100vh;
+        background-color: #f8fafc;
+        padding: 16px;
+        box-sizing: border-box;
+      }
+      .sk-container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .sk-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 24px;
+      }
+      .sk-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .sk-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        padding: 20px;
+        min-height: 110px;
+      }
+      .sk-pulse {
+        background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+        background-size: 200% 100%;
+        animation: sk-shimmer 1.5s infinite;
+        border-radius: 8px;
+      }
+      @keyframes sk-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+      .sk-spinner-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 16px;
+        gap: 12px;
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .sk-spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #2563eb;
+        border-radius: 50%;
+        animation: sk-spin 0.8s linear infinite;
+      }
+      @keyframes sk-spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Lightweight initial shell placeholder for slow connections -->
+      <div id="app-skeleton">
+        <div class="sk-container">
+          <div class="sk-header">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="sk-pulse" style="width:36px;height:36px;border-radius:10px;"></div>
+              <div class="sk-pulse" style="width:160px;height:20px;"></div>
+            </div>
+            <div class="sk-pulse" style="width:90px;height:28px;border-radius:8px;"></div>
+          </div>
+          <div class="sk-cards">
+            <div class="sk-card">
+              <div class="sk-pulse" style="width:50%;height:14px;margin-bottom:12px;"></div>
+              <div class="sk-pulse" style="width:75%;height:26px;"></div>
+            </div>
+            <div class="sk-card">
+              <div class="sk-pulse" style="width:50%;height:14px;margin-bottom:12px;"></div>
+              <div class="sk-pulse" style="width:75%;height:26px;"></div>
+            </div>
+            <div class="sk-card">
+              <div class="sk-pulse" style="width:50%;height:14px;margin-bottom:12px;"></div>
+              <div class="sk-pulse" style="width:75%;height:26px;"></div>
+            </div>
+          </div>
+          <div class="sk-spinner-wrap">
+            <div class="sk-spinner"></div>
+            <span>Loading Society Monthly Expense Dashboard...</span>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
