@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ListChecks, Camera, FileBarChart2, Settings, LogOut,
-  Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff, Sparkles, MessageSquare
+  Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff, Sparkles, MessageSquare, BarChart3
 } from 'lucide-react'
 import {
   loadData, addExpense, updateExpense, deleteExpense,
@@ -16,6 +16,7 @@ import ExpenseTable from '../components/ExpenseTable'
 import Charts from '../components/Charts'
 import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import WhatsAppBroadcastHub from '../components/WhatsAppBroadcastHub'
+import AnalyticsDashboard from '../components/AnalyticsDashboard'
 import { exportToCSV, printReport } from '../utils/export'
 import { predictNextWaterSupply } from '../utils/waterPrediction'
 
@@ -314,6 +315,7 @@ export default function AdminPanel() {
     { id: 'reports',   icon: <FileBarChart2  size={18}/>, label: 'Reports' },
     { id: 'water',     icon: <Droplet        size={18}/>, label: 'Water Supply' },
     { id: 'broadcast', icon: <MessageSquare  size={18}/>, label: 'WhatsApp Hub' },
+    { id: 'analytics', icon: <BarChart3      size={18}/>, label: 'Analytics' },
     { id: 'settings',  icon: <Settings       size={18}/>, label: 'Settings' },
   ]
 
@@ -802,6 +804,15 @@ export default function AdminPanel() {
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
             totals={totals}
+            showNotif={showNotif}
+          />
+        )}
+
+        {/* Resident Visitor Analytics Dashboard */}
+        {activeTab === 'analytics' && (
+          <AnalyticsDashboard
+            data={data}
+            setData={setData}
             showNotif={showNotif}
           />
         )}

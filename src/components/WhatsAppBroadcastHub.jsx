@@ -194,7 +194,12 @@ export default function WhatsAppBroadcastHub({
     const current = filteredContacts[queueIndex]
     if (!current) return
     const cleanPhone = current.phone.replace(/[^0-9]/g, '')
-    const encoded = encodeURIComponent(messageText)
+    // Personalize link for direct tracking if present
+    let personalizedText = messageText
+    if (personalizedText.includes('/view') && !personalizedText.includes('?u=')) {
+      personalizedText = personalizedText.replace(/\/view(?!\?)/g, `/view?u=${cleanPhone}`)
+    }
+    const encoded = encodeURIComponent(personalizedText)
     const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encoded}`
     window.open(url, '_blank')
 

@@ -1,5 +1,5 @@
 import { db } from './firebase'
-import { collection, doc, getDoc, getDocs, query, orderBy, setDoc, addDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, query, orderBy, limit, setDoc, addDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore'
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -82,16 +82,21 @@ export const loadData = async () => {
   const groupsDocRef = doc(db, 'settings', 'whatsapp_groups')
   const groupsPromise = getDoc(groupsDocRef).catch(() => null)
 
-  const [settingsDoc, recordsSnapshot, expensesSnapshot, waterSupplySnapshot, contactsSnapshot, groupsDoc] = await Promise.all([
+  const visitorLogsCol = collection(db, 'visitor_logs')
+  const visitorLogsQuery = query(visitorLogsCol, orderBy('timestamp', 'desc'), limit(500))
+  const visitorLogsPromise = getDocs(visitorLogsQuery).catch(() => null)
+
+  const [settingsDoc, recordsSnapshot, expensesSnapshot, waterSupplySnapshot, contactsSnapshot, groupsDoc, visitorLogsSnapshot] = await Promise.all([
     settingsDocPromise,
     recordsPromise,
     expensesPromise,
     waterSupplyPromise,
     contactsPromise,
-    groupsPromise
+    groupsPromise,
+    visitorLogsPromise
   ]).catch(err => {
     console.error("Firebase data load error:", err)
-    return [null, null, null, null, null, null]
+    return [null, null, null, null, null, null, null]
   })
 
   let settings = {
@@ -176,7 +181,23 @@ export const loadData = async () => {
     }
   }
 
-  return { settings, monthlyRecords, expenses, waterSupply, contacts, groups }
+  const visitorLogs = visitorLogsSnapshot ? visitorLogsSnapshot.docs.map(d => {
+    const data = d.data()
+    return {
+      id: d.id,
+      name: data.name || '',
+      phone: data.phone || '',
+      houseNo: data.houseNo || '',
+      tag: data.tag || 'Resident',
+      device: data.device || 'Desktop',
+      monthViewed: data.monthViewed || '',
+      userAgent: data.userAgent || '',
+      timestamp: data.timestamp || 0,
+      dateStr: data.dateStr || ''
+    }
+  }) : []
+
+  return { settings, monthlyRecords, expenses, waterSupply, contacts, groups, visitorLogs }
 }
 
 // ─── Settings ────────────────────────────────────────────────
@@ -411,5 +432,51 @@ export const updateWhatsAppGroups = async (groups) => {
   const docRef = doc(db, 'settings', 'whatsapp_groups')
   await setDoc(docRef, { groups, updatedAt: Date.now() }, { merge: true })
   return loadData()
+}
+
+// ─── Resident Visitor Analytics CRUD ─────────────────────────
+
+export const logVisitor = async (visitorData = {}) => {
+  try {
+    const col = collection(db, 'visitor_logs')
+    const now = new Date()
+    const docData = {
+      name: visitorData.name || 'Anonymous Resident',
+      phone: visitorData.phone || '',
+      houseNo: visitorData.houseNo || '',
+      tag: visitorData.tag || 'Resident',
+      device: visitorData.device || (window.innerWidth < 768 ? 'Mobile' : 'Desktop'),
+      monthViewed: visitorData.monthViewed || '',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      timestamp: Date.now(),
+      dateStr: now.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
+    }
+    await addDoc(col, docData)
+    return docData
+  } catch (err) {
+    console.warn("Could not log visitor event to Firestore:", err)
+    return null
+  }
+}
+
+export const clearVisitorLogs = async () => {
+  try {
+    const col = collection(db, 'visitor_logs')
+    const snapshot = await getDocs(query(col, limit(100)))
+    const batch = writeBatch(db)
+    snapshot.docs.forEach(d => batch.delete(d.ref))
+    await batch.commit()
+    return loadData()
+  } catch (err) {
+    console.error("Failed to clear visitor logs:", err)
+    return loadData()
+  }
 }
 
