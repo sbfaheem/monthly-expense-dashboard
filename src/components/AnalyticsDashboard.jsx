@@ -1901,7 +1901,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
                       type="text"
                       value={assignForm.houseAddress}
                       onChange={(e) => setAssignForm({ ...assignForm, houseAddress: e.target.value })}
-                      placeholder="e.g. House 42-A, St 2"
+                      placeholder="e.g. R-100 Sector 7D/1 or A-4 Sector 7D/1"
                       className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>

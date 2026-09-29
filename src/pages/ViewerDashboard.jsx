@@ -801,7 +801,7 @@ export default function ViewerDashboard() {
                         <Home size={14} className="absolute left-3 top-3 text-slate-400" />
                         <input
                           type="text"
-                          placeholder="e.g. House 14-B / Street 2"
+                          placeholder="e.g. R-100 Sector 7D/1 or A-4 Sector 7D/1"
                           value={manualAddress}
                           onChange={(e) => setManualAddress(e.target.value)}
                           className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
@@ -968,7 +968,7 @@ export default function ViewerDashboard() {
                         <Home size={14} className="absolute left-3 top-3 text-slate-400" />
                         <input
                           type="text"
-                          placeholder="e.g. House 42-A, St 2"
+                          placeholder="e.g. R-100 Sector 7D/1 or A-4 Sector 7D/1"
                           value={feedbackAddress}
                           onChange={(e) => setFeedbackAddress(e.target.value)}
                           className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
