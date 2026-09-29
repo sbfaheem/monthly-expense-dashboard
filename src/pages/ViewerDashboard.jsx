@@ -124,11 +124,11 @@ export default function ViewerDashboard() {
         }
         setResident(fullResident)
         localStorage.setItem('resident_identity', JSON.stringify(fullResident))
-      } else if (resolvedGroup) {
-        // Prompt check-in modal after a brief pause if arriving from WhatsApp group without identity
+      } else {
+        // Prompt check-in modal immediately if arriving without confirmed identity
         setTimeout(() => {
           setShowCheckInModal(true)
-        }, 800)
+        }, 400)
       }
     }).catch(err => {
       console.error('Failed to load data:', err)
@@ -141,38 +141,37 @@ export default function ViewerDashboard() {
   const monthlyExpenses = data.expenses.filter(e => e.month === currentMonthKey)
   const totals = calculateTotals(data.expenses, data.settings, data.monthlyRecords, currentMonthKey)
 
-  // Log visit to Firestore whenever month or resident is loaded/changed
+  // Log visit to Firestore ONLY when resident identity is confirmed
   useEffect(() => {
-    if (loading || !selectedMonth) return
+    if (loading || !selectedMonth || !resident) return
 
     const sessionKey = `visited_${currentMonthKey}_${resident?.phone || resident?.name || 'anon'}_${resident?.group || detectedGroup || 'general'}`
     if (sessionStorage.getItem(sessionKey)) return
+    sessionStorage.setItem(sessionKey, 'true')
 
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
     const logPayload = {
-      name: resident?.name || 'Guest / Unverified Resident',
-      phone: resident?.phone || '',
-      houseNo: resident?.houseNo || resident?.houseAddress || '',
-      houseAddress: resident?.houseAddress || resident?.houseNo || '',
-      group: resident?.group || detectedGroup || 'Unspecified Group',
-      tag: resident?.tag || 'Resident',
+      name: resident.name,
+      phone: resident.phone || '',
+      houseNo: resident.houseNo || resident.houseAddress || '',
+      houseAddress: resident.houseAddress || resident.houseNo || '',
+      group: resident.group || detectedGroup || 'NTRG 2 Asad Hanzalla street',
+      tag: resident.tag || 'Resident',
       monthViewed: currentMonthKey,
       device: isMobile ? 'Mobile' : 'Desktop'
     }
 
-    logVisitor(logPayload).then(() => {
-      sessionStorage.setItem(sessionKey, 'true')
-    })
+    logVisitor(logPayload)
   }, [loading, currentMonthKey, resident, detectedGroup])
 
   // Filter contacts for check-in modal based on group & search query
   const filteredDirectoryContacts = useMemo(() => {
     if (!data.contacts) return []
     let list = data.contacts
-    if (selectedModalGroup) {
+    if (selectedModalGroup && selectedModalGroup !== 'Direct Resident (No WhatsApp Group)') {
       list = list.filter(c => (c.group || 'NTRG 2 Asad Hanzalla street') === selectedModalGroup)
     }
-    if (!residentSearchQuery.trim()) return list.slice(0, 30)
+    if (!residentSearchQuery.trim()) return list
     const q = residentSearchQuery.toLowerCase()
     return list.filter(c =>
       c.name?.toLowerCase().includes(q) ||
@@ -186,8 +185,11 @@ export default function ViewerDashboard() {
       ...c,
       houseAddress: c.houseAddress || c.houseNo || '',
       houseNo: c.houseAddress || c.houseNo || '',
-      group: c.group || selectedModalGroup || detectedGroup || 'Direct Community Resident'
+      group: c.group || selectedModalGroup || detectedGroup || 'NTRG 2 Asad Hanzalla street'
     }
+    const sessionKey = `visited_${currentMonthKey}_${fullContact.phone || fullContact.name || 'anon'}_${fullContact.group || detectedGroup || 'general'}`
+    sessionStorage.setItem(sessionKey, 'true')
+
     setResident(fullContact)
     localStorage.setItem('resident_identity', JSON.stringify(fullContact))
     setShowCheckInModal(false)
@@ -196,7 +198,7 @@ export default function ViewerDashboard() {
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
     logVisitor({
       name: fullContact.name,
-      phone: fullContact.phone,
+      phone: fullContact.phone || '',
       houseNo: fullContact.houseNo || '',
       houseAddress: fullContact.houseAddress || fullContact.houseNo || '',
       group: fullContact.group,
@@ -215,12 +217,34 @@ export default function ViewerDashboard() {
       houseAddress: manualAddress.trim() || '',
       houseNo: manualAddress.trim() || '',
       tag: 'Resident',
-      group: selectedModalGroup || detectedGroup || 'Direct Community Resident'
+      group: selectedModalGroup || detectedGroup || 'NTRG 2 Asad Hanzalla street'
     }
     handleSelectResident(customResident)
     setManualName('')
     setManualPhone('')
     setManualAddress('')
+  }
+
+  const handleDismissModal = () => {
+    setShowCheckInModal(false)
+    if (!resident) {
+      const groupShort = (selectedModalGroup || detectedGroup || '').includes('7D') ? 'Sector 7D/1' : 'Asad Hanzalla'
+      const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
+      const sessionKey = `visited_${currentMonthKey}_guest_${selectedModalGroup || detectedGroup || 'general'}`
+      if (!sessionStorage.getItem(sessionKey)) {
+        sessionStorage.setItem(sessionKey, 'true')
+        logVisitor({
+          name: `Resident (${groupShort})`,
+          phone: '',
+          houseNo: 'Community Resident',
+          houseAddress: 'Community Resident',
+          group: selectedModalGroup || detectedGroup || 'NTRG 2 Asad Hanzalla street',
+          tag: 'Resident',
+          monthViewed: currentMonthKey,
+          device: isMobile ? 'Mobile' : 'Desktop'
+        })
+      }
+    }
   }
 
   const handleOpenFeedback = () => {
@@ -606,7 +630,7 @@ export default function ViewerDashboard() {
       {showCheckInModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
           <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[92vh] flex flex-col">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700 flex-shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="size-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
                   <UserCheck size={18} />
@@ -617,166 +641,195 @@ export default function ViewerDashboard() {
                 </div>
               </div>
               <button
-                onClick={() => setShowCheckInModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100"
+                onClick={handleDismissModal}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                title="Close"
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Non-Coercive Reassurance Notice */}
-            <div className="mt-3 p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl">
-              <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-200 leading-relaxed">
-                ℹ️ <strong>No WhatsApp group membership required:</strong> You can browse the complete monthly expense dashboard directly. Enter your Name, Phone Number, and House Address so the management knows you have reviewed this financial summary.
-              </p>
-            </div>
+            {/* Scrollable Modal Content */}
+            <div className="flex-1 overflow-y-auto py-3 space-y-4 pr-1">
+              {/* Non-Coercive Reassurance Notice */}
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl">
+                <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-200 leading-relaxed">
+                  ℹ️ <strong>No WhatsApp group membership required:</strong> You can view the full monthly expense dashboard directly. Enter your Name, Phone Number, and House Address so the management committee knows you have reviewed the accounts.
+                </p>
+              </div>
 
-            {/* Quick Household Entry Form */}
-            <div className="mt-4 pt-1">
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2.5">
-                Enter Your Household Details
-              </h4>
-              <form onSubmit={handleManualCheckIn} className="space-y-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Full Name *</label>
+              {/* Group Selector */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5">
+                  Select Community / WhatsApp Group:
+                </label>
+                <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedModalGroup('NTRG 2 Asad Hanzalla street')}
+                    className={`py-2 px-2 rounded-lg text-[11px] font-bold transition-all ${
+                      selectedModalGroup === 'NTRG 2 Asad Hanzalla street'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    Asad Hanzalla
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedModalGroup('N.T.R.C Sector 7D/1')}
+                    className={`py-2 px-2 rounded-lg text-[11px] font-bold transition-all ${
+                      selectedModalGroup === 'N.T.R.C Sector 7D/1'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    Sector 7D/1
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedModalGroup('Direct Resident (No WhatsApp Group)')}
+                    className={`py-2 px-2 rounded-lg text-[11px] font-bold transition-all ${
+                      selectedModalGroup === 'Direct Resident (No WhatsApp Group)'
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    No Group
+                  </button>
+                </div>
+              </div>
+
+              {/* Fast 1-Click Directory Pick */}
+              {selectedModalGroup !== 'Direct Resident (No WhatsApp Group)' && data.contacts?.length > 0 && (
+                <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      ⚡ Quick 1-Tap Pick from Directory
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      {filteredDirectoryContacts.length} residents listed
+                    </span>
+                  </div>
+
                   <div className="relative">
-                    <User size={14} className="absolute left-3 top-3 text-slate-400" />
+                    <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="e.g. Muhammad Asif"
-                      value={manualName}
-                      onChange={(e) => setManualName(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
-                      required
+                      placeholder="Type your name or house # to find instantly..."
+                      value={residentSearchQuery}
+                      onChange={(e) => setResidentSearchQuery(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 mb-1">Phone Number</label>
-                    <div className="relative">
-                      <Phone size={14} className="absolute left-3 top-3 text-slate-400" />
-                      <input
-                        type="tel"
-                        placeholder="e.g. 0300 1234567"
-                        value={manualPhone}
-                        onChange={(e) => setManualPhone(e.target.value)}
-                        className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
-                      />
-                    </div>
+                  <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+                    {filteredDirectoryContacts.length === 0 ? (
+                      <p className="text-center py-2 text-[11px] text-slate-400">No match found. Enter details below!</p>
+                    ) : (
+                      filteredDirectoryContacts.map((c) => (
+                        <button
+                          key={c.id || c.phone}
+                          type="button"
+                          onClick={() => handleSelectResident(c)}
+                          className="w-full p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:border-emerald-400 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-all text-left flex items-center justify-between group shadow-2xs"
+                        >
+                          <div>
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-300">
+                              {c.name}
+                            </p>
+                            <p className="text-[10px] text-slate-500 font-mono">
+                              {c.phone} {c.houseNo ? `• ${c.houseNo}` : ''}
+                            </p>
+                          </div>
+                          <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                            Select <ArrowRight size={11} />
+                          </span>
+                        </button>
+                      ))
+                    )}
                   </div>
+                </div>
+              )}
 
+              {/* Manual Household Entry Form */}
+              <div>
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
+                  Or Enter Your Household Details
+                </h4>
+                <form onSubmit={handleManualCheckIn} className="space-y-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-500 mb-1">House / Flat Address *</label>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                      Full Name *
+                    </label>
                     <div className="relative">
-                      <Home size={14} className="absolute left-3 top-3 text-slate-400" />
+                      <User size={14} className="absolute left-3 top-3 text-slate-400" />
                       <input
                         type="text"
-                        placeholder="e.g. House 14-B / St 3"
-                        value={manualAddress}
-                        onChange={(e) => setManualAddress(e.target.value)}
+                        placeholder="e.g. Muhammad Asif / Tariq Mehmood"
+                        value={manualName}
+                        onChange={(e) => setManualName(e.target.value)}
                         className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
                         required
                       />
                     </div>
                   </div>
-                </div>
 
-                {/* Optional Community / Group Tag */}
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                    Area / Street Group (Optional)
-                  </label>
-                  <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedModalGroup('NTRG 2 Asad Hanzalla street')}
-                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all ${
-                        selectedModalGroup === 'NTRG 2 Asad Hanzalla street'
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                      }`}
-                    >
-                      Asad Hanzalla
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedModalGroup('N.T.R.C Sector 7D/1')}
-                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all ${
-                        selectedModalGroup === 'N.T.R.C Sector 7D/1'
-                          ? 'bg-blue-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                      }`}
-                    >
-                      Sector 7D/1
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedModalGroup('Direct Resident (No WhatsApp Group)')}
-                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all ${
-                        selectedModalGroup === 'Direct Resident (No WhatsApp Group)'
-                          ? 'bg-purple-600 text-white shadow-xs'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                      }`}
-                    >
-                      No Group
-                    </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Contact / WhatsApp Phone
+                      </label>
+                      <div className="relative">
+                        <Phone size={14} className="absolute left-3 top-3 text-slate-400" />
+                        <input
+                          type="tel"
+                          placeholder="e.g. 0300 1234567"
+                          value={manualPhone}
+                          onChange={(e) => setManualPhone(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        House / Flat Address *
+                      </label>
+                      <div className="relative">
+                        <Home size={14} className="absolute left-3 top-3 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="e.g. House 14-B / Street 2"
+                          value={manualAddress}
+                          onChange={(e) => setManualAddress(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
+                          required
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-                <button
-                  type="submit"
-                  className="w-full py-2.5 bg-primary text-white text-xs font-extrabold rounded-xl hover:bg-primary-hover shadow-sm transition-all flex items-center justify-center gap-1.5"
-                >
-                  <Check size={14} /> Save Profile &amp; Check In
-                </button>
-              </form>
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 bg-primary text-white text-xs font-extrabold rounded-xl hover:bg-primary-hover shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-98"
+                  >
+                    <Check size={14} /> Save Profile &amp; View Dashboard
+                  </button>
+                </form>
+              </div>
             </div>
 
-            {/* Collapsible / Optional Directory Search */}
-            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700">
-              <p className="text-[11px] font-bold text-slate-500 mb-1.5">
-                Or find your name in the registered directory:
-              </p>
-              <div className="relative mb-2">
-                <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search registered directory by name or phone..."
-                  value={residentSearchQuery}
-                  onChange={(e) => setResidentSearchQuery(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-
-              {residentSearchQuery.trim() && (
-                <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
-                  {filteredDirectoryContacts.length === 0 ? (
-                    <p className="text-center py-2 text-[11px] text-slate-400">No matching directory contact.</p>
-                  ) : (
-                    filteredDirectoryContacts.map((c) => (
-                      <button
-                        key={c.id || c.phone}
-                        onClick={() => handleSelectResident(c)}
-                        className="w-full p-2 rounded-lg border border-slate-100 dark:border-slate-700 hover:border-primary/40 hover:bg-primary/5 transition-all text-left flex items-center justify-between group"
-                      >
-                        <div>
-                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary">
-                            {c.name}
-                          </p>
-                          <p className="text-[10px] text-slate-500 font-mono">
-                            {c.phone} {c.houseNo ? `(${c.houseNo})` : ''} • {c.group || 'NTRG 2 Asad Hanzalla street'}
-                          </p>
-                        </div>
-                        <span className="text-[10px] font-bold text-primary flex items-center gap-0.5">
-                          Select <ArrowRight size={10} />
-                        </span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
+            {/* Modal Footer with Dismiss */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs flex-shrink-0">
+              <span className="text-[11px] text-slate-400">Statement: <strong>{currentMonthKey}</strong></span>
+              <button
+                type="button"
+                onClick={handleDismissModal}
+                className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-bold hover:underline transition-colors"
+              >
+                Skip for now / Browse as Guest →
+              </button>
             </div>
           </div>
         </div>

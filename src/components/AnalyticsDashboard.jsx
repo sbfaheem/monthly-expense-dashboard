@@ -268,29 +268,32 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
         matchedContact = contacts.find(c => c.name?.toLowerCase().trim() === lowerName)
       }
 
+      // Robust group resolution - never leave as "Unspecified Group"
+      const rawGrp = log.group && log.group !== 'Unspecified Group' ? log.group : (matchedContact?.group || 'NTRG 2 Asad Hanzalla street')
+      const displayGroup = rawGrp.includes('7D') ? 'N.T.R.C Sector 7D/1' : 'NTRG 2 Asad Hanzalla street'
+
+      const displayPhone = log.phone || matchedContact?.phone || ''
+      const displayAddress = log.houseAddress || log.houseNo || matchedContact?.houseNo || ''
+
       // Display name determination
       let displayName = log.name
       let badgeType = 'profile' // 'verified' | 'profile' | 'group' | 'guest'
       
-      if (!displayName || displayName === 'Guest / Unverified Resident' || displayName === 'Anonymous Resident') {
+      if (!displayName || displayName === 'Guest / Unverified Resident' || displayName === 'Anonymous Resident' || displayName === 'Community Visitor') {
         if (matchedContact) {
           displayName = matchedContact.name
           badgeType = 'verified'
-        } else if (log.group) {
-          const groupShort = log.group.includes('7D') ? 'Sector 7D/1' : 'Asad Hanzalla'
-          displayName = `WhatsApp Member (${groupShort})`
-          badgeType = 'group'
+        } else if (displayPhone) {
+          displayName = `Resident (${displayPhone.slice(-4)})`
+          badgeType = 'profile'
         } else {
-          displayName = 'Community Visitor'
-          badgeType = 'guest'
+          const groupShort = displayGroup.includes('7D') ? 'Sector 7D/1' : 'Asad Hanzalla'
+          displayName = `Resident (${groupShort})`
+          badgeType = 'group'
         }
       } else {
         badgeType = matchedContact ? 'verified' : 'profile'
       }
-
-      const displayPhone = log.phone || matchedContact?.phone || ''
-      const displayAddress = log.houseAddress || log.houseNo || matchedContact?.houseNo || ''
-      const displayGroup = log.group || matchedContact?.group || 'Unspecified Group'
 
       return {
         ...log,
@@ -1289,59 +1292,86 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
           </span>
         </div>
 
-        {visitorLogs.length === 0 ? (
+        {enrichedVisitorLogs.length === 0 ? (
           <div className="p-8 text-center text-slate-400 italic bg-slate-50 dark:bg-slate-900/40 rounded-xl">
             No visitor events logged yet. Once residents open the dashboard (e.g. from WhatsApp), their visits will appear here!
           </div>
         ) : (
           <div className="divide-y divide-slate-100 dark:divide-slate-700 max-h-96 overflow-y-auto pr-1">
-            {visitorLogs.slice(0, 50).map((log, idx) => (
-              <div key={log.id || idx} className="py-3 flex items-center justify-between gap-4 hover:bg-slate-50/60 dark:hover:bg-slate-750/40 px-2 rounded-xl transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs flex-shrink-0">
-                    {log.device === 'Mobile' ? <Smartphone size={14} /> : <Monitor size={14} />}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-extrabold text-xs text-slate-800 dark:text-slate-100">
-                        {log.name || 'Anonymous Resident'}
-                      </span>
-                      {log.group && (
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          log.group.includes('7D')
-                            ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300'
-                            : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'
-                        }`}>
-                          {log.group}
-                        </span>
-                      )}
-                      {log.houseNo && (
-                        <span className="text-[10px] text-slate-500 font-semibold">
-                          ({log.houseNo})
-                        </span>
-                      )}
-                      {log.monthViewed && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                          {log.monthViewed}
-                        </span>
-                      )}
+            {enrichedVisitorLogs.slice(0, 50).map((log, idx) => {
+              const cleanPhone = (log.displayPhone || '').replace(/[^0-9]/g, '')
+              return (
+                <div key={log.id || idx} className="py-3 flex items-center justify-between gap-4 hover:bg-slate-50/60 dark:hover:bg-slate-750/40 px-2 rounded-xl transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs flex-shrink-0">
+                      {log.device === 'Mobile' ? <Smartphone size={14} /> : <Monitor size={14} />}
                     </div>
-                    <p className="text-[11px] text-slate-400 font-mono">
-                      {log.phone || 'No phone recorded'} • {log.device}
-                    </p>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-extrabold text-xs text-slate-800 dark:text-slate-100">
+                          {log.displayName}
+                        </span>
+                        {log.displayGroup && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                            log.displayGroup.includes('7D')
+                              ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'
+                          }`}>
+                            {log.displayGroup.includes('7D') ? 'Sector 7D/1' : 'Asad Hanzalla'}
+                          </span>
+                        )}
+                        {log.displayAddress && (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-purple-700 dark:text-purple-300 font-bold bg-purple-50 dark:bg-purple-950/40 px-1.5 py-0.5 rounded border border-purple-200/60">
+                            <Home size={10} /> {log.displayAddress}
+                          </span>
+                        )}
+                        {log.monthViewed && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                            {log.monthViewed}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-400 font-mono mt-0.5">
+                        {log.displayPhone ? (
+                          <a
+                            href={`https://wa.me/${cleanPhone}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1 hover:underline"
+                            title="Chat on WhatsApp"
+                          >
+                            <MessageSquare size={11} /> {log.displayPhone}
+                          </a>
+                        ) : (
+                          <span>No phone recorded</span>
+                        )}
+                        <span>•</span>
+                        <span>{log.device || 'Desktop'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="text-right">
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        {timeAgo(log.timestamp)}
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        {log.dateStr}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => handleOpenAssignModal(log)}
+                      className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-primary hover:text-white text-slate-600 dark:text-slate-300 transition-all"
+                      title="Edit / Assign Resident Details"
+                    >
+                      <Edit2 size={13} />
+                    </button>
                   </div>
                 </div>
-
-                <div className="text-right flex-shrink-0">
-                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    {timeAgo(log.timestamp)}
-                  </p>
-                  <p className="text-[10px] text-slate-400">
-                    {log.dateStr}
-                  </p>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
