@@ -98,17 +98,22 @@ export const loadData = async () => {
   const visitorLogsQuery = query(visitorLogsCol, orderBy('timestamp', 'desc'), limit(500))
   const visitorLogsPromise = getDocs(visitorLogsQuery).catch(() => null)
 
-  const [settingsDoc, recordsSnapshot, expensesSnapshot, waterSupplySnapshot, contactsSnapshot, groupsDoc, visitorLogsSnapshot] = await Promise.all([
+  const feedbackCol = collection(db, 'resident_feedback')
+  const feedbackQuery = query(feedbackCol, orderBy('timestamp', 'desc'), limit(300))
+  const feedbackPromise = getDocs(feedbackQuery).catch(() => null)
+
+  const [settingsDoc, recordsSnapshot, expensesSnapshot, waterSupplySnapshot, contactsSnapshot, groupsDoc, visitorLogsSnapshot, feedbackSnapshot] = await Promise.all([
     settingsDocPromise,
     recordsPromise,
     expensesPromise,
     waterSupplyPromise,
     contactsPromise,
     groupsPromise,
-    visitorLogsPromise
+    visitorLogsPromise,
+    feedbackPromise
   ]).catch(err => {
     console.error("Firebase data load error:", err)
-    return [null, null, null, null, null, null, null]
+    return [null, null, null, null, null, null, null, null]
   })
 
   let settings = {
@@ -200,7 +205,8 @@ export const loadData = async () => {
       id: d.id,
       name: data.name || '',
       phone: data.phone || '',
-      houseNo: data.houseNo || '',
+      houseNo: data.houseNo || data.houseAddress || '',
+      houseAddress: data.houseAddress || data.houseNo || '',
       group: data.group || '',
       tag: data.tag || 'Resident',
       device: data.device || 'Desktop',
@@ -211,7 +217,23 @@ export const loadData = async () => {
     }
   }) : []
 
-  return { settings, monthlyRecords, expenses, waterSupply, contacts, groups, visitorLogs }
+  const feedback = feedbackSnapshot ? feedbackSnapshot.docs.map(d => {
+    const data = d.data()
+    return {
+      id: d.id,
+      name: data.name || 'Anonymous Resident',
+      phone: data.phone || '',
+      houseAddress: data.houseAddress || data.houseNo || '',
+      rating: Number(data.rating || 5),
+      comment: data.comment || data.feedback || '',
+      monthViewed: data.monthViewed || '',
+      device: data.device || 'Desktop',
+      timestamp: data.timestamp || 0,
+      dateStr: data.dateStr || ''
+    }
+  }) : []
+
+  return { settings, monthlyRecords, expenses, waterSupply, contacts, groups, visitorLogs, feedback }
 }
 
 // ─── Settings ────────────────────────────────────────────────
@@ -460,7 +482,8 @@ export const logVisitor = async (visitorData = {}) => {
     const docData = {
       name: visitorData.name || 'Anonymous Resident',
       phone: visitorData.phone || '',
-      houseNo: visitorData.houseNo || '',
+      houseNo: visitorData.houseNo || visitorData.houseAddress || '',
+      houseAddress: visitorData.houseAddress || visitorData.houseNo || '',
       group: visitorData.group || '',
       tag: visitorData.tag || 'Resident',
       device: visitorData.device || (window.innerWidth < 768 ? 'Mobile' : 'Desktop'),
@@ -497,4 +520,52 @@ export const clearVisitorLogs = async () => {
     return loadData()
   }
 }
+
+// ─── Resident Feedback & Rating CRUD ─────────────────────────
+
+export const submitFeedback = async (feedbackData = {}) => {
+  try {
+    const col = collection(db, 'resident_feedback')
+    const now = new Date()
+    const docData = {
+      name: feedbackData.name || 'Anonymous Resident',
+      phone: feedbackData.phone || '',
+      houseAddress: feedbackData.houseAddress || feedbackData.houseNo || '',
+      rating: Number(feedbackData.rating || 5),
+      comment: feedbackData.comment || '',
+      monthViewed: feedbackData.monthViewed || '',
+      device: feedbackData.device || (window.innerWidth < 768 ? 'Mobile' : 'Desktop'),
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      timestamp: Date.now(),
+      dateStr: now.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
+    }
+    await addDoc(col, docData)
+    return docData
+  } catch (err) {
+    console.warn("Could not submit feedback to Firestore:", err)
+    return null
+  }
+}
+
+export const clearFeedback = async () => {
+  try {
+    const col = collection(db, 'resident_feedback')
+    const snapshot = await getDocs(query(col, limit(100)))
+    const batch = writeBatch(db)
+    snapshot.docs.forEach(d => batch.delete(d.ref))
+    await batch.commit()
+    return loadData()
+  } catch (err) {
+    console.error("Failed to clear feedback:", err)
+    return loadData()
+  }
+}
+
 

@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
-import { loadData, calculateTotals, getLastDataMonth, logVisitor, resolveGroupName } from '../utils/storage'
+import { loadData, calculateTotals, getLastDataMonth, logVisitor, resolveGroupName, submitFeedback } from '../utils/storage'
 import Header from '../components/Header'
 import SummaryCards from '../components/SummaryCards'
 import ExpenseTable from '../components/ExpenseTable'
 import Charts from '../components/Charts'
 import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import { exportToCSV, printReport } from '../utils/export'
-import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2 } from 'lucide-react'
+import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles } from 'lucide-react'
 
 // Helper to normalize phone numbers for robust matching (last 10 digits)
 const normalizePhone = (p) => (p || '').replace(/[^0-9]/g, '').slice(-10)
@@ -31,6 +31,18 @@ export default function ViewerDashboard() {
   const [residentSearchQuery, setResidentSearchQuery] = useState('')
   const [manualName, setManualName] = useState('')
   const [manualPhone, setManualPhone] = useState('')
+  const [manualAddress, setManualAddress] = useState('')
+
+  // Resident Feedback & Rating state
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+  const [feedbackRating, setFeedbackRating] = useState(5)
+  const [feedbackHoverRating, setFeedbackHoverRating] = useState(0)
+  const [feedbackName, setFeedbackName] = useState('')
+  const [feedbackPhone, setFeedbackPhone] = useState('')
+  const [feedbackAddress, setFeedbackAddress] = useState('')
+  const [feedbackComment, setFeedbackComment] = useState('')
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false)
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
 
   useEffect(() => {
     loadData().then(freshData => {
@@ -134,18 +146,21 @@ export default function ViewerDashboard() {
   const handleSelectResident = (c) => {
     const fullContact = {
       ...c,
-      group: c.group || selectedModalGroup || detectedGroup || 'NTRG 2 Asad Hanzalla street'
+      houseAddress: c.houseAddress || c.houseNo || '',
+      houseNo: c.houseAddress || c.houseNo || '',
+      group: c.group || selectedModalGroup || detectedGroup || 'Direct Community Resident'
     }
     setResident(fullContact)
     localStorage.setItem('resident_identity', JSON.stringify(fullContact))
     setShowCheckInModal(false)
 
-    // Immediately log visit for newly identified resident with group
+    // Immediately log visit for newly identified resident with group and address
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
     logVisitor({
       name: fullContact.name,
       phone: fullContact.phone,
       houseNo: fullContact.houseNo || '',
+      houseAddress: fullContact.houseAddress || fullContact.houseNo || '',
       group: fullContact.group,
       tag: fullContact.tag || 'Resident',
       monthViewed: currentMonthKey,
@@ -159,13 +174,73 @@ export default function ViewerDashboard() {
     const customResident = {
       name: manualName.trim(),
       phone: manualPhone.trim() || '',
-      houseNo: '7D/1',
+      houseAddress: manualAddress.trim() || '',
+      houseNo: manualAddress.trim() || '',
       tag: 'Resident',
-      group: selectedModalGroup || detectedGroup || 'NTRG 2 Asad Hanzalla street'
+      group: selectedModalGroup || detectedGroup || 'Direct Community Resident'
     }
     handleSelectResident(customResident)
     setManualName('')
     setManualPhone('')
+    setManualAddress('')
+  }
+
+  const handleOpenFeedback = () => {
+    setFeedbackRating(5)
+    setFeedbackHoverRating(0)
+    setFeedbackComment('')
+    setFeedbackSubmitted(false)
+    if (resident) {
+      setFeedbackName(resident.name || '')
+      setFeedbackPhone(resident.phone || '')
+      setFeedbackAddress(resident.houseAddress || resident.houseNo || '')
+    } else {
+      setFeedbackName(manualName || '')
+      setFeedbackPhone(manualPhone || '')
+      setFeedbackAddress(manualAddress || '')
+    }
+    setShowFeedbackModal(true)
+  }
+
+  const handleSubmitFeedback = async (e) => {
+    e.preventDefault()
+    if (!feedbackName.trim()) {
+      alert("Please enter your name.")
+      return
+    }
+    setFeedbackSubmitting(true)
+    try {
+      const payload = {
+        name: feedbackName.trim(),
+        phone: feedbackPhone.trim(),
+        houseAddress: feedbackAddress.trim(),
+        rating: Number(feedbackRating || 5),
+        comment: feedbackComment.trim(),
+        monthViewed: currentMonthKey
+      }
+      await submitFeedback(payload)
+
+      // If resident wasn't set, remember them as a resident profile
+      if (!resident) {
+        const fullProfile = {
+          name: payload.name,
+          phone: payload.phone,
+          houseAddress: payload.houseAddress,
+          houseNo: payload.houseAddress,
+          group: detectedGroup || 'Direct Community Resident',
+          tag: 'Resident'
+        }
+        setResident(fullProfile)
+        localStorage.setItem('resident_identity', JSON.stringify(fullProfile))
+      }
+
+      setFeedbackSubmitted(true)
+    } catch (err) {
+      console.error("Error submitting feedback:", err)
+      alert("Failed to submit feedback. Please try again.")
+    } finally {
+      setFeedbackSubmitting(false)
+    }
   }
 
   const handleClearIdentity = () => {
@@ -196,7 +271,16 @@ export default function ViewerDashboard() {
           </div>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleOpenFeedback}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500 hover:text-white transition-all text-xs font-extrabold border border-amber-500/25 shadow-xs active:scale-95"
+            title="Give Resident Feedback & Rating"
+          >
+            <Star size={15} className="fill-amber-400 text-amber-500 group-hover:fill-white" />
+            <span>Feedback &amp; Rating</span>
+          </button>
+
           <div className="hidden md:flex items-center gap-2 bg-slate-100 dark:bg-primary/10 px-3 py-1.5 rounded-full">
             <span className="material-symbols-outlined text-sm text-primary">visibility</span>
             <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Read-only Access</span>
@@ -228,21 +312,29 @@ export default function ViewerDashboard() {
                   <span className={`text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
                     (resident.group || detectedGroup || '').includes('7D')
                       ? 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/60 dark:text-blue-200 dark:border-blue-800'
-                      : 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/60 dark:text-emerald-200 dark:border-emerald-800'
+                      : (resident.group || detectedGroup || '').includes('Hanzalla')
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/60 dark:text-emerald-200 dark:border-emerald-800'
+                      : 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/60 dark:text-purple-200 dark:border-purple-800'
                   }`}>
-                    Group: {resident.group || detectedGroup || 'NTRG 2 Asad Hanzalla street'}
+                    {resident.group || detectedGroup || 'Community Resident'}
                   </span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
                     Verified Resident
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                  You are visiting from WhatsApp Group: <strong className="text-slate-800 dark:text-slate-200">{resident.group || detectedGroup || 'NTRG 2 Asad Hanzalla street'}</strong>
-                  {resident.houseNo ? ` • House: ${resident.houseNo}` : ''} • Contact: {resident.phone}
+                  Community Identity: <strong className="text-slate-800 dark:text-slate-200">{resident.group || detectedGroup || 'Community Resident'}</strong>
+                  {(resident.houseAddress || resident.houseNo) ? ` • Address: ${resident.houseAddress || resident.houseNo}` : ''} {resident.phone ? `• Contact: ${resident.phone}` : ''}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 self-end sm:self-auto">
+            <div className="flex items-center gap-3 self-end sm:self-auto flex-wrap">
+              <button
+                onClick={handleOpenFeedback}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500 hover:text-white text-amber-800 dark:text-amber-300 text-xs font-bold border border-amber-500/25 transition-all shadow-xs active:scale-95"
+              >
+                <Star size={13} className="fill-amber-400" /> Rate &amp; Feedback
+              </button>
               <button
                 onClick={() => setShowCheckInModal(true)}
                 className="text-xs font-bold text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 hover:underline"
@@ -275,16 +367,24 @@ export default function ViewerDashboard() {
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Tap &ldquo;Identify Yourself&rdquo; to select or enter your name so management knows you have reviewed this month&apos;s financial summary.
+                  Tap &ldquo;Identify Yourself&rdquo; to link your Name &amp; House Address, or leave a review below.
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setShowCheckInModal(true)}
-              className="bg-primary hover:bg-primary-hover text-white text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 self-start sm:self-auto active:scale-98"
-            >
-              <UserCheck size={15} /> Identify Yourself
-            </button>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <button
+                onClick={handleOpenFeedback}
+                className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold px-3.5 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-98"
+              >
+                <Star size={14} className="fill-white" /> Rate &amp; Feedback
+              </button>
+              <button
+                onClick={() => setShowCheckInModal(true)}
+                className="bg-primary hover:bg-primary-hover text-white text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 active:scale-98"
+              >
+                <UserCheck size={15} /> Identify Yourself
+              </button>
+            </div>
           </div>
         ) : (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-800/80 border border-blue-200/80 dark:border-slate-700 rounded-2xl p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
@@ -294,19 +394,27 @@ export default function ViewerDashboard() {
               </div>
               <div>
                 <p className="text-sm font-extrabold text-slate-800 dark:text-slate-100">
-                  Resident of NTRC Sector 7D/1 or NTRG 2 Asad Hanzalla Street?
+                  Welcome to the Community Expense Portal
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Check in with your name and WhatsApp group so management knows you have reviewed this month&apos;s financial summary.
+                  No WhatsApp group membership required! Browse monthly financial accounts, check water schedule, and share your feedback.
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setShowCheckInModal(true)}
-              className="bg-primary hover:bg-primary-hover text-white text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 self-start sm:self-auto active:scale-98"
-            >
-              <UserCheck size={15} /> Identify Yourself
-            </button>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <button
+                onClick={handleOpenFeedback}
+                className="bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold px-3.5 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-98"
+              >
+                <Star size={14} className="fill-white" /> Give Feedback
+              </button>
+              <button
+                onClick={() => setShowCheckInModal(true)}
+                className="bg-primary hover:bg-primary-hover text-white text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 active:scale-98"
+              >
+                <UserCheck size={15} /> Identify Yourself
+              </button>
+            </div>
           </div>
         )}
 
@@ -413,6 +521,28 @@ export default function ViewerDashboard() {
               </div>
             </div>
             
+            {/* Resident Feedback & Rating Trigger Card */}
+            <div className="bg-gradient-to-br from-amber-50 via-orange-50/30 to-amber-100/40 dark:from-slate-800 dark:to-slate-800/90 p-5 rounded-2xl border border-amber-200/80 dark:border-amber-900/40 shadow-sm space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div className="size-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-sm shadow-amber-500/20">
+                  <Star size={18} className="fill-white" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-extrabold text-slate-800 dark:text-slate-100">Resident Feedback &amp; Rating</h4>
+                  <p className="text-[11px] text-amber-700 dark:text-amber-400 font-semibold">Your rating helps improve community services</p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Have feedback or suggestions regarding water supply, street cleaning, security, or expenses? Share your rating &amp; comments directly with the management committee.
+              </p>
+              <button
+                onClick={handleOpenFeedback}
+                className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-extrabold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98"
+              >
+                <Star size={14} className="fill-white" /> Rate Dashboard &amp; Leave Feedback
+              </button>
+            </div>
+
           </div>
         </div>
 
@@ -425,7 +555,7 @@ export default function ViewerDashboard() {
       {/* Resident Identity / Check-in Modal */}
       {showCheckInModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[90vh] flex flex-col">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
               <div className="flex items-center gap-2.5">
                 <div className="size-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
@@ -433,7 +563,7 @@ export default function ViewerDashboard() {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">Resident Check-In</h3>
-                  <p className="text-xs text-slate-500">Select your name to link your device</p>
+                  <p className="text-xs text-slate-500">Record your review with the management committee</p>
                 </div>
               </div>
               <button
@@ -444,110 +574,342 @@ export default function ViewerDashboard() {
               </button>
             </div>
 
-            {/* WhatsApp Group Selector */}
-            <div className="pt-3">
-              <label className="block text-[11px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
-                Select Your WhatsApp Group
-              </label>
-              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-750">
-                <button
-                  type="button"
-                  onClick={() => setSelectedModalGroup('N.T.R.C Sector 7D/1')}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    selectedModalGroup === 'N.T.R.C Sector 7D/1'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                  }`}
-                >
-                  <Building2 size={13} /> Sector 7D/1
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedModalGroup('NTRG 2 Asad Hanzalla street')}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    selectedModalGroup === 'NTRG 2 Asad Hanzalla street'
-                      ? 'bg-emerald-600 text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                  }`}
-                >
-                  <MessageSquare size={13} /> Asad Hanzalla
-                </button>
-              </div>
-            </div>
-
-            {/* Search Box */}
-            <div className="py-3">
-              <div className="relative">
-                <Search size={16} className="absolute left-3.5 top-3 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder={`Search ${selectedModalGroup} residents...`}
-                  value={residentSearchQuery}
-                  onChange={(e) => setResidentSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-primary outline-none"
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            {/* Contact Results List */}
-            <div className="flex-1 overflow-y-auto space-y-1.5 max-h-60 pr-1">
-              {filteredDirectoryContacts.length === 0 ? (
-                <div className="text-center py-6 text-xs text-slate-400">
-                  No matching contact found in the directory. You can enter your name below.
-                </div>
-              ) : (
-                filteredDirectoryContacts.map((c) => (
-                  <button
-                    key={c.id || c.phone}
-                    onClick={() => handleSelectResident(c)}
-                    className="w-full p-3 rounded-xl border border-slate-100 dark:border-slate-700 hover:border-primary/40 hover:bg-primary/5 transition-all text-left flex items-center justify-between group"
-                  >
-                    <div>
-                      <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary">
-                        {c.name}
-                      </p>
-                      <p className="text-[11px] text-slate-500 font-mono">
-                        {c.phone} {c.houseNo ? `(${c.houseNo})` : ''}
-                      </p>
-                    </div>
-                    <span className="text-[10px] font-bold text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                      Select <ArrowRight size={12} />
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
-
-            {/* Quick Manual Entry Option */}
-            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
-              <p className="text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">
-                Don&apos;t see your name? Enter manually:
+            {/* Non-Coercive Reassurance Notice */}
+            <div className="mt-3 p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl">
+              <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-200 leading-relaxed">
+                ℹ️ <strong>No WhatsApp group membership required:</strong> You can browse the complete monthly expense dashboard directly. Enter your Name, Phone Number, and House Address so the management knows you have reviewed this financial summary.
               </p>
-              <form onSubmit={handleManualCheckIn} className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Your Full Name"
-                  value={manualName}
-                  onChange={(e) => setManualName(e.target.value)}
-                  className="flex-1 px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-1 focus:ring-primary"
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Phone (optional)"
-                  value={manualPhone}
-                  onChange={(e) => setManualPhone(e.target.value)}
-                  className="w-32 px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-1 focus:ring-primary"
-                />
+            </div>
+
+            {/* Quick Household Entry Form */}
+            <div className="mt-4 pt-1">
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2.5">
+                Enter Your Household Details
+              </h4>
+              <form onSubmit={handleManualCheckIn} className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">Full Name *</label>
+                  <div className="relative">
+                    <User size={14} className="absolute left-3 top-3 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="e.g. Muhammad Asif"
+                      value={manualName}
+                      onChange={(e) => setManualName(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 mb-1">Phone Number</label>
+                    <div className="relative">
+                      <Phone size={14} className="absolute left-3 top-3 text-slate-400" />
+                      <input
+                        type="tel"
+                        placeholder="e.g. 0300 1234567"
+                        value={manualPhone}
+                        onChange={(e) => setManualPhone(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 mb-1">House / Flat Address *</label>
+                    <div className="relative">
+                      <Home size={14} className="absolute left-3 top-3 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="e.g. House 14-B / St 3"
+                        value={manualAddress}
+                        onChange={(e) => setManualAddress(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Optional Community / Group Tag */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                    Area / Street Group (Optional)
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedModalGroup('NTRG 2 Asad Hanzalla street')}
+                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all ${
+                        selectedModalGroup === 'NTRG 2 Asad Hanzalla street'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                    >
+                      Asad Hanzalla
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedModalGroup('N.T.R.C Sector 7D/1')}
+                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all ${
+                        selectedModalGroup === 'N.T.R.C Sector 7D/1'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                    >
+                      Sector 7D/1
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedModalGroup('Direct Resident (No WhatsApp Group)')}
+                      className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all ${
+                        selectedModalGroup === 'Direct Resident (No WhatsApp Group)'
+                          ? 'bg-purple-600 text-white shadow-xs'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                    >
+                      No Group
+                    </button>
+                  </div>
+                </div>
+
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-hover transition-all"
+                  className="w-full py-2.5 bg-primary text-white text-xs font-extrabold rounded-xl hover:bg-primary-hover shadow-sm transition-all flex items-center justify-center gap-1.5"
                 >
-                  Save
+                  <Check size={14} /> Save Profile &amp; Check In
                 </button>
               </form>
             </div>
+
+            {/* Collapsible / Optional Directory Search */}
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700">
+              <p className="text-[11px] font-bold text-slate-500 mb-1.5">
+                Or find your name in the registered directory:
+              </p>
+              <div className="relative mb-2">
+                <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search registered directory by name or phone..."
+                  value={residentSearchQuery}
+                  onChange={(e) => setResidentSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              {residentSearchQuery.trim() && (
+                <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+                  {filteredDirectoryContacts.length === 0 ? (
+                    <p className="text-center py-2 text-[11px] text-slate-400">No matching directory contact.</p>
+                  ) : (
+                    filteredDirectoryContacts.map((c) => (
+                      <button
+                        key={c.id || c.phone}
+                        onClick={() => handleSelectResident(c)}
+                        className="w-full p-2 rounded-lg border border-slate-100 dark:border-slate-700 hover:border-primary/40 hover:bg-primary/5 transition-all text-left flex items-center justify-between group"
+                      >
+                        <div>
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary">
+                            {c.name}
+                          </p>
+                          <p className="text-[10px] text-slate-500 font-mono">
+                            {c.phone} {c.houseNo ? `(${c.houseNo})` : ''} • {c.group || 'NTRG 2 Asad Hanzalla street'}
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-bold text-primary flex items-center gap-0.5">
+                          Select <ArrowRight size={10} />
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Resident Feedback & Rating Modal */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[92vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
+              <div className="flex items-center gap-2.5">
+                <div className="size-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-sm shadow-amber-500/20">
+                  <Star size={18} className="fill-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">Resident Feedback &amp; Rating</h3>
+                  <p className="text-xs text-slate-500">Share your thoughts on community services &amp; accounts</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowFeedbackModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {feedbackSubmitted ? (
+              <div className="py-8 text-center space-y-4">
+                <div className="size-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center mx-auto shadow-md shadow-emerald-500/10">
+                  <CheckCircle2 size={36} />
+                </div>
+                <div>
+                  <h4 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
+                    Thank You for Your Feedback!
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto leading-relaxed">
+                    Your rating and suggestions have been recorded in the Admin Panel for the management committee to review.
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <button
+                    onClick={() => setShowFeedbackModal(false)}
+                    className="px-6 py-2.5 bg-primary text-white text-xs font-extrabold rounded-xl hover:bg-primary-hover shadow-sm transition-all"
+                  >
+                    Done / Return to Dashboard
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitFeedback} className="flex-1 overflow-y-auto py-3 space-y-4 pr-1">
+                {/* Interactive Star Rating */}
+                <div className="bg-amber-50/70 dark:bg-slate-900/60 p-4 rounded-2xl border border-amber-200/60 dark:border-slate-700 text-center space-y-2">
+                  <label className="block text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                    Overall Satisfaction Rating *
+                  </label>
+                  
+                  <div className="flex items-center justify-center gap-2 py-1">
+                    {[1, 2, 3, 4, 5].map((starVal) => {
+                      const active = (feedbackHoverRating || feedbackRating) >= starVal
+                      return (
+                        <button
+                          type="button"
+                          key={starVal}
+                          onClick={() => setFeedbackRating(starVal)}
+                          onMouseEnter={() => setFeedbackHoverRating(starVal)}
+                          onMouseLeave={() => setFeedbackHoverRating(0)}
+                          className="p-1 transition-transform hover:scale-125 active:scale-95 outline-none"
+                          title={`${starVal} Star${starVal > 1 ? 's' : ''}`}
+                        >
+                          <Star
+                            size={32}
+                            className={`transition-colors ${
+                              active
+                                ? 'text-amber-400 fill-amber-400 drop-shadow-sm'
+                                : 'text-slate-300 dark:text-slate-600'
+                            }`}
+                          />
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <p className="text-xs font-extrabold text-amber-800 dark:text-amber-300">
+                    {feedbackRating === 5 && '⭐⭐⭐⭐⭐ Outstanding Transparency & Work (بہترین)'}
+                    {feedbackRating === 4 && '⭐⭐⭐⭐ Good & Satisfactory (تسلی بخش)'}
+                    {feedbackRating === 3 && '⭐⭐⭐ Average / Satisfactory (مناسب)'}
+                    {feedbackRating === 2 && '⭐⭐ Needs Improvement (بہتری کی ضرورت)'}
+                    {feedbackRating === 1 && '⭐ Unsatisfactory / Issues Reported (غیر تسلی بخش)'}
+                  </p>
+                </div>
+
+                {/* Resident Details Fields */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                      Your Full Name *
+                    </label>
+                    <div className="relative">
+                      <User size={14} className="absolute left-3 top-3 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="e.g. Asad Ullah"
+                        value={feedbackName}
+                        onChange={(e) => setFeedbackName(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Contact Phone
+                      </label>
+                      <div className="relative">
+                        <Phone size={14} className="absolute left-3 top-3 text-slate-400" />
+                        <input
+                          type="tel"
+                          placeholder="e.g. 0300 1234567"
+                          value={feedbackPhone}
+                          onChange={(e) => setFeedbackPhone(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        House / Flat Address *
+                      </label>
+                      <div className="relative">
+                        <Home size={14} className="absolute left-3 top-3 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="e.g. House 42-A, St 2"
+                          value={feedbackAddress}
+                          onChange={(e) => setFeedbackAddress(e.target.value)}
+                          className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Feedback / Comments textarea */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                      Comments, Suggestions, or Inquiries
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Share your thoughts on water schedule, sanitation, guards, or any questions regarding expenses..."
+                      value={feedbackComment}
+                      onChange={(e) => setFeedbackComment(e.target.value)}
+                      className="w-full p-3 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary leading-relaxed"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                    <span>Reviewing statement: <strong>{currentMonthKey}</strong></span>
+                    <span>No WhatsApp join required</span>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={feedbackSubmitting}
+                    className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
+                  >
+                    {feedbackSubmitting ? (
+                      <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Send size={14} />
+                    )}
+                    Submit Feedback &amp; Rating
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

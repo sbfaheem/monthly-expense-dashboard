@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ListChecks, Camera, FileBarChart2, Settings, LogOut,
-  Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff, Sparkles, MessageSquare, BarChart3
+  Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff, Sparkles, MessageSquare, BarChart3, Star
 } from 'lucide-react'
 import {
   loadData, addExpense, updateExpense, deleteExpense,
@@ -316,6 +316,7 @@ export default function AdminPanel() {
     { id: 'water',     icon: <Droplet        size={18}/>, label: 'Water Supply' },
     { id: 'broadcast', icon: <MessageSquare  size={18}/>, label: 'WhatsApp Hub' },
     { id: 'analytics', icon: <BarChart3      size={18}/>, label: 'Analytics' },
+    { id: 'feedback',  icon: <Star           size={18}/>, label: 'Feedback' },
     { id: 'settings',  icon: <Settings       size={18}/>, label: 'Settings' },
   ]
 
@@ -814,6 +815,17 @@ export default function AdminPanel() {
             data={data}
             setData={setData}
             showNotif={showNotif}
+            defaultView="tracking"
+          />
+        )}
+
+        {/* Resident Feedback & Ratings Dashboard */}
+        {activeTab === 'feedback' && (
+          <AnalyticsDashboard
+            data={data}
+            setData={setData}
+            showNotif={showNotif}
+            defaultView="feedback"
           />
         )}
 

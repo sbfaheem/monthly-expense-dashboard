@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Users, Eye, Smartphone, Monitor, Clock, ArrowUpRight,
   Search, Filter, Download, RefreshCw, Send, CheckCircle2,
-  AlertCircle, ChevronRight, Sparkles, Trash2, Calendar, UserCheck, MessageSquare, ExternalLink, X, Building2
+  AlertCircle, ChevronRight, Sparkles, Trash2, Calendar, UserCheck, MessageSquare, ExternalLink, X, Building2,
+  Star, Home, ThumbsUp, MessageSquareHeart
 } from 'lucide-react'
-import { loadData, clearVisitorLogs } from '../utils/storage'
+import { loadData, clearVisitorLogs, clearFeedback } from '../utils/storage'
 
 // Helper to normalize phone numbers for robust matching (last 10 digits)
 const normalizePhone = (p) => (p || '').replace(/[^0-9]/g, '').slice(-10)
@@ -23,15 +24,102 @@ const timeAgo = (timestamp) => {
   return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
+export default function AnalyticsDashboard({ data = {}, setData, showNotif, defaultView = 'tracking' }) {
+  const [analyticsView, setAnalyticsView] = useState(defaultView) // 'tracking' | 'feedback'
+
+  // Sync if parent tab changes
+  useEffect(() => {
+    if (defaultView) setAnalyticsView(defaultView)
+  }, [defaultView])
   const [filterTab, setFilterTab] = useState('all') // 'all' | 'visited' | 'unvisited'
   const [groupFilter, setGroupFilter] = useState('all') // 'all' | 'N.T.R.C Sector 7D/1' | 'NTRG 2 Asad Hanzalla street'
   const [searchTerm, setSearchTerm] = useState('')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedContactHistory, setSelectedContactHistory] = useState(null)
 
+  // Feedback specific filters
+  const [feedbackSearch, setFeedbackSearch] = useState('')
+  const [feedbackRatingFilter, setFeedbackRatingFilter] = useState('all') // 'all' | '5' | '4' | '3' | 'low'
+
   const contacts = data.contacts || []
   const visitorLogs = data.visitorLogs || []
+  const feedbackList = data.feedback || []
+
+  // ─── Feedback Metrics Calculations ───
+  const totalFeedbackCount = feedbackList.length
+  const avgRating = totalFeedbackCount > 0
+    ? (feedbackList.reduce((sum, f) => sum + (f.rating || 5), 0) / totalFeedbackCount).toFixed(1)
+    : '5.0'
+
+  const fiveStarCount = feedbackList.filter(f => (f.rating || 5) === 5).length
+  const fourStarCount = feedbackList.filter(f => f.rating === 4).length
+  const threeStarCount = feedbackList.filter(f => f.rating === 3).length
+  const twoStarCount = feedbackList.filter(f => f.rating === 2).length
+  const oneStarCount = feedbackList.filter(f => f.rating === 1).length
+
+  const positivePercent = totalFeedbackCount > 0
+    ? Math.round(((fiveStarCount + fourStarCount) / totalFeedbackCount) * 100)
+    : 100
+
+  const verifiedAddressCount = feedbackList.filter(f => (f.houseAddress || f.houseNo)).length
+
+  // Filtered Feedback
+  const filteredFeedback = useMemo(() => {
+    return feedbackList.filter(f => {
+      // Rating filter
+      if (feedbackRatingFilter === '5' && f.rating !== 5) return false
+      if (feedbackRatingFilter === '4' && f.rating !== 4) return false
+      if (feedbackRatingFilter === '3' && f.rating !== 3) return false
+      if (feedbackRatingFilter === 'low' && f.rating > 2) return false
+
+      // Search filter
+      if (!feedbackSearch.trim()) return true
+      const q = feedbackSearch.toLowerCase()
+      return (
+        f.name?.toLowerCase().includes(q) ||
+        f.phone?.includes(q) ||
+        f.houseAddress?.toLowerCase().includes(q) ||
+        f.comment?.toLowerCase().includes(q) ||
+        f.monthViewed?.toLowerCase().includes(q)
+      )
+    })
+  }, [feedbackList, feedbackRatingFilter, feedbackSearch])
+
+  // Clear Feedback
+  const handleClearFeedback = async () => {
+    if (!window.confirm('Are you sure you want to clear all resident feedback records? This cannot be undone.')) return
+    try {
+      const freshData = await clearFeedback()
+      setData(freshData)
+      if (showNotif) showNotif('All resident feedback records cleared', 'error')
+    } catch (err) {
+      if (showNotif) showNotif('Failed to clear feedback records', 'error')
+    }
+  }
+
+  // Export Feedback CSV
+  const exportFeedbackCSV = () => {
+    const headers = ['Resident Name', 'Phone', 'House Address', 'Rating', 'Comment', 'Month Viewed', 'Date & Time', 'Device']
+    const rows = feedbackList.map(f => [
+      `"${f.name || 'Anonymous'}"`,
+      `"${f.phone || ''}"`,
+      `"${f.houseAddress || ''}"`,
+      f.rating || 5,
+      `"${(f.comment || '').replace(/"/g, '""')}"`,
+      `"${f.monthViewed || ''}"`,
+      `"${f.dateStr || ''}"`,
+      `"${f.device || ''}"`
+    ])
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement('a')
+    link.setAttribute('href', encodedUri)
+    link.setAttribute('download', `resident_feedback_ratings_${new Date().toISOString().slice(0, 10)}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
 
   // ─── Refresh Logs ─────────────────────────────────────────────
   const handleRefresh = async () => {
@@ -197,8 +285,47 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
 
   return (
     <div className="space-y-8">
-      {/* ─── Top Header & Controls ─── */}
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-primary/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* ─── Mode Switcher: Visitor Tracking vs. Resident Feedback & Ratings ─── */}
+      <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700 w-fit">
+        <button
+          onClick={() => setAnalyticsView('tracking')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all ${
+            analyticsView === 'tracking'
+              ? 'bg-white dark:bg-slate-900 text-primary shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-primary'
+          }`}
+        >
+          <Users size={16} />
+          <span>Resident Visitor Tracking</span>
+          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+            analyticsView === 'tracking' ? 'bg-primary/10 text-primary' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+          }`}>
+            {visitorLogs.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setAnalyticsView('feedback')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-extrabold transition-all ${
+            analyticsView === 'feedback'
+              ? 'bg-white dark:bg-slate-900 text-amber-600 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-amber-600'
+          }`}
+        >
+          <Star size={16} className={analyticsView === 'feedback' ? 'fill-amber-400 text-amber-500' : ''} />
+          <span>Resident Feedback &amp; Ratings</span>
+          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+            analyticsView === 'feedback' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+          }`}>
+            {totalFeedbackCount}
+          </span>
+        </button>
+      </div>
+
+      {analyticsView === 'tracking' ? (
+        <>
+          {/* ─── Top Header & Controls ─── */}
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-primary/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
             <div className="size-10 rounded-xl bg-primary text-white flex items-center justify-center shadow-md shadow-primary/20">
@@ -708,6 +835,389 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif }) {
           </div>
         )}
       </div>
+      </>
+    ) : (
+      <>
+        {/* ─── Feedback Header & Controls ─── */}
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-primary/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <div className="size-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20">
+                <Star size={20} className="fill-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  Resident Feedback &amp; Ratings
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Reviews, ratings, household addresses, and comments submitted by community residents.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 text-xs font-bold text-slate-700 dark:text-slate-200 transition-all shadow-sm"
+            >
+              <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-amber-500' : ''} />
+              Refresh Data
+            </button>
+
+            <button
+              onClick={exportFeedbackCSV}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 text-white hover:bg-amber-600 text-xs font-bold transition-all shadow-sm"
+            >
+              <Download size={14} />
+              Export Feedback CSV
+            </button>
+
+            {totalFeedbackCount > 0 && (
+              <button
+                onClick={handleClearFeedback}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-950/30 text-xs font-bold transition-all"
+                title="Clear all feedback records"
+              >
+                <Trash2 size={14} />
+                Clear Feedback
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ─── Feedback KPI Summary Cards ─── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* KPI 1: Overall Average Rating */}
+          <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-primary/10 space-y-3">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Average Rating</span>
+              <div className="size-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                <Star size={18} className="fill-amber-400" />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-slate-900 dark:text-white">
+                  {avgRating}
+                </span>
+                <span className="text-sm font-bold text-slate-400">/ 5.0</span>
+              </div>
+              <div className="flex items-center gap-1 mt-1 text-amber-400">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    size={14}
+                    className={star <= Math.round(Number(avgRating)) ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-600'}
+                  />
+                ))}
+                <span className="text-xs font-semibold text-slate-500 ml-1">
+                  ({totalFeedbackCount} reviews)
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* KPI 2: Total Feedback Submissions */}
+          <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-primary/10 space-y-3">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Reviews</span>
+              <div className="size-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                <MessageSquareHeart size={18} />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-slate-900 dark:text-white">
+                  {totalFeedbackCount}
+                </span>
+                <span className="text-xs font-semibold text-slate-400">
+                  Submissions
+                </span>
+              </div>
+              <p className="text-xs text-blue-600 dark:text-blue-400 font-bold mt-1">
+                Community Resident Voice
+              </p>
+            </div>
+          </div>
+
+          {/* KPI 3: Positive Feedback Ratio */}
+          <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-primary/10 space-y-3">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Satisfaction Rate</span>
+              <div className="size-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                <ThumbsUp size={18} />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-slate-900 dark:text-white">
+                  {positivePercent}%
+                </span>
+                <span className="text-xs font-semibold text-slate-400">
+                  4★ &amp; 5★ Ratings
+                </span>
+              </div>
+              {/* Progress bar */}
+              <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden mt-2">
+                <div
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                  style={{ width: `${positivePercent}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* KPI 4: Verified House Addresses */}
+          <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-primary/10 space-y-3">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Households Captured</span>
+              <div className="size-8 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center">
+                <Home size={18} />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-slate-900 dark:text-white">
+                  {verifiedAddressCount}
+                </span>
+                <span className="text-xs font-semibold text-slate-400">
+                  House Addresses
+                </span>
+              </div>
+              <p className="text-xs text-purple-600 dark:text-purple-400 font-bold mt-1">
+                Mapped to physical homes
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── Rating Distribution Breakdown ─── */}
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-primary/10">
+          <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+            <Star size={16} className="text-amber-500 fill-amber-400" />
+            Rating Distribution Breakdown
+          </h3>
+          <div className="space-y-2.5">
+            {[
+              { stars: 5, label: '5 Stars (Outstanding)', count: fiveStarCount, color: 'bg-emerald-500' },
+              { stars: 4, label: '4 Stars (Good)', count: fourStarCount, color: 'bg-blue-500' },
+              { stars: 3, label: '3 Stars (Average)', count: threeStarCount, color: 'bg-amber-500' },
+              { stars: 2, label: '2 Stars (Needs Work)', count: twoStarCount, color: 'bg-orange-500' },
+              { stars: 1, label: '1 Star (Unsatisfactory)', count: oneStarCount, color: 'bg-red-500' }
+            ].map(item => {
+              const pct = totalFeedbackCount > 0 ? Math.round((item.count / totalFeedbackCount) * 100) : 0
+              return (
+                <div key={item.stars} className="flex items-center gap-3 text-xs">
+                  <span className="w-36 font-bold text-slate-600 dark:text-slate-300">
+                    {item.label}
+                  </span>
+                  <div className="flex-1 h-3 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${item.color} rounded-full transition-all duration-500`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="w-16 text-right font-mono font-bold text-slate-500">
+                    {item.count} ({pct}%)
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ─── Resident Feedback Feed & Table ─── */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-primary/10 overflow-hidden">
+          {/* Filter and Search Bar */}
+          <div className="p-6 border-b border-slate-100 dark:border-slate-700/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                Resident Reviews &amp; Suggestions
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                  {filteredFeedback.length}
+                </span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Detailed ratings, comments, and household address information from community members.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
+              {/* Rating Filter Tabs */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-700/50 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                <button
+                  onClick={() => setFeedbackRatingFilter('all')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    feedbackRatingFilter === 'all'
+                      ? 'bg-white dark:bg-slate-800 text-primary shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-primary'
+                  }`}
+                >
+                  All ({totalFeedbackCount})
+                </button>
+                <button
+                  onClick={() => setFeedbackRatingFilter('5')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    feedbackRatingFilter === '5'
+                      ? 'bg-amber-500 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-amber-500'
+                  }`}
+                >
+                  5★ ({fiveStarCount})
+                </button>
+                <button
+                  onClick={() => setFeedbackRatingFilter('4')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    feedbackRatingFilter === '4'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-blue-600'
+                  }`}
+                >
+                  4★ ({fourStarCount})
+                </button>
+                <button
+                  onClick={() => setFeedbackRatingFilter('3')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    feedbackRatingFilter === '3'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-amber-600'
+                  }`}
+                >
+                  3★ ({threeStarCount})
+                </button>
+                <button
+                  onClick={() => setFeedbackRatingFilter('low')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    feedbackRatingFilter === 'low'
+                      ? 'bg-red-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-red-600'
+                  }`}
+                >
+                  1-2★ ({twoStarCount + oneStarCount})
+                </button>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search name, phone, address, comment..."
+                  value={feedbackSearch}
+                  onChange={(e) => setFeedbackSearch(e.target.value)}
+                  className="pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-primary outline-none w-full sm:w-60"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Feedback Content List */}
+          <div className="p-6 divide-y divide-slate-100 dark:divide-slate-700/60">
+            {filteredFeedback.length === 0 ? (
+              <div className="text-center py-12 space-y-3">
+                <div className="size-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto">
+                  <Star size={24} />
+                </div>
+                <p className="text-sm font-bold text-slate-600 dark:text-slate-300">
+                  No resident reviews found
+                </p>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  {totalFeedbackCount === 0
+                    ? 'Residents can rate the dashboard and provide comments directly from the Viewer Dashboard.'
+                    : 'Try adjusting your search query or rating filter.'}
+                </p>
+              </div>
+            ) : (
+              filteredFeedback.map((f, idx) => {
+                const cleanPhone = f.phone ? f.phone.replace(/[^0-9]/g, '') : ''
+                return (
+                  <div key={f.id || idx} className="py-5 first:pt-0 last:pb-0 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      {/* Resident Info & House Address */}
+                      <div className="flex items-center gap-3">
+                        <div className="size-10 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center font-black text-sm">
+                          {(f.name || 'R').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-extrabold text-sm text-slate-900 dark:text-slate-100">
+                              {f.name || 'Anonymous Resident'}
+                            </h4>
+                            {f.houseAddress && (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
+                                <Home size={11} /> {f.houseAddress}
+                              </span>
+                            )}
+                            {f.monthViewed && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                                {f.monthViewed}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
+                            {f.phone ? (
+                              <a
+                                href={`https://wa.me/${cleanPhone}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1 hover:underline"
+                                title="Reply to resident on WhatsApp"
+                              >
+                                {f.phone}
+                                <ExternalLink size={11} />
+                              </a>
+                            ) : (
+                              <span className="italic text-slate-400">No phone provided</span>
+                            )}
+                            <span>•</span>
+                            <span>{f.device || 'Desktop'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Star Rating & Time */}
+                      <div className="flex items-center gap-3 sm:text-right">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1 text-amber-400 justify-end">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                size={16}
+                                className={star <= (f.rating || 5) ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-600'}
+                              />
+                            ))}
+                            <span className="font-black text-xs text-slate-700 dark:text-slate-200 ml-1">
+                              {f.rating || 5}/5
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-400">
+                            {timeAgo(f.timestamp)} • {f.dateStr}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Comment Box */}
+                    {f.comment ? (
+                      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-750 text-xs text-slate-700 dark:text-slate-200 leading-relaxed font-medium">
+                        &ldquo;{f.comment}&rdquo;
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 italic">
+                        No written comment provided with this star rating.
+                      </p>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
+      </>
+    )}
 
       {/* ─── Resident History Modal ─── */}
       {selectedContactHistory && (
