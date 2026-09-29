@@ -5,6 +5,7 @@ import SummaryCards from '../components/SummaryCards'
 import ExpenseTable from '../components/ExpenseTable'
 import Charts from '../components/Charts'
 import WaterSupplyTracker from '../components/WaterSupplyTracker'
+import MonthlyVarianceBanner from '../components/MonthlyVarianceBanner'
 import { exportToCSV, printReport } from '../utils/export'
 import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
 import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck } from 'lucide-react'
@@ -484,6 +485,13 @@ export default function ViewerDashboard() {
           onMonthChange={setSelectedMonth}
           onYearChange={setSelectedYear}
           isAdmin={false}
+        />
+
+        {/* What Changed This Month? Headline Variance Banner */}
+        <MonthlyVarianceBanner
+          selectedMonth={currentMonthKey}
+          allExpenses={data.expenses || []}
+          currency={data.settings?.currency || 'PKR'}
         />
 
         {/* Water Supply Tracker */}

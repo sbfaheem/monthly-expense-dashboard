@@ -15,6 +15,7 @@ import SummaryCards from '../components/SummaryCards'
 import ExpenseTable from '../components/ExpenseTable'
 import Charts from '../components/Charts'
 import WaterSupplyTracker from '../components/WaterSupplyTracker'
+import MonthlyVarianceBanner from '../components/MonthlyVarianceBanner'
 import WhatsAppBroadcastHub from '../components/WhatsAppBroadcastHub'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
 import { exportToCSV, printReport } from '../utils/export'
@@ -384,6 +385,11 @@ export default function AdminPanel() {
 
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
+            <MonthlyVarianceBanner
+              selectedMonth={currentMonthKey}
+              allExpenses={data.expenses || []}
+              currency={data.settings?.currency || 'PKR'}
+            />
             <WaterSupplyTracker 
               entries={(() => {
                 const ws = data.waterSupply?.find(item => item.id === currentMonthKey)
