@@ -201,12 +201,11 @@ export default function WhatsAppBroadcastHub({
       window.open(targetUrl, '_blank')
       showNotif(`Announcement copied! Opening "${group.name}" — just paste (Ctrl+V) and send.`)
     } else {
-      // Prompt modal to configure or paste the group invite link
-      setGroupLinkModal({
-        group,
-        pendingText: groupMessageText,
-        linkInput: ''
-      })
+      // 1-Click Direct WhatsApp open with pre-typed announcement — no blocking popup!
+      const encoded = encodeURIComponent(groupMessageText)
+      const url = `https://api.whatsapp.com/send?text=${encoded}`
+      window.open(url, '_blank')
+      showNotif(`Announcement copied! Tap "${group.name}" in WhatsApp and click Send.`)
     }
   }
 
@@ -664,7 +663,7 @@ export default function WhatsAppBroadcastHub({
                           {g.link ? (
                             <>Open Direct Group Chat &amp; Paste <ArrowRight size={10} /></>
                           ) : (
-                            <>Connect Group Link &amp; Open <ArrowRight size={10} /></>
+                            <>Click to Send to Group <ArrowRight size={10} /></>
                           )}
                         </span>
                       </div>
