@@ -89,6 +89,7 @@ export default function ViewerDashboard() {
             if (ws.start) return [{ id: 'legacy', start: ws.start, end: ws.end }]
             return []
           })()} 
+          allWaterSupply={data.waterSupply || []}
         />
 
         {/* Summary Cards */}

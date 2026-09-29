@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ListChecks, Camera, FileBarChart2, Settings, LogOut,
-  Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff
+  Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff, Sparkles
 } from 'lucide-react'
 import {
   loadData, addExpense, updateExpense, deleteExpense,
@@ -16,6 +16,7 @@ import ExpenseTable from '../components/ExpenseTable'
 import Charts from '../components/Charts'
 import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import { exportToCSV, printReport } from '../utils/export'
+import { predictNextWaterSupply } from '../utils/waterPrediction'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const CATEGORIES = ['Security', 'Maintenance', 'Utilities', 'Miscellaneous', 'Capital']
@@ -377,6 +378,8 @@ export default function AdminPanel() {
                 if (ws.start) return [{ id: 'legacy', start: ws.start, end: ws.end }]
                 return []
               })()} 
+              allWaterSupply={data.waterSupply || []}
+              isAdmin={true}
             />
             <SummaryCards
               openingBalance={totals.record.openingBalance}
@@ -653,6 +656,32 @@ export default function AdminPanel() {
                  Manage water supply periods for the selected month: <strong className="text-primary font-bold">{currentMonthKey}</strong>
                </p>
              </div>
+
+             {/* Predictive Model Quick Banner */}
+             {(() => {
+               const pred = predictNextWaterSupply(data.waterSupply || [])
+               if (!pred.hasEnoughData) return null
+               return (
+                 <div className="bg-indigo-50/70 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800/40 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                   <div className="flex items-center gap-3">
+                     <div className="size-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center flex-shrink-0">
+                       <Sparkles size={18} />
+                     </div>
+                     <div>
+                       <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider block">
+                         Predictive Model Forecast (Every ~{pred.prediction.avgIntervalDays} Days)
+                       </span>
+                       <span className="text-sm font-extrabold text-slate-800 dark:text-slate-100">
+                         Next Window: <span className="text-indigo-600 dark:text-indigo-400">{pred.prediction.windowFormatted}</span> • Est. Duration: {pred.prediction.avgDurationText}
+                       </span>
+                     </div>
+                   </div>
+                   <span className={`text-xs font-bold px-3 py-1 rounded-full w-fit ${pred.prediction.statusBadge.color}`}>
+                     {pred.prediction.statusBadge.label}
+                   </span>
+                 </div>
+               )
+             })()}
 
              {/* Existing entries list */}
              <div className="border border-slate-100 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm bg-slate-50/50 p-4">
