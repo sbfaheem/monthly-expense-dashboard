@@ -504,6 +504,10 @@ export default function ViewerDashboard() {
           openingBalance={totals.record.openingBalance}
           monthlyCollection={totals.record.monthlyCollection}
           totalExpense={totals.totalExpense}
+          netCashFlow={totals.netCashFlow}
+          status={totals.status}
+          closingBalance={totals.closingBalance}
+          isOverdrawn={totals.isOverdrawn}
           saving={totals.saving}
           totalSaving={totals.totalSaving}
           currency={data.settings.currency}

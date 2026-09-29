@@ -104,21 +104,29 @@ const ExpenseTable = ({ expenses, settings, selectedMonth, totals, onEdit, onDel
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-primary/10 overflow-hidden divide-y divide-primary/5">
          <div className="px-6 py-4 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
            <span className="text-sm font-bold text-slate-600 dark:text-slate-400">TOTAL MONTHLY EXPENSE</span>
-           <span className="text-lg font-bold text-primary">{fmt(totals.totalExpense)}</span>
+           <span className="text-lg font-bold text-primary">{settings.currency} {fmt(totals.totalExpense)}</span>
          </div>
          <div className="px-6 py-4 flex justify-between items-center">
-           <span className="text-sm font-bold text-slate-600 dark:text-slate-400">CURRENT MONTH SAVING</span>
-           <span className="text-lg font-bold text-green-600 dark:text-green-400">{fmt(totals.saving)}</span>
+           <span className="text-sm font-bold text-slate-600 dark:text-slate-400">
+             {(totals.netCashFlow ?? totals.saving) >= 0 ? 'MONTHLY CASH FLOW (SURPLUS)' : 'MONTHLY CASH FLOW (DEFICIT)'}
+           </span>
+           <span className={`text-lg font-bold ${(totals.netCashFlow ?? totals.saving) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+             {(totals.netCashFlow ?? totals.saving) < 0 ? '-' : '+'} {settings.currency} {fmt(Math.abs(totals.netCashFlow ?? totals.saving))}
+           </span>
          </div>
-         {totals.record.showCctvExpense && (
-           <div className="px-6 py-4 flex justify-between items-center text-red-600">
+         {totals.record?.showCctvExpense && (
+           <div className="px-6 py-4 flex justify-between items-center text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20">
              <span className="text-sm font-bold">Capital Expenditure (CCTV)</span>
-             <span className="text-lg font-bold">{fmt(totals.record.cctvExpense)}</span>
+             <span className="text-lg font-bold">- {settings.currency} {fmt(totals.record.cctvExpense)}</span>
            </div>
          )}
          <div className="px-6 py-4 flex justify-between items-center bg-slate-900 dark:bg-black">
-           <span className="text-sm font-bold text-white">{totals.totalSaving >= 0 ? 'TOTAL ACCUMULATED SAVING' : 'TOTAL ACCUMULATED DEFICIT'}</span>
-           <span className={`text-lg font-bold ${totals.totalSaving >= 0 ? 'text-secondary-gold' : 'text-red-500'}`}>{fmt(Math.abs(totals.totalSaving))}</span>
+           <span className="text-sm font-bold text-white">
+             {(totals.closingBalance ?? totals.totalSaving) >= 0 ? 'CLOSING BALANCE (ACCUMULATED SURPLUS)' : 'CLOSING BALANCE (OVERDRAWN DEFICIT)'}
+           </span>
+           <span className={`text-lg font-bold ${(totals.closingBalance ?? totals.totalSaving) >= 0 ? 'text-secondary-gold' : 'text-red-400'}`}>
+             {(totals.closingBalance ?? totals.totalSaving) < 0 ? '-' : ''} {settings.currency} {fmt(Math.abs(totals.closingBalance ?? totals.totalSaving))}
+           </span>
          </div>
       </div>
     </>

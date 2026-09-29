@@ -32,6 +32,9 @@ export const getLastDataMonth = (data) => {
   return { month: m, year: Number(y) }
 }
 
+import { calculateMonthlyFinances } from './finance'
+export { calculateMonthlyFinances }
+
 export const calculateTotals = (expenses, settings, monthlyRecords, selectedMonth) => {
   const [selMonthName, selYearStr] = selectedMonth.split(' ')
   const selYear = Number(selYearStr)
@@ -45,8 +48,6 @@ export const calculateTotals = (expenses, settings, monthlyRecords, selectedMont
   const isPendingCurrentMonth = isCurrentMonth && today.getDate() !== lastDayOfMonth
 
   const monthlyExpenses = expenses.filter(e => e.month === selectedMonth)
-  const totalExpense = isPendingCurrentMonth ? 0 : monthlyExpenses.reduce((sum, e) => sum + Number(e.amount), 0)
-
   const monthRecord = monthlyRecords.find(r => r.month === selectedMonth)
   const isNoData = isPendingCurrentMonth || (!monthRecord && monthlyExpenses.length === 0)
   
@@ -59,15 +60,31 @@ export const calculateTotals = (expenses, settings, monthlyRecords, selectedMont
     showCctvExpense: false,
   } : monthRecord
 
-  const saving = record.isManualSaving
-    ? Number(record.manualSaving)
-    : Number(record.monthlyCollection) - totalExpense
+  const activeExpenses = isPendingCurrentMonth ? [] : monthlyExpenses
+  const finances = calculateMonthlyFinances(
+    record.openingBalance || 0,
+    record.monthlyCollection || 0,
+    activeExpenses
+  )
 
-  const totalSaving = isNoData 
+  const netCashFlow = record.isManualSaving ? Number(record.manualSaving) : finances.netCashFlow
+  const status = netCashFlow >= 0 ? "Surplus" : "Deficit"
+  const closingBalance = isNoData 
     ? 0 
-    : Number(record.openingBalance) + saving - (record.showCctvExpense ? record.cctvExpense || 0 : 0)
+    : Number(record.openingBalance) + netCashFlow - (record.showCctvExpense ? record.cctvExpense || 0 : 0)
+  const isOverdrawn = closingBalance < 0
 
-  return { totalExpense, saving, totalSaving, record: { ...record, isNoData } }
+  return {
+    totalExpense: isPendingCurrentMonth ? 0 : finances.totalExpense,
+    netCashFlow,
+    status,
+    closingBalance,
+    isOverdrawn,
+    // Backwards-compatible aliases
+    saving: netCashFlow,
+    totalSaving: closingBalance,
+    record: { ...record, isNoData }
+  }
 }
 
 // ─── Load all data ───────────────────────────────────────────
