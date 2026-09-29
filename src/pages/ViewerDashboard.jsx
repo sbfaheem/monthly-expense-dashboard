@@ -6,6 +6,7 @@ import ExpenseTable from '../components/ExpenseTable'
 import Charts from '../components/Charts'
 import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import MonthlyVarianceBanner from '../components/MonthlyVarianceBanner'
+import DynamicAlertBanner from '../components/DynamicAlertBanner'
 import { exportToCSV, printReport } from '../utils/export'
 import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
 import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck } from 'lucide-react'
@@ -522,18 +523,13 @@ export default function ViewerDashboard() {
           isNoData={totals.record.isNoData}
         />
 
-        {/* Monthly Note / Urdu Management Announcement */}
-        {totals.record.note && (
-          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-6 shadow-sm flex items-start gap-4" dir="rtl">
-            <div className="size-10 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-[22px]">campaign</span>
-            </div>
-            <div className="flex-1 text-right">
-              <h4 className="text-sm font-extrabold text-amber-800 dark:text-amber-300 mb-1 tracking-wide">انتظامیہ کی طرف سے اہم نوٹ:</h4>
-              <p className="text-[15px] font-semibold text-amber-900 dark:text-amber-200 leading-relaxed font-urdu">{totals.record.note}</p>
-            </div>
-          </div>
-        )}
+        {/* Contextual Dynamic Resident Alert Banner (Deficit vs Surplus) */}
+        <DynamicAlertBanner
+          netCashFlow={totals.netCashFlow}
+          currency={data.settings?.currency || 'PKR'}
+          customNote={totals.record?.note}
+          isNoData={totals.record?.isNoData}
+        />
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
