@@ -203,7 +203,9 @@ export default function WhatsAppBroadcastHub({
     // Personalize link for direct tracking if present
     let personalizedText = messageText
     if (personalizedText.includes('/view') && !personalizedText.includes('?u=')) {
-      personalizedText = personalizedText.replace(/\/view(?!\?)/g, `/view?u=${cleanPhone}&grp=${groupSlug}`)
+      const nameParam = encodeURIComponent(current.name || '')
+      const addrParam = encodeURIComponent(current.houseNo || '')
+      personalizedText = personalizedText.replace(/\/view(?!\?)/g, `/view?u=${cleanPhone}&name=${nameParam}&addr=${addrParam}&grp=${groupSlug}`)
     }
     const encoded = encodeURIComponent(personalizedText)
     const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encoded}`

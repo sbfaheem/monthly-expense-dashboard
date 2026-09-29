@@ -3,9 +3,9 @@ import {
   Users, Eye, Smartphone, Monitor, Clock, ArrowUpRight,
   Search, Filter, Download, RefreshCw, Send, CheckCircle2,
   AlertCircle, ChevronRight, Sparkles, Trash2, Calendar, UserCheck, MessageSquare, ExternalLink, X, Building2,
-  Star, Home, ThumbsUp, MessageSquareHeart
+  Star, Home, ThumbsUp, MessageSquareHeart, Phone, Edit2, UserPlus, Check
 } from 'lucide-react'
-import { loadData, clearVisitorLogs, clearFeedback } from '../utils/storage'
+import { loadData, clearVisitorLogs, clearFeedback, updateVisitorLog, deleteVisitorLog } from '../utils/storage'
 
 // Helper to normalize phone numbers for robust matching (last 10 digits)
 const normalizePhone = (p) => (p || '').replace(/[^0-9]/g, '').slice(-10)
@@ -31,11 +31,26 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
   useEffect(() => {
     if (defaultView) setAnalyticsView(defaultView)
   }, [defaultView])
+
+  // Table Mode: 'visits' (Total Impressions with Name, Phone, Address) vs 'directory' (70 Registered Contacts)
+  const [tableMode, setTableMode] = useState('visits')
+
+  // Visits Log filters
+  const [visitSearchTerm, setVisitSearchTerm] = useState('')
+  const [visitGroupFilter, setVisitGroupFilter] = useState('all') // 'all' | 'NTRG 2 Asad Hanzalla street' | 'N.T.R.C Sector 7D/1' | 'direct'
+  const [visitDeviceFilter, setVisitDeviceFilter] = useState('all') // 'all' | 'Mobile' | 'Desktop'
+
+  // Directory filters
   const [filterTab, setFilterTab] = useState('all') // 'all' | 'visited' | 'unvisited'
   const [groupFilter, setGroupFilter] = useState('all') // 'all' | 'N.T.R.C Sector 7D/1' | 'NTRG 2 Asad Hanzalla street'
   const [searchTerm, setSearchTerm] = useState('')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedContactHistory, setSelectedContactHistory] = useState(null)
+
+  // Edit / Assign Resident to visit log state
+  const [assigningLog, setAssigningLog] = useState(null)
+  const [assignForm, setAssignForm] = useState({ name: '', phone: '', houseAddress: '', group: 'NTRG 2 Asad Hanzalla street' })
+  const [assigningLoading, setAssigningLoading] = useState(false)
 
   // Feedback specific filters
   const [feedbackSearch, setFeedbackSearch] = useState('')
@@ -240,12 +255,173 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
   const mostViewedMonth = mostViewedMonthEntry ? mostViewedMonthEntry[0] : 'None'
   const mostViewedMonthCount = mostViewedMonthEntry ? mostViewedMonthEntry[1] : 0
 
+  // ─── Enriched Visitor Logs (Total Visits) with WhatsApp & Resident Details ───
+  const enrichedVisitorLogs = useMemo(() => {
+    return visitorLogs.map(log => {
+      const cleanPhone = normalizePhone(log.phone)
+      let matchedContact = null
+      if (cleanPhone && cleanPhone.length >= 7) {
+        matchedContact = contacts.find(c => normalizePhone(c.phone) === cleanPhone)
+      }
+      if (!matchedContact && log.name && log.name !== 'Guest / Unverified Resident' && log.name !== 'Anonymous Resident') {
+        const lowerName = log.name.toLowerCase().trim()
+        matchedContact = contacts.find(c => c.name?.toLowerCase().trim() === lowerName)
+      }
+
+      // Display name determination
+      let displayName = log.name
+      let badgeType = 'profile' // 'verified' | 'profile' | 'group' | 'guest'
+      
+      if (!displayName || displayName === 'Guest / Unverified Resident' || displayName === 'Anonymous Resident') {
+        if (matchedContact) {
+          displayName = matchedContact.name
+          badgeType = 'verified'
+        } else if (log.group) {
+          const groupShort = log.group.includes('7D') ? 'Sector 7D/1' : 'Asad Hanzalla'
+          displayName = `WhatsApp Member (${groupShort})`
+          badgeType = 'group'
+        } else {
+          displayName = 'Community Visitor'
+          badgeType = 'guest'
+        }
+      } else {
+        badgeType = matchedContact ? 'verified' : 'profile'
+      }
+
+      const displayPhone = log.phone || matchedContact?.phone || ''
+      const displayAddress = log.houseAddress || log.houseNo || matchedContact?.houseNo || ''
+      const displayGroup = log.group || matchedContact?.group || 'Unspecified Group'
+
+      return {
+        ...log,
+        displayName,
+        displayPhone,
+        displayAddress,
+        displayGroup,
+        badgeType,
+        matchedContact
+      }
+    })
+  }, [visitorLogs, contacts])
+
+  // ─── Filtered Total Visits ────────────────────────────────────
+  const filteredVisits = useMemo(() => {
+    return enrichedVisitorLogs.filter(v => {
+      // Group Filter
+      if (visitGroupFilter !== 'all') {
+        const vGrp = v.displayGroup || ''
+        if (visitGroupFilter === 'N.T.R.C Sector 7D/1' && !vGrp.includes('7D')) return false
+        if (visitGroupFilter === 'NTRG 2 Asad Hanzalla street' && (!vGrp.includes('Hanzalla') && !vGrp.includes('NTRG'))) return false
+        if (visitGroupFilter === 'direct' && (vGrp.includes('7D') || vGrp.includes('Hanzalla') || vGrp.includes('NTRG'))) return false
+      }
+
+      // Device Filter
+      if (visitDeviceFilter !== 'all' && v.device !== visitDeviceFilter) return false
+
+      // Search Filter
+      if (!visitSearchTerm.trim()) return true
+      const q = visitSearchTerm.toLowerCase()
+      return (
+        v.displayName?.toLowerCase().includes(q) ||
+        v.displayPhone?.includes(q) ||
+        v.displayAddress?.toLowerCase().includes(q) ||
+        v.displayGroup?.toLowerCase().includes(q) ||
+        v.monthViewed?.toLowerCase().includes(q)
+      )
+    })
+  }, [enrichedVisitorLogs, visitGroupFilter, visitDeviceFilter, visitSearchTerm])
+
+  // ─── Actions for Total Visits Log ─────────────────────────────
+  const exportVisitsCSV = () => {
+    const headers = ['Resident / Profile Name', 'WhatsApp Phone', 'House Address', 'WhatsApp Group', 'Statement Viewed', 'Device', 'Date & Time']
+    const rows = enrichedVisitorLogs.map(v => [
+      `"${v.displayName || ''}"`,
+      `"${v.displayPhone || ''}"`,
+      `"${v.displayAddress || ''}"`,
+      `"${v.displayGroup || ''}"`,
+      `"${v.monthViewed || ''}"`,
+      `"${v.device || ''}"`,
+      `"${v.dateStr || ''}"`
+    ])
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement('a')
+    link.setAttribute('href', encodedUri)
+    link.setAttribute('download', `total_visits_log_${new Date().toISOString().slice(0, 10)}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const handleChatWithVisitor = (v) => {
+    const cleanPhone = (v.displayPhone || '').replace(/[^0-9]/g, '')
+    if (!cleanPhone) return
+    const text = `السلام علیکم ${v.displayName} صاحب! نارتھ ٹاؤن ریذیڈنٹس (${v.displayGroup}) کی انتظامیہ کی طرف سے رابطہ کر رہے ہیں۔`
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`, '_blank')
+  }
+
+  const handleOpenAssignModal = (log) => {
+    setAssigningLog(log)
+    setAssignForm({
+      name: (log.displayName && !log.displayName.startsWith('WhatsApp Member') && log.displayName !== 'Community Visitor' && log.displayName !== 'Guest / Unverified Resident') ? log.displayName : '',
+      phone: log.displayPhone || '',
+      houseAddress: log.displayAddress || '',
+      group: log.displayGroup || 'NTRG 2 Asad Hanzalla street'
+    })
+  }
+
+  const handleSelectContactForAssign = (contact) => {
+    setAssignForm({
+      name: contact.name || '',
+      phone: contact.phone || '',
+      houseAddress: contact.houseNo || '',
+      group: contact.group || 'NTRG 2 Asad Hanzalla street'
+    })
+  }
+
+  const handleSaveAssignedLog = async (e) => {
+    e.preventDefault()
+    if (!assigningLog || !assignForm.name.trim()) return
+    setAssigningLoading(true)
+    try {
+      const updatedFields = {
+        name: assignForm.name.trim(),
+        phone: assignForm.phone.trim(),
+        houseNo: assignForm.houseAddress.trim(),
+        houseAddress: assignForm.houseAddress.trim(),
+        group: assignForm.group.trim() || 'NTRG 2 Asad Hanzalla street'
+      }
+      const freshData = await updateVisitorLog(assigningLog.id, updatedFields)
+      setData(freshData)
+      setAssigningLog(null)
+      if (showNotif) showNotif('Visitor record updated with resident details!')
+    } catch (err) {
+      if (showNotif) showNotif('Failed to update visitor record', 'error')
+    } finally {
+      setAssigningLoading(false)
+    }
+  }
+
+  const handleDeleteLog = async (logId) => {
+    if (!window.confirm('Delete this visitor log record?')) return
+    try {
+      const freshData = await deleteVisitorLog(logId)
+      setData(freshData)
+      if (showNotif) showNotif('Visit entry removed')
+    } catch (err) {
+      if (showNotif) showNotif('Failed to delete visit entry', 'error')
+    }
+  }
+
   // ─── One-Click WhatsApp Reminder for Unvisited Residents ──────
   const handleSendReminder = (contact) => {
     const cleanPhone = contact.phone.replace(/[^0-9]/g, '')
     const groupName = contact.group || 'NTRG 2 Asad Hanzalla street'
     const groupSlug = groupName.includes('7D') ? '7d1' : 'ntrg2'
-    const trackedUrl = `https://monthly-expense-dashboard.vercel.app/view?u=${cleanPhone}&grp=${groupSlug}`
+    const nameParam = encodeURIComponent(contact.name || '')
+    const addrParam = encodeURIComponent(contact.houseNo || '')
+    const trackedUrl = `https://monthly-expense-dashboard.vercel.app/view?u=${cleanPhone}&name=${nameParam}&addr=${addrParam}&grp=${groupSlug}`
     
     let text = `السلام علیکم ${contact.name} صاحب!\n`
     text += `نارتھ ٹاؤن ریذیڈنٹس (${groupName}) کی انتظامیہ کی طرف سے سلام۔\n\n`
@@ -426,7 +602,13 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
       {/* ─── Summary KPI Cards ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1: Unique Residents Visited */}
-        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-primary/10 space-y-3">
+        <div 
+          onClick={() => setTableMode('directory')}
+          className={`bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border transition-all cursor-pointer hover:shadow-md space-y-3 ${
+            tableMode === 'directory' ? 'ring-2 ring-emerald-500 border-emerald-500/30' : 'border-primary/10 hover:border-emerald-300'
+          }`}
+          title="Click to view Registered Resident Directory"
+        >
           <div className="flex items-center justify-between text-slate-400">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Verified Residents</span>
             <div className="size-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
@@ -456,7 +638,13 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
         </div>
 
         {/* KPI 2: Total Dashboard Visits */}
-        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-primary/10 space-y-3">
+        <div 
+          onClick={() => setTableMode('visits')}
+          className={`bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border transition-all cursor-pointer hover:shadow-md space-y-3 ${
+            tableMode === 'visits' ? 'ring-2 ring-blue-500 border-blue-500/30' : 'border-primary/10 hover:border-blue-300'
+          }`}
+          title="Click to view Total Visits Log with Name, Phone, and House Address"
+        >
           <div className="flex items-center justify-between text-slate-400">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Visits</span>
             <div className="size-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center">
@@ -528,239 +716,561 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
         </div>
       </div>
 
-      {/* ─── Main Section: Resident Engagement Directory ─── */}
+      {/* ─── Main Section: Toggle between Total Visits Log and Registered Directory ─── */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-primary/10 overflow-hidden">
-        {/* Table Header & Controls */}
-        <div className="p-6 border-b border-slate-100 dark:border-slate-700/60 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-              Resident Engagement Directory
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                {filteredContacts.length}
-              </span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Mapped against WhatsApp groups (NTRC Sector 7D/1 &amp; NTRG 2 Asad Hanzalla street).
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
-            {/* Group Filter Selector */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-700/50 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+        {/* Table View Switcher & Sub-Header */}
+        <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-700/60 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            {/* Primary Toggle: Total Visits Log vs Registered Directory */}
+            <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-700 w-fit">
               <button
-                onClick={() => setGroupFilter('all')}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  groupFilter === 'all'
-                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-primary'
-                }`}
-              >
-                All Groups
-              </button>
-              <button
-                onClick={() => setGroupFilter('NTRG 2 Asad Hanzalla street')}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  groupFilter === 'NTRG 2 Asad Hanzalla street'
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600'
-                }`}
-              >
-                Asad Hanzalla
-              </button>
-              <button
-                onClick={() => setGroupFilter('N.T.R.C Sector 7D/1')}
-                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  groupFilter === 'N.T.R.C Sector 7D/1'
+                onClick={() => setTableMode('visits')}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-black transition-all ${
+                  tableMode === 'visits'
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-600 dark:text-slate-300 hover:text-blue-600'
                 }`}
               >
-                Sector 7D/1
+                <Eye size={14} />
+                <span>Total Visits Log</span>
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                  tableMode === 'visits' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200'
+                }`}>
+                  {enrichedVisitorLogs.length}
+                </span>
               </button>
-            </div>
 
-            {/* Visit Status Filter Tabs */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-700/50 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
               <button
-                onClick={() => setFilterTab('all')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  filterTab === 'all'
-                    ? 'bg-white dark:bg-slate-800 text-primary shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-primary'
-                }`}
-              >
-                All ({contacts.length})
-              </button>
-              <button
-                onClick={() => setFilterTab('visited')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  filterTab === 'visited'
+                onClick={() => setTableMode('directory')}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-black transition-all ${
+                  tableMode === 'directory'
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600'
                 }`}
               >
-                <CheckCircle2 size={12} /> Visited ({visitedCount})
-              </button>
-              <button
-                onClick={() => setFilterTab('unvisited')}
-                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  filterTab === 'unvisited'
-                    ? 'bg-amber-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-amber-600'
-                }`}
-              >
-                <AlertCircle size={12} /> Not Visited ({unvisitedCount})
+                <Users size={14} />
+                <span>Registered Directory</span>
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                  tableMode === 'directory' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200'
+                }`}>
+                  {contacts.length}
+                </span>
               </button>
             </div>
 
-            {/* Search Input */}
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search resident, phone, group..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-primary outline-none w-full sm:w-56"
-              />
-            </div>
+            <p className="text-xs text-slate-500 hidden xl:block">
+              {tableMode === 'visits'
+                ? 'Every visitor impression with Name, WhatsApp Contact Number, and House Address.'
+                : 'Complete 70-contact directory mapped against WhatsApp groups with visit tracking.'}
+            </p>
           </div>
+
+          {/* Controls Specific to Active Mode */}
+          {tableMode === 'visits' ? (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-wrap">
+              {/* Group Filter Selector */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-700/50 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                <button
+                  onClick={() => setVisitGroupFilter('all')}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    visitGroupFilter === 'all'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-primary'
+                  }`}
+                >
+                  All Groups
+                </button>
+                <button
+                  onClick={() => setVisitGroupFilter('NTRG 2 Asad Hanzalla street')}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    visitGroupFilter === 'NTRG 2 Asad Hanzalla street'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600'
+                  }`}
+                >
+                  Asad Hanzalla
+                </button>
+                <button
+                  onClick={() => setVisitGroupFilter('N.T.R.C Sector 7D/1')}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    visitGroupFilter === 'N.T.R.C Sector 7D/1'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-blue-600'
+                  }`}
+                >
+                  Sector 7D/1
+                </button>
+              </div>
+
+              {/* Device Filter */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-700/50 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                <button
+                  onClick={() => setVisitDeviceFilter('all')}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    visitDeviceFilter === 'all'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  All Devices
+                </button>
+                <button
+                  onClick={() => setVisitDeviceFilter('Mobile')}
+                  className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    visitDeviceFilter === 'Mobile'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300'
+                  }`}
+                  title="Mobile Visitors"
+                >
+                  <Smartphone size={13} />
+                </button>
+                <button
+                  onClick={() => setVisitDeviceFilter('Desktop')}
+                  className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    visitDeviceFilter === 'Desktop'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300'
+                  }`}
+                  title="Desktop Visitors"
+                >
+                  <Monitor size={13} />
+                </button>
+              </div>
+
+              {/* Search Visits */}
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search name, phone, address..."
+                  value={visitSearchTerm}
+                  onChange={(e) => setVisitSearchTerm(e.target.value)}
+                  className="pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-primary outline-none w-full sm:w-52"
+                />
+              </div>
+
+              <button
+                onClick={exportVisitsCSV}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 text-xs font-bold text-slate-700 dark:text-slate-200 transition-all shadow-xs"
+                title="Export Total Visits to CSV"
+              >
+                <Download size={13} />
+                <span className="hidden sm:inline">Export</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-wrap">
+              {/* Group Filter Selector */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-700/50 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                <button
+                  onClick={() => setGroupFilter('all')}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    groupFilter === 'all'
+                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-primary'
+                  }`}
+                >
+                  All Groups
+                </button>
+                <button
+                  onClick={() => setGroupFilter('NTRG 2 Asad Hanzalla street')}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    groupFilter === 'NTRG 2 Asad Hanzalla street'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600'
+                  }`}
+                >
+                  Asad Hanzalla
+                </button>
+                <button
+                  onClick={() => setGroupFilter('N.T.R.C Sector 7D/1')}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    groupFilter === 'N.T.R.C Sector 7D/1'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-blue-600'
+                  }`}
+                >
+                  Sector 7D/1
+                </button>
+              </div>
+
+              {/* Visit Status Filter Tabs */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-700/50 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                <button
+                  onClick={() => setFilterTab('all')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    filterTab === 'all'
+                      ? 'bg-white dark:bg-slate-800 text-primary shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-primary'
+                  }`}
+                >
+                  All ({contacts.length})
+                </button>
+                <button
+                  onClick={() => setFilterTab('visited')}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    filterTab === 'visited'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600'
+                  }`}
+                >
+                  <CheckCircle2 size={12} /> Visited ({visitedCount})
+                </button>
+                <button
+                  onClick={() => setFilterTab('unvisited')}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    filterTab === 'unvisited'
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-amber-600'
+                  }`}
+                >
+                  <AlertCircle size={12} /> Not Visited ({unvisitedCount})
+                </button>
+              </div>
+
+              {/* Search Directory */}
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search resident, phone, house #..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-primary outline-none w-full sm:w-52"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Directory Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-slate-750 text-slate-500 uppercase font-extrabold tracking-wider border-b border-slate-100 dark:border-slate-700">
-              <tr>
-                <th className="p-4">Resident</th>
-                <th className="p-4">WhatsApp Contact</th>
-                <th className="p-4">WhatsApp Group</th>
-                <th className="p-4">House #</th>
-                <th className="p-4">Status &amp; Visits</th>
-                <th className="p-4">Last Seen</th>
-                <th className="p-4 text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {filteredContacts.length === 0 ? (
+        {/* ─── TABLE 1: TOTAL VISITS LOG (Active by default) ─── */}
+        {tableMode === 'visits' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 dark:bg-slate-750 text-slate-500 uppercase font-extrabold tracking-wider border-b border-slate-100 dark:border-slate-700">
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-400 italic">
-                    No residents found matching the selected filter.
-                  </td>
+                  <th className="p-4">Resident / WhatsApp Profile</th>
+                  <th className="p-4">WhatsApp Contact</th>
+                  <th className="p-4">House Address</th>
+                  <th className="p-4">WhatsApp Group</th>
+                  <th className="p-4">Statement Viewed</th>
+                  <th className="p-4">Device</th>
+                  <th className="p-4">Visited At</th>
+                  <th className="p-4 text-center">Action</th>
                 </tr>
-              ) : (
-                filteredContacts.map(c => (
-                  <tr key={c.id || c.phone} className="hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors">
-                    {/* Name & Avatar */}
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`size-8 rounded-full flex items-center justify-center font-bold text-xs text-white ${
-                          c.hasVisited ? 'bg-emerald-600' : 'bg-slate-400'
-                        }`}>
-                          {c.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-extrabold text-slate-800 dark:text-slate-100">{c.name}</p>
-                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                            c.tag === 'Committee' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' : 'text-slate-400'
-                          }`}>
-                            {c.tag || 'Resident'}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* WhatsApp */}
-                    <td className="p-4 font-mono font-medium">
-                      <a
-                        href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 font-bold group"
-                        title="Chat on WhatsApp"
-                      >
-                        {c.phone}
-                        <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </a>
-                    </td>
-
-                    {/* WhatsApp Group */}
-                    <td className="p-4">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
-                        (c.group || '').includes('7D')
-                          ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
-                          : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
-                      }`}>
-                        {(c.group || '').includes('7D') ? 'Sector 7D/1' : 'Asad Hanzalla'}
-                      </span>
-                    </td>
-
-                    {/* House No */}
-                    <td className="p-4 font-semibold text-slate-600 dark:text-slate-300">
-                      {c.houseNo || '7D/1'}
-                    </td>
-
-                    {/* Engagement Status */}
-                    <td className="p-4">
-                      {c.hasVisited ? (
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
-                            <CheckCircle2 size={12} /> Visited ({c.visitCount}x)
-                          </span>
-                          {c.lastDevice && (
-                            <span className="p-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-500" title={`Last seen on ${c.lastDevice}`}>
-                              {c.lastDevice === 'Mobile' ? <Smartphone size={12} /> : <Monitor size={12} />}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40">
-                          <AlertCircle size={12} /> Not Visited Yet
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Last Seen */}
-                    <td className="p-4 text-slate-500">
-                      {c.lastVisitedAt ? (
-                        <div>
-                          <p className="font-bold text-slate-700 dark:text-slate-300">
-                            {timeAgo(c.lastVisitedAt)}
-                          </p>
-                          <p className="text-[10px] text-slate-400">
-                            {c.lastVisitedDateStr}
-                          </p>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 italic">Never</span>
-                      )}
-                    </td>
-
-                    {/* Action */}
-                    <td className="p-4 text-center">
-                      {c.hasVisited ? (
-                        <button
-                          onClick={() => setSelectedContactHistory(c)}
-                          className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-primary/10 hover:text-primary text-slate-700 dark:text-slate-200 text-xs font-bold transition-all"
-                        >
-                          View Logs
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleSendReminder(c)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition-all active:scale-98"
-                          title="Send direct invitation link via WhatsApp"
-                        >
-                          <Send size={12} /> Send Reminder
-                        </button>
-                      )}
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                {filteredVisits.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="p-10 text-center text-slate-400 italic">
+                      <Eye size={24} className="mx-auto mb-2 opacity-40" />
+                      No visit records found matching your filters.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  filteredVisits.map((v) => {
+                    const cleanPhone = (v.displayPhone || '').replace(/[^0-9]/g, '')
+                    return (
+                      <tr key={v.id} className="hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors">
+                        {/* Name & Badge */}
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`size-8 rounded-full flex items-center justify-center font-bold text-xs text-white shadow-xs ${
+                              v.badgeType === 'verified'
+                                ? 'bg-emerald-600'
+                                : v.badgeType === 'profile'
+                                ? 'bg-blue-600'
+                                : v.badgeType === 'group'
+                                ? 'bg-amber-600'
+                                : 'bg-slate-500'
+                            }`}>
+                              {(v.displayName || 'V').charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-extrabold text-slate-800 dark:text-slate-100">
+                                {v.displayName}
+                              </p>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                {v.badgeType === 'verified' && (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                                    Verified Contact
+                                  </span>
+                                )}
+                                {v.badgeType === 'profile' && (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                                    WhatsApp Profile
+                                  </span>
+                                )}
+                                {v.badgeType === 'group' && (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                                    Group Member
+                                  </span>
+                                )}
+                                {v.badgeType === 'guest' && (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                                    Guest Visitor
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* WhatsApp Phone */}
+                        <td className="p-4 font-mono font-medium">
+                          {v.displayPhone ? (
+                            <a
+                              href={`https://wa.me/${cleanPhone}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 font-bold group"
+                              title="Chat on WhatsApp"
+                            >
+                              <MessageSquare size={13} className="text-emerald-500" />
+                              <span>{v.displayPhone}</span>
+                              <ExternalLink size={11} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </a>
+                          ) : (
+                            <span className="text-slate-400 italic text-[11px]">Unlinked</span>
+                          )}
+                        </td>
+
+                        {/* House Address */}
+                        <td className="p-4">
+                          {v.displayAddress ? (
+                            <div className="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-200">
+                              <Home size={13} className="text-purple-500 flex-shrink-0" />
+                              <span>{v.displayAddress}</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 italic text-[11px]">—</span>
+                          )}
+                        </td>
+
+                        {/* WhatsApp Group */}
+                        <td className="p-4">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
+                            (v.displayGroup || '').includes('7D')
+                              ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
+                              : (v.displayGroup || '').includes('Hanzalla') || (v.displayGroup || '').includes('NTRG')
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                              : 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800'
+                          }`}>
+                            {(v.displayGroup || '').includes('7D')
+                              ? 'Sector 7D/1'
+                              : (v.displayGroup || '').includes('Hanzalla') || (v.displayGroup || '').includes('NTRG')
+                              ? 'Asad Hanzalla'
+                              : v.displayGroup || 'Direct Link'}
+                          </span>
+                        </td>
+
+                        {/* Statement Viewed */}
+                        <td className="p-4">
+                          {v.monthViewed ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                              {v.monthViewed}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 italic text-[10px]">Dashboard</span>
+                          )}
+                        </td>
+
+                        {/* Device */}
+                        <td className="p-4 text-slate-600 dark:text-slate-300">
+                          <span className="flex items-center gap-1 text-[11px] font-medium">
+                            {v.device === 'Mobile' ? (
+                              <Smartphone size={13} className="text-emerald-500" />
+                            ) : (
+                              <Monitor size={13} className="text-blue-500" />
+                            )}
+                            <span>{v.device || 'Desktop'}</span>
+                          </span>
+                        </td>
+
+                        {/* Visited At */}
+                        <td className="p-4 text-slate-500">
+                          <p className="font-bold text-slate-700 dark:text-slate-300">
+                            {timeAgo(v.timestamp)}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            {v.dateStr}
+                          </p>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="p-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {cleanPhone && (
+                              <button
+                                onClick={() => handleChatWithVisitor(v)}
+                                className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all"
+                                title="Chat on WhatsApp"
+                              >
+                                <MessageSquare size={13} />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleOpenAssignModal(v)}
+                              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-primary hover:text-white text-slate-600 dark:text-slate-300 transition-all"
+                              title="Assign or Edit Resident Details"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteLog(v.id)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
+                              title="Delete this visit entry"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ─── TABLE 2: REGISTERED RESIDENT DIRECTORY (70 Contacts) ─── */}
+        {tableMode === 'directory' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 dark:bg-slate-750 text-slate-500 uppercase font-extrabold tracking-wider border-b border-slate-100 dark:border-slate-700">
+                <tr>
+                  <th className="p-4">Resident</th>
+                  <th className="p-4">WhatsApp Contact</th>
+                  <th className="p-4">WhatsApp Group</th>
+                  <th className="p-4">House #</th>
+                  <th className="p-4">Status &amp; Visits</th>
+                  <th className="p-4">Last Seen</th>
+                  <th className="p-4 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                {filteredContacts.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-8 text-center text-slate-400 italic">
+                      No residents found matching the selected filter.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredContacts.map(c => (
+                    <tr key={c.id || c.phone} className="hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors">
+                      {/* Name & Avatar */}
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`size-8 rounded-full flex items-center justify-center font-bold text-xs text-white ${
+                            c.hasVisited ? 'bg-emerald-600' : 'bg-slate-400'
+                          }`}>
+                            {c.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-extrabold text-slate-800 dark:text-slate-100">{c.name}</p>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                              c.tag === 'Committee' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' : 'text-slate-400'
+                            }`}>
+                              {c.tag || 'Resident'}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* WhatsApp */}
+                      <td className="p-4 font-mono font-medium">
+                        <a
+                          href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-emerald-600 hover:text-emerald-700 flex items-center gap-1 font-bold group"
+                          title="Chat on WhatsApp"
+                        >
+                          {c.phone}
+                          <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </a>
+                      </td>
+
+                      {/* WhatsApp Group */}
+                      <td className="p-4">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
+                          (c.group || '').includes('7D')
+                            ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                        }`}>
+                          {(c.group || '').includes('7D') ? 'Sector 7D/1' : 'Asad Hanzalla'}
+                        </span>
+                      </td>
+
+                      {/* House No */}
+                      <td className="p-4 font-semibold text-slate-600 dark:text-slate-300">
+                        {c.houseNo || '7D/1'}
+                      </td>
+
+                      {/* Engagement Status */}
+                      <td className="p-4">
+                        {c.hasVisited ? (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                              <CheckCircle2 size={12} /> Visited ({c.visitCount}x)
+                            </span>
+                            {c.lastDevice && (
+                              <span className="p-1 rounded bg-slate-100 dark:bg-slate-700 text-slate-500" title={`Last seen on ${c.lastDevice}`}>
+                                {c.lastDevice === 'Mobile' ? <Smartphone size={12} /> : <Monitor size={12} />}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40">
+                            <AlertCircle size={12} /> Not Visited Yet
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Last Seen */}
+                      <td className="p-4 text-slate-500">
+                        {c.lastVisitedAt ? (
+                          <div>
+                            <p className="font-bold text-slate-700 dark:text-slate-300">
+                              {timeAgo(c.lastVisitedAt)}
+                            </p>
+                            <p className="text-[10px] text-slate-400">
+                              {c.lastVisitedDateStr}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 italic">Never</span>
+                        )}
+                      </td>
+
+                      {/* Action */}
+                      <td className="p-4 text-center">
+                        {c.hasVisited ? (
+                          <button
+                            onClick={() => setSelectedContactHistory(c)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-primary/10 hover:text-primary text-slate-700 dark:text-slate-200 text-xs font-bold transition-all"
+                          >
+                            View Logs
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleSendReminder(c)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-sm transition-all active:scale-98"
+                            title="Send direct invitation link via WhatsApp"
+                          >
+                            <Send size={12} /> Send Reminder
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* ─── Live Recent Visits Activity Stream ─── */}
@@ -1269,6 +1779,136 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Assign / Edit Resident to Visit Log Modal ─── */}
+      {assigningLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
+              <div className="flex items-center gap-2.5">
+                <div className="size-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shadow-sm shadow-blue-500/20">
+                  <UserCheck size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                    Assign / Edit Visitor Details
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Attach Name, WhatsApp Phone, and House Address to this visit record
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAssigningLog(null)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="py-4 flex-1 overflow-y-auto space-y-4 pr-1">
+              {/* Quick Select from 70 Directory Contacts */}
+              <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                  ⚡ Quick Pick from Registered 70 Residents Directory
+                </label>
+                <select
+                  onChange={(e) => {
+                    const found = contacts.find(c => (c.id || c.phone) === e.target.value)
+                    if (found) handleSelectContactForAssign(found)
+                  }}
+                  defaultValue=""
+                  className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-primary font-medium"
+                >
+                  <option value="" disabled>-- Select resident from directory to auto-fill --</option>
+                  {contacts.map(c => (
+                    <option key={c.id || c.phone} value={c.id || c.phone}>
+                      {c.name} ({c.phone}) - House: {c.houseNo || 'N/A'} [{c.group?.includes('7D') ? 'Sector 7D/1' : 'Asad Hanzalla'}]
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Form fields */}
+              <form onSubmit={handleSaveAssignedLog} className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                    Resident / WhatsApp Profile Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={assignForm.name}
+                    onChange={(e) => setAssignForm({ ...assignForm, name: e.target.value })}
+                    placeholder="e.g. Abdul Majeed"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-primary"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                      WhatsApp Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={assignForm.phone}
+                      onChange={(e) => setAssignForm({ ...assignForm, phone: e.target.value })}
+                      placeholder="e.g. 0301 3377675"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                      House / Flat Address
+                    </label>
+                    <input
+                      type="text"
+                      value={assignForm.houseAddress}
+                      onChange={(e) => setAssignForm({ ...assignForm, houseAddress: e.target.value })}
+                      placeholder="e.g. House 42-A, St 2"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                    WhatsApp Group
+                  </label>
+                  <select
+                    value={assignForm.group}
+                    onChange={(e) => setAssignForm({ ...assignForm, group: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="NTRG 2 Asad Hanzalla street">NTRG 2 Asad Hanzalla street</option>
+                    <option value="N.T.R.C Sector 7D/1">N.T.R.C Sector 7D/1</option>
+                    <option value="Direct Community Resident">Direct Community Resident (No Group)</option>
+                  </select>
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAssigningLog(null)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={assigningLoading}
+                    className="px-5 py-2 bg-primary hover:bg-primary-hover text-white rounded-xl text-xs font-extrabold shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50 active:scale-98"
+                  >
+                    {assigningLoading ? 'Saving...' : 'Save & Update Record'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>

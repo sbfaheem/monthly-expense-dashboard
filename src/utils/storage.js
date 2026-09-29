@@ -521,6 +521,29 @@ export const clearVisitorLogs = async () => {
   }
 }
 
+export const updateVisitorLog = async (logId, updatedData = {}) => {
+  try {
+    const docRef = doc(db, 'visitor_logs', logId)
+    await updateDoc(docRef, updatedData)
+    return loadData()
+  } catch (err) {
+    console.error("Failed to update visitor log:", err)
+    return loadData()
+  }
+}
+
+export const deleteVisitorLog = async (logId) => {
+  try {
+    const docRef = doc(db, 'visitor_logs', logId)
+    await deleteDoc(docRef)
+    return loadData()
+  } catch (err) {
+    console.error("Failed to delete visitor log:", err)
+    return loadData()
+  }
+}
+
+
 // ─── Resident Feedback & Rating CRUD ─────────────────────────
 
 export const submitFeedback = async (feedbackData = {}) => {

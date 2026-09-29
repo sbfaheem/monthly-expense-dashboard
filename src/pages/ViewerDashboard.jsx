@@ -54,6 +54,8 @@ export default function ViewerDashboard() {
       // Resolve resident identity and WhatsApp group
       const params = new URLSearchParams(window.location.search)
       const queryUser = params.get('u') || params.get('user') || params.get('phone') || params.get('ref')
+      const queryName = params.get('name') || params.get('wa_name') || params.get('profile') || params.get('resident')
+      const queryAddr = params.get('addr') || params.get('address') || params.get('house') || params.get('houseNo')
       const rawGroup = params.get('grp') || params.get('group')
       const resolvedGroup = resolveGroupName(rawGroup)
 
@@ -76,6 +78,31 @@ export default function ViewerDashboard() {
         }
       }
 
+      // Check queryName if no contact matched by phone
+      if (!matched && queryName && freshData.contacts?.length) {
+        const lowerName = queryName.toLowerCase().trim()
+        matched = freshData.contacts.find(c => c.name?.toLowerCase().trim() === lowerName)
+      }
+
+      // If URL explicitly provides name and/or phone, create or enrich profile directly from WhatsApp link
+      if (!matched && (queryName || queryUser)) {
+        matched = {
+          name: queryName || queryUser || 'Resident',
+          phone: queryUser || '',
+          houseAddress: queryAddr || '',
+          houseNo: queryAddr || '',
+          group: resolvedGroup || 'NTRG 2 Asad Hanzalla street',
+          tag: 'Resident'
+        }
+      } else if (matched && (queryAddr || queryName)) {
+        matched = {
+          ...matched,
+          name: queryName || matched.name,
+          houseAddress: queryAddr || matched.houseAddress || matched.houseNo || '',
+          houseNo: queryAddr || matched.houseNo || ''
+        }
+      }
+
       if (!matched && storedIdentity) {
         try {
           const parsed = JSON.parse(storedIdentity)
@@ -89,9 +116,19 @@ export default function ViewerDashboard() {
 
       if (matched) {
         const finalGroup = resolvedGroup || matched.group || 'NTRG 2 Asad Hanzalla street'
-        const fullResident = { ...matched, group: finalGroup }
+        const fullResident = {
+          ...matched,
+          group: finalGroup,
+          houseAddress: matched.houseAddress || matched.houseNo || '',
+          houseNo: matched.houseNo || matched.houseAddress || ''
+        }
         setResident(fullResident)
         localStorage.setItem('resident_identity', JSON.stringify(fullResident))
+      } else if (resolvedGroup) {
+        // Prompt check-in modal after a brief pause if arriving from WhatsApp group without identity
+        setTimeout(() => {
+          setShowCheckInModal(true)
+        }, 800)
       }
     }).catch(err => {
       console.error('Failed to load data:', err)
@@ -108,14 +145,15 @@ export default function ViewerDashboard() {
   useEffect(() => {
     if (loading || !selectedMonth) return
 
-    const sessionKey = `visited_${currentMonthKey}_${resident?.phone || 'anon'}_${resident?.group || detectedGroup || 'general'}`
+    const sessionKey = `visited_${currentMonthKey}_${resident?.phone || resident?.name || 'anon'}_${resident?.group || detectedGroup || 'general'}`
     if (sessionStorage.getItem(sessionKey)) return
 
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
     const logPayload = {
       name: resident?.name || 'Guest / Unverified Resident',
       phone: resident?.phone || '',
-      houseNo: resident?.houseNo || '',
+      houseNo: resident?.houseNo || resident?.houseAddress || '',
+      houseAddress: resident?.houseAddress || resident?.houseNo || '',
       group: resident?.group || detectedGroup || 'Unspecified Group',
       tag: resident?.tag || 'Resident',
       monthViewed: currentMonthKey,
@@ -232,6 +270,18 @@ export default function ViewerDashboard() {
         }
         setResident(fullProfile)
         localStorage.setItem('resident_identity', JSON.stringify(fullProfile))
+
+        const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
+        logVisitor({
+          name: fullProfile.name,
+          phone: fullProfile.phone,
+          houseNo: fullProfile.houseNo,
+          houseAddress: fullProfile.houseAddress,
+          group: fullProfile.group,
+          tag: fullProfile.tag,
+          monthViewed: currentMonthKey,
+          device: isMobile ? 'Mobile' : 'Desktop'
+        })
       }
 
       setFeedbackSubmitted(true)
