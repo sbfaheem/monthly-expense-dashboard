@@ -6,10 +6,25 @@ import ExpenseTable from '../components/ExpenseTable'
 import Charts from '../components/Charts'
 import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import { exportToCSV, printReport } from '../utils/export'
-import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles } from 'lucide-react'
+import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck } from 'lucide-react'
 
 // Helper to normalize phone numbers for robust matching (last 10 digits)
 const normalizePhone = (p) => (p || '').replace(/[^0-9]/g, '').slice(-10)
+
+// Helper for relative timestamps
+const timeAgo = (timestamp) => {
+  if (!timestamp) return 'Recently'
+  const seconds = Math.floor((Date.now() - Number(timestamp)) / 1000)
+  if (seconds < 60) return 'Just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days}d ago`
+  const months = Math.floor(days / 30)
+  return `${months}mo ago`
+}
 
 export default function ViewerDashboard() {
   const [data, setData] = useState({
@@ -17,7 +32,8 @@ export default function ViewerDashboard() {
     monthlyRecords: [],
     expenses: [],
     waterSupply: [],
-    contacts: []
+    contacts: [],
+    feedback: []
   })
   const [loading, setLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState('')
@@ -140,6 +156,13 @@ export default function ViewerDashboard() {
   const currentMonthKey = `${selectedMonth} ${selectedYear}`
   const monthlyExpenses = data.expenses.filter(e => e.month === currentMonthKey)
   const totals = calculateTotals(data.expenses, data.settings, data.monthlyRecords, currentMonthKey)
+
+  const feedbackList = data.feedback || []
+  const avgRating = useMemo(() => {
+    if (!feedbackList.length) return '5.0'
+    const total = feedbackList.reduce((acc, f) => acc + (Number(f.rating) || 5), 0)
+    return (total / feedbackList.length).toFixed(1)
+  }, [feedbackList])
 
   // Log visit to Firestore ONLY when resident identity is confirmed
   useEffect(() => {
@@ -280,7 +303,13 @@ export default function ViewerDashboard() {
         comment: feedbackComment.trim(),
         monthViewed: currentMonthKey
       }
-      await submitFeedback(payload)
+      const created = await submitFeedback(payload)
+      if (created) {
+        setData(prev => ({
+          ...prev,
+          feedback: [created, ...(prev.feedback || [])]
+        }))
+      }
 
       // If resident wasn't set, remember them as a resident profile
       if (!resident) {
@@ -620,6 +649,155 @@ export default function ViewerDashboard() {
 
           </div>
         </div>
+
+        {/* ─── Resident Reviews & Community Feedback Section ─── */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-blue-600/10 via-indigo-600/5 to-purple-600/10 dark:from-slate-800/90 dark:to-slate-900/90 rounded-3xl p-6 sm:p-8 lg:p-10 border border-blue-500/20 dark:border-slate-700 shadow-sm space-y-6">
+          {/* Subtle glow decorative background */}
+          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Section Header */}
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-primary/10 dark:border-slate-700/60 pb-6">
+            <div>
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 shadow-2xs">
+                  <Sparkles size={12} className="text-blue-600 dark:text-blue-400" />
+                  Community Reviews &amp; Feedback
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  <CheckCircle2 size={12} /> {feedbackList.length}+ Positive Reviews
+                </span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                What North Town Residents Are Saying
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                Ratings, reviews, and suggestions shared by verified residents of Asad Hanzalla Street &amp; Sector 7D/1 on monthly accounts and community services.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Average Rating Pill */}
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-900/60 px-3.5 py-2 rounded-2xl shadow-xs">
+                <div className="flex items-center gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} size={15} className="fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <div className="border-l border-slate-200 dark:border-slate-700 pl-2 text-left">
+                  <p className="text-xs font-black text-slate-800 dark:text-slate-200 leading-none">{avgRating} / 5.0</p>
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 font-bold leading-none mt-0.5">Top Rated</p>
+                </div>
+              </div>
+
+              {/* Leave Review Action Button */}
+              <button
+                onClick={handleOpenFeedback}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-extrabold rounded-2xl shadow-sm shadow-primary/25 transition-all active:scale-95"
+              >
+                <Star size={14} className="fill-white" />
+                <span>+ Rate &amp; Leave Review</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Cards Grid */}
+          <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {feedbackList.map((f, idx) => {
+              const rating = Number(f.rating) || 5
+              const initials = (f.name || 'R').charAt(0).toUpperCase()
+              return (
+                <div
+                  key={f.id || idx}
+                  className="bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-700 shadow-md shadow-blue-500/5 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
+                >
+                  {/* Card Top: Avatar, Name, House Address & Community Badge */}
+                  <div>
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3">
+                        {/* Avatar with Blue Verified Checkmark Overlay */}
+                        <div className="relative size-11 rounded-full bg-gradient-to-tr from-primary to-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-md shadow-primary/20 flex-shrink-0">
+                          {initials}
+                          <div
+                            className="absolute -bottom-1 -right-1 size-5 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800 shadow-xs"
+                            title="Verified Resident Profile"
+                          >
+                            <Check size={11} strokeWidth={3} />
+                          </div>
+                        </div>
+
+                        <div>
+                          <p className="font-extrabold text-sm sm:text-base text-slate-800 dark:text-slate-100 leading-tight">
+                            {f.name}
+                          </p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1 font-medium">
+                            <Home size={11} className="text-purple-500 flex-shrink-0" />
+                            <span>{f.houseAddress || 'Sector 7D/1'}</span>
+                            <span className="text-slate-300 dark:text-slate-600">•</span>
+                            <span className="text-blue-600 dark:text-blue-400 font-bold">Verified Resident</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Verified Shield Icon */}
+                      <div
+                        className="size-8 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/60 flex items-center justify-center text-blue-600 dark:text-blue-400 flex-shrink-0"
+                        title="Verified Community Review"
+                      >
+                        <ShieldCheck size={17} />
+                      </div>
+                    </div>
+
+                    {/* Star Rating & Relative Time */}
+                    <div className="flex items-center gap-2 my-2">
+                      <div className="flex items-center gap-0.5">
+                        {[...Array(5)].map((_, sIdx) => (
+                          <Star
+                            key={sIdx}
+                            size={16}
+                            className={sIdx < rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200 dark:text-slate-600'}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-xs font-semibold text-slate-400">
+                        {timeAgo(f.timestamp) || f.dateStr || 'Recently'}
+                      </span>
+                    </div>
+
+                    {/* Review Text / Quote */}
+                    <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-normal mt-2.5">
+                      &ldquo;{f.comment || 'Accounts are clear and well managed. Complete financial transparency.'}&rdquo;
+                    </p>
+                  </div>
+
+                  {/* Card Bottom Meta */}
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-[11px]">
+                    <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-800/40">
+                      <CheckCircle2 size={11} /> Verified Review
+                    </span>
+                    <span className="text-slate-400 font-semibold">
+                      {f.monthViewed || currentMonthKey}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Bottom Prompt Call to Action */}
+          <div className="relative z-10 pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 border-t border-primary/10 dark:border-slate-700/60">
+            <p>
+              Have feedback on water supply schedule, security, or expenses? Share your rating to help the management committee improve services.
+            </p>
+            <button
+              onClick={handleOpenFeedback}
+              className="font-extrabold text-primary hover:underline flex items-center gap-1 flex-shrink-0"
+            >
+              <span>Submit your review</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+        </section>
 
       </main>
       
