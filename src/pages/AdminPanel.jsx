@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ListChecks, Camera, FileBarChart2, Settings, LogOut,
-  Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff, Sparkles, MessageSquare, BarChart3, Star
+  Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff, Sparkles, MessageSquare, BarChart3, Star, Share2
 } from 'lucide-react'
 import {
   loadData, addExpense, updateExpense, deleteExpense,
@@ -17,6 +17,7 @@ import Charts from '../components/Charts'
 import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import MonthlyVarianceBanner from '../components/MonthlyVarianceBanner'
 import DynamicAlertBanner from '../components/DynamicAlertBanner'
+import WhatsAppSnapshotModal from '../components/WhatsAppSnapshotModal'
 import WhatsAppBroadcastHub from '../components/WhatsAppBroadcastHub'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
 import { exportToCSV, printReport } from '../utils/export'
@@ -61,6 +62,7 @@ export default function AdminPanel() {
   const [showCurrentPass, setShowCurrentPass] = useState(false)
   const [showNewPass, setShowNewPass] = useState(false)
   const [passwordSaving, setPasswordSaving] = useState(false)
+  const [showWhatsAppSnapshotModal, setShowWhatsAppSnapshotModal] = useState(false)
 
   useEffect(() => { setTempCctv(null) }, [selectedMonth, selectedYear])
 
@@ -626,11 +628,17 @@ export default function AdminPanel() {
                    </h3>
                    <p className="text-sm text-slate-500 font-medium mt-1">Generated statement for {currentMonthKey}</p>
                  </div>
-                 <div className="flex gap-3">
-                   <button onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)} className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold transition-colors">
+                 <div className="flex gap-2 sm:gap-3 flex-wrap">
+                   <button
+                     onClick={() => setShowWhatsAppSnapshotModal(true)}
+                     className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold transition-all shadow-sm shadow-emerald-600/20 active:scale-95 text-xs sm:text-sm"
+                   >
+                     <Share2 size={16} /> Download WhatsApp Summary
+                   </button>
+                   <button onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)} className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl font-bold transition-colors text-xs sm:text-sm">
                      <span className="material-symbols-outlined text-[20px]">download</span> Export CSV
                    </button>
-                   <button onClick={printReport} className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg font-bold transition-colors shadow-sm shadow-primary/30">
+                   <button onClick={printReport} className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-xl font-bold transition-colors shadow-sm shadow-primary/30 text-xs sm:text-sm">
                      <span className="material-symbols-outlined text-[20px]">print</span> Print Report
                    </button>
                  </div>
@@ -962,6 +970,16 @@ export default function AdminPanel() {
           </div>
         )}
       </main>
+
+      {/* WhatsApp 1080px Summary Snapshot Modal */}
+      <WhatsAppSnapshotModal
+        isOpen={showWhatsAppSnapshotModal}
+        onClose={() => setShowWhatsAppSnapshotModal(false)}
+        selectedMonth={currentMonthKey}
+        totals={totals}
+        allExpenses={data.expenses || []}
+        currency={data.settings?.currency || 'PKR'}
+      />
     </div>
   )
 }

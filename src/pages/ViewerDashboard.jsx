@@ -7,9 +7,10 @@ import Charts from '../components/Charts'
 import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import MonthlyVarianceBanner from '../components/MonthlyVarianceBanner'
 import DynamicAlertBanner from '../components/DynamicAlertBanner'
+import WhatsAppSnapshotModal from '../components/WhatsAppSnapshotModal'
 import { exportToCSV, printReport } from '../utils/export'
 import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
-import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck } from 'lucide-react'
+import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2 } from 'lucide-react'
 
 // Helper to normalize phone numbers for robust matching (last 10 digits)
 const normalizePhone = (p) => (p || '').replace(/[^0-9]/g, '').slice(-10)
@@ -62,6 +63,7 @@ export default function ViewerDashboard() {
   const [feedbackComment, setFeedbackComment] = useState('')
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false)
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
+  const [showWhatsAppSnapshotModal, setShowWhatsAppSnapshotModal] = useState(false)
 
   useEffect(() => {
     loadData().then(freshData => {
@@ -364,11 +366,20 @@ export default function ViewerDashboard() {
             <span className="material-symbols-outlined text-sm text-primary">visibility</span>
             <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Read-only Access</span>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)} className="flex items-center justify-center rounded-lg h-10 w-10 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Export CSV">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowWhatsAppSnapshotModal(true)}
+              className="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-black shadow-sm transition-all active:scale-95 flex-shrink-0"
+              title="Download 1080px WhatsApp Card Summary"
+            >
+              <Share2 size={16} />
+              <span className="hidden sm:inline">Download WhatsApp Summary</span>
+              <span className="sm:hidden">WhatsApp Card</span>
+            </button>
+            <button onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)} className="flex items-center justify-center rounded-xl h-10 w-10 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex-shrink-0" title="Export CSV">
               <span className="material-symbols-outlined">download</span>
             </button>
-            <button onClick={printReport} className="flex items-center justify-center rounded-lg h-10 w-10 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors" title="Print Report">
+            <button onClick={printReport} className="flex items-center justify-center rounded-xl h-10 w-10 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex-shrink-0" title="Print Report">
               <span className="material-symbols-outlined">print</span>
             </button>
           </div>
@@ -1151,6 +1162,16 @@ export default function ViewerDashboard() {
           </div>
         </div>
       )}
+
+      {/* WhatsApp 1080px Summary Snapshot Modal */}
+      <WhatsAppSnapshotModal
+        isOpen={showWhatsAppSnapshotModal}
+        onClose={() => setShowWhatsAppSnapshotModal(false)}
+        selectedMonth={currentMonthKey}
+        totals={totals}
+        allExpenses={data.expenses || []}
+        currency={data.settings?.currency || 'PKR'}
+      />
     </div>
   )
 }
