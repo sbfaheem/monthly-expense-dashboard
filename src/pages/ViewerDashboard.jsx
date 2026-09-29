@@ -233,10 +233,10 @@ export default function ViewerDashboard() {
 
   const handleManualCheckIn = (e) => {
     e.preventDefault()
-    if (!manualName.trim()) return
+    if (!manualName.trim() || !manualPhone.trim()) return
     const customResident = {
       name: manualName.trim(),
-      phone: manualPhone.trim() || '',
+      phone: manualPhone.trim(),
       houseAddress: manualAddress.trim() || '',
       houseNo: manualAddress.trim() || '',
       tag: 'Resident',
@@ -250,24 +250,6 @@ export default function ViewerDashboard() {
 
   const handleDismissModal = () => {
     setShowCheckInModal(false)
-    if (!resident) {
-      const groupShort = (selectedModalGroup || detectedGroup || '').includes('7D') ? 'Sector 7D/1' : 'Asad Hanzalla'
-      const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
-      const sessionKey = `visited_${currentMonthKey}_guest_${selectedModalGroup || detectedGroup || 'general'}`
-      if (!sessionStorage.getItem(sessionKey)) {
-        sessionStorage.setItem(sessionKey, 'true')
-        logVisitor({
-          name: `Resident (${groupShort})`,
-          phone: '',
-          houseNo: 'Community Resident',
-          houseAddress: 'Community Resident',
-          group: selectedModalGroup || detectedGroup || 'NTRG 2 Asad Hanzalla street',
-          tag: 'Resident',
-          monthViewed: currentMonthKey,
-          device: isMobile ? 'Mobile' : 'Desktop'
-        })
-      }
-    }
   }
 
   const handleOpenFeedback = () => {
@@ -914,7 +896,7 @@ export default function ViewerDashboard() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
                       <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                        Contact / WhatsApp Phone
+                        Contact / WhatsApp Phone *
                       </label>
                       <div className="relative">
                         <Phone size={14} className="absolute left-3 top-3 text-slate-400" />
@@ -924,6 +906,7 @@ export default function ViewerDashboard() {
                           value={manualPhone}
                           onChange={(e) => setManualPhone(e.target.value)}
                           className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
+                          required
                         />
                       </div>
                     </div>
@@ -962,9 +945,9 @@ export default function ViewerDashboard() {
               <button
                 type="button"
                 onClick={handleDismissModal}
-                className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 font-bold hover:underline transition-colors"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-semibold hover:underline transition-colors text-[11px]"
               >
-                Skip for now / Browse as Guest →
+                Close ✕
               </button>
             </div>
           </div>
