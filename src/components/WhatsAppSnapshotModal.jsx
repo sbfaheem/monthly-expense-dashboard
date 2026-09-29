@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react'
-import html2canvas from 'html2canvas'
 import {
   Download,
   Share2,
@@ -46,7 +45,10 @@ export default function WhatsAppSnapshotModal({
     if (!cardRef.current) return
     setDownloading(true)
     try {
-      // Allow fonts and SVGs to render fully
+      // Dynamically load html2canvas on demand to keep initial mobile bundle light and ultra-fast
+      const html2canvasModule = await import('html2canvas')
+      const html2canvas = html2canvasModule.default || html2canvasModule
+
       await new Promise(r => setTimeout(r, 200))
       
       const canvas = await html2canvas(cardRef.current, {

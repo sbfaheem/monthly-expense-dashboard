@@ -1,6 +1,6 @@
 import { normalizeItem, getParentCategory } from '../utils/normalizeExpense'
 import { MONTH_NAMES } from '../utils/finance'
-import { Sparkles, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { Sparkles, TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 
 const CATEGORY_STYLES = {
   'Salaries & Payroll': 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200/60 dark:border-blue-800/50',
@@ -82,48 +82,151 @@ const ExpenseTable = ({
   })
 
   return (
-    <div className="space-y-6">
-      {/* Month-over-Month Side-by-Side Comparison Table */}
+    <div className="space-y-5">
+      {/* Container Card */}
       <div className="bg-white dark:bg-slate-850 rounded-3xl shadow-md shadow-slate-200/50 dark:shadow-none border border-slate-200/80 dark:border-slate-750 overflow-hidden">
-        {/* Table Top Title Bar */}
-        <div className="px-6 py-4.5 bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200/80 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">
+        {/* Table / Section Top Title Bar */}
+        <div className="px-5 sm:px-6 py-4 bg-slate-50/90 dark:bg-slate-800/90 border-b border-slate-200/80 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h3 className="text-sm sm:text-base md:text-lg font-black text-slate-900 dark:text-slate-100">
               Month-over-Month Expense Breakdown
             </h3>
-            <span className="text-xs font-extrabold bg-primary/10 text-primary px-2.5 py-0.5 rounded-full border border-primary/20">
+            <span className="text-[11px] sm:text-xs font-black bg-primary/10 text-primary px-2.5 py-0.5 rounded-full border border-primary/20">
               {tableRows.length} Line Items
             </span>
           </div>
-          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+          <div className="text-xs font-bold text-slate-500 dark:text-slate-400">
             {hasPriorData ? (
               <span>Comparing <strong>{curMonthShort}</strong> vs. <strong>{priorMonthShort}</strong></span>
             ) : (
-              <span>Initial cycle baseline for <strong>{curMonthShort}</strong></span>
+              <span>Baseline period for <strong>{curMonthShort}</strong></span>
             )}
           </div>
         </div>
 
-        {/* Responsive Table */}
-        <div className="overflow-x-auto">
+        {/* ========================================================================= */}
+        {/* 📱 MOBILE VIEW: Layman-Friendly Vertically Stacked Cards (NO horizontal scroll) */}
+        {/* ========================================================================= */}
+        <div className="block md:hidden p-3 sm:p-4 space-y-3">
+          {tableRows.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 font-bold text-xs">
+              No expense records found for {selectedMonth}.
+            </div>
+          ) : (
+            tableRows.map((row) => {
+              const catClass = CATEGORY_STYLES[row.category] || CATEGORY_STYLES['Community & Utilities']
+              return (
+                <div
+                  key={row.id || row.name}
+                  className="bg-slate-50/70 dark:bg-slate-800/60 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-700/80 space-y-2.5 shadow-2xs"
+                >
+                  {/* Card Header: Item Name + Category */}
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-sm font-black text-slate-900 dark:text-slate-100 leading-tight">
+                      {row.name}
+                    </span>
+                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border flex-shrink-0 ${catClass}`}>
+                      {row.category}
+                    </span>
+                  </div>
+
+                  {/* Side-by-Side Comparison Box */}
+                  <div className="grid grid-cols-2 gap-2 bg-white dark:bg-slate-900/80 p-2.5 rounded-xl border border-slate-100 dark:border-slate-750 text-xs">
+                    {/* Prior Month */}
+                    <div>
+                      <span className="text-[10px] font-extrabold text-slate-400 block uppercase">
+                        {hasPriorData ? priorMonthShort : 'Prior Month'}
+                      </span>
+                      <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 font-mono mt-0.5 block">
+                        {hasPriorData && row.priorAmount > 0 ? `${currency} ${fmt(row.priorAmount)}` : '—'}
+                      </span>
+                    </div>
+
+                    {/* Current Month */}
+                    <div className="border-l border-slate-100 dark:border-slate-800 pl-2">
+                      <span className="text-[10px] font-extrabold text-primary block uppercase">
+                        {curMonthShort} (Current)
+                      </span>
+                      <span className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 font-mono mt-0.5 block">
+                        {currency} {fmt(row.currentAmount)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Variance Status Pill & Actions */}
+                  <div className="flex items-center justify-between gap-2 pt-0.5">
+                    {!hasPriorData ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400">
+                        Starting Baseline
+                      </span>
+                    ) : row.isNew ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                        <Sparkles size={12} /> ✨ New this month
+                      </span>
+                    ) : row.diff > 0 ? (
+                      <span className="inline-flex items-center gap-1 font-black text-rose-600 dark:text-rose-400 text-xs bg-rose-50 dark:bg-rose-950/50 px-2.5 py-1 rounded-xl border border-rose-200/80 dark:border-rose-900/60">
+                        <ArrowUpRight size={13} className="stroke-[3]" />
+                        +{currency} {fmt(row.diff)}
+                        {row.pct && <span className="text-[10px] font-extrabold text-rose-500">(+{row.pct}%)</span>}
+                      </span>
+                    ) : row.diff < 0 ? (
+                      <span className="inline-flex items-center gap-1 font-black text-emerald-600 dark:text-emerald-400 text-xs bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60">
+                        <ArrowDownRight size={13} className="stroke-[3]" />
+                        -{currency} {fmt(row.diff)}
+                        {row.pct && <span className="text-[10px] font-extrabold text-emerald-600">({row.pct}%)</span>}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 font-semibold text-slate-400 dark:text-slate-500 text-[11px]">
+                        <Minus size={12} /> — Unchanged
+                      </span>
+                    )}
+
+                    {/* Mobile Admin Actions */}
+                    {isAdmin && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => onEdit && onEdit(row.expense)}
+                          className="text-[11px] bg-blue-50 text-blue-600 px-2 py-1 rounded-lg font-black hover:bg-blue-100"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => onDelete && onDelete(row.id)}
+                          className="text-[11px] bg-red-50 text-red-600 px-2 py-1 rounded-lg font-black hover:bg-red-100"
+                        >
+                          Del
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 💻 DESKTOP / TABLET VIEW: Spacious 4-Column Table */}
+        {/* ========================================================================= */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left whitespace-nowrap">
-            <thead className="text-[11px] sm:text-xs font-black text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+            <thead className="text-xs font-black text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
               <tr>
-                <th className="px-6 py-3.5">Line Item</th>
-                <th className="px-6 py-3.5 text-right">
+                <th className="px-6 py-4">Line Item</th>
+                <th className="px-6 py-4 text-right">
                   {hasPriorData ? `Prior (${priorMonthShort})` : 'Prior Month'}
                 </th>
-                <th className="px-6 py-3.5 text-right">
+                <th className="px-6 py-4 text-right">
                   {`Current (${curMonthShort})`}
                 </th>
-                <th className="px-6 py-3.5 text-right">Variance &amp; Status</th>
-                {isAdmin && <th className="px-6 py-3.5 text-center w-24 border-l border-slate-100 dark:border-slate-800">Actions</th>}
+                <th className="px-6 py-4 text-right">Variance &amp; Status</th>
+                {isAdmin && <th className="px-6 py-4 text-center w-24 border-l border-slate-100 dark:border-slate-800">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {tableRows.length === 0 ? (
                 <tr>
-                  <td colSpan={isAdmin ? 5 : 4} className="px-6 py-8 text-center text-slate-400 font-medium">
+                  <td colSpan={isAdmin ? 5 : 4} className="px-6 py-8 text-center text-slate-400 font-bold text-sm">
                     No expense records found for {selectedMonth}.
                   </td>
                 </tr>
@@ -135,7 +238,7 @@ const ExpenseTable = ({
                       {/* Column 1: Line Item & Normalized Parent Category Tag */}
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">
-                          <span className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
+                          <span className="text-sm font-black text-slate-900 dark:text-slate-100">
                             {row.name}
                           </span>
                           <span className={`inline-flex items-center w-fit text-[10px] font-bold px-2 py-0.5 rounded-md border ${catClass}`}>
@@ -223,7 +326,7 @@ const ExpenseTable = ({
       
       {/* Aggregate Financial Metrics Embedded Bottom Area */}
       <div className="bg-white dark:bg-slate-850 rounded-3xl shadow-md shadow-slate-200/50 dark:shadow-none border border-slate-200/80 dark:border-slate-750 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
-         <div className="px-6 py-4 flex justify-between items-center bg-slate-50/60 dark:bg-slate-900/40">
+         <div className="px-5 sm:px-6 py-4 flex justify-between items-center bg-slate-50/60 dark:bg-slate-900/40">
            <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
              TOTAL MONTHLY EXPENSE
            </span>
@@ -232,7 +335,7 @@ const ExpenseTable = ({
            </span>
          </div>
          
-         <div className="px-6 py-4 flex justify-between items-center">
+         <div className="px-5 sm:px-6 py-4 flex justify-between items-center">
            <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
              {(totals.netCashFlow ?? totals.saving) >= 0 ? 'MONTHLY CASH FLOW (SURPLUS)' : 'MONTHLY CASH FLOW (DEFICIT)'}
            </span>
@@ -242,13 +345,13 @@ const ExpenseTable = ({
          </div>
 
          {totals.record?.showCctvExpense && (
-           <div className="px-6 py-4 flex justify-between items-center text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20">
+           <div className="px-5 sm:px-6 py-4 flex justify-between items-center text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20">
              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Capital Expenditure (CCTV)</span>
              <span className="text-base sm:text-lg font-black font-mono">- {currency} {fmt(totals.record.cctvExpense)}</span>
            </div>
          )}
 
-         <div className="px-6 py-4 flex justify-between items-center bg-slate-900 dark:bg-black text-white">
+         <div className="px-5 sm:px-6 py-4 flex justify-between items-center bg-slate-900 dark:bg-black text-white">
            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">
              {(totals.closingBalance ?? totals.totalSaving) >= 0 ? 'CLOSING BALANCE (ACCUMULATED SURPLUS)' : 'CLOSING BALANCE (OVERDRAWN DEFICIT)'}
            </span>
