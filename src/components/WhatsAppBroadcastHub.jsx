@@ -3,7 +3,7 @@ import {
   MessageSquare, Send, Users, UserPlus, Megaphone, Copy,
   Check, ExternalLink, Trash2, Pencil, Search, Sparkles,
   Droplet, FileText, AlertTriangle, ArrowRight, RotateCcw,
-  Plus, CheckCheck, Smartphone
+  Plus, CheckCheck, Smartphone, Globe
 } from 'lucide-react'
 import {
   addWhatsAppContact, updateWhatsAppContact, deleteWhatsAppContact,
@@ -43,135 +43,133 @@ export default function WhatsAppBroadcastHub({
 
   // ─── Composer State ──────────────────────────────────────────
   const [activeTemplate, setActiveTemplate] = useState('water') // 'water' | 'expense' | 'dues' | 'custom'
-  const [customUrdu, setCustomUrdu] = useState(false)
+  const [msgLanguage, setMsgLanguage] = useState('ur') // Default to 'ur' for community notices
   const [copied, setCopied] = useState(false)
   const [queueIndex, setQueueIndex] = useState(0)
 
   // Water Prediction data
   const predictionData = useMemo(() => predictNextWaterSupply(data.waterSupply || []), [data.waterSupply])
 
-  // Template generator
-  const generatedMessage = useMemo(() => {
+  // Helper to build template text for any language
+  const buildTemplateMessage = (templateKey, lang) => {
     const websiteUrl = 'https://monthly-expense-dashboard.vercel.app/view'
+    const last = predictionData.lastSupply
+    const p = predictionData.prediction
+    const rec = totals.record
+    const isDeficit = totals.totalSaving < 0
 
-    if (activeTemplate === 'water') {
-      const last = predictionData.lastSupply
-      const p = predictionData.prediction
-
-      let text = `💧 *WATER SUPPLY ANNOUNCEMENT & FORECAST*\n`
-      text += `📍 *North Town Residents*\n\n`
-
-      if (predictionData.hasEnoughData) {
-        text += `✅ *Recent Supply:* ${last.formattedStart} – ${last.formattedEnd}\n`
-        text += `🔮 *Next Expected Arrival:* *${p.windowFormatted}*\n`
-        text += `🎯 *Most Probable Start:* ${p.predictedDateFormatted}\n`
-        text += `⏳ *Estimated Duration:* ${p.avgDurationText}\n`
-        text += `🔄 *Cadence:* Every ~${p.avgIntervalDays} days (${p.reliabilityScore}% regularity)\n\n`
+    // ─── 1. WATER SUPPLY & FORECAST ───
+    if (templateKey === 'water') {
+      if (lang === 'ur') {
+        let text = `💧 *پانی کی سپلائی کا شیڈول اور متوقع پیشگوئی*\n`
+        text += `📍 *نارتھ ٹاؤن ریذیڈنٹس (North Town Residents)*\n\n`
+        if (predictionData.hasEnoughData) {
+          text += `✅ *گزشتہ سپلائی:* ${last.formattedStart} تا ${last.formattedEnd}\n`
+          text += `🔮 *اگلی متوقع سپلائی:* *${p.windowFormatted}*\n`
+          text += `🎯 *زیادہ امکان آغاز:* ${p.predictedDateFormatted}\n`
+          text += `⏳ *متوقع دورانیہ:* ${p.avgDurationText}\n`
+          text += `🔄 *سپلائی سائیکل:* ہر ~${p.avgIntervalDays} دن بعد (${p.reliabilityScore}% مستقل مزاجی)\n\n`
+        } else {
+          text += `ℹ️ پانی کی سپلائی کا ریکارڈ اپ ڈیٹ کیا جا رہا ہے۔\n\n`
+        }
+        text += `⚠️ *ضروری اطلاع:* تمام معزز رہائشیوں سے گزارش ہے کہ اپنے انڈر گراؤنڈ ٹینک چیک کر لیں اور موٹروں کی بروقت تیاری یقینی بنائیں۔\n\n`
+        text += `🌐 *آن لائن اخراجات اور پانی کا ٹریکر:* \n${websiteUrl}`
+        return text
       } else {
-        text += `ℹ️ Water supply tracking is being updated.\n\n`
+        let text = `💧 *WATER SUPPLY ANNOUNCEMENT & FORECAST*\n`
+        text += `📍 *North Town Residents*\n\n`
+        if (predictionData.hasEnoughData) {
+          text += `✅ *Recent Supply:* ${last.formattedStart} – ${last.formattedEnd}\n`
+          text += `🔮 *Next Expected Arrival:* *${p.windowFormatted}*\n`
+          text += `🎯 *Most Probable Start:* ${p.predictedDateFormatted}\n`
+          text += `⏳ *Estimated Duration:* ${p.avgDurationText}\n`
+          text += `🔄 *Cadence:* Every ~${p.avgIntervalDays} days (${p.reliabilityScore}% regularity)\n\n`
+        } else {
+          text += `ℹ️ Water supply tracking is being updated.\n\n`
+        }
+        text += `⚠️ *Notice:* Please keep water storage tanks clean and ready.\n\n`
+        text += `🌐 *Live Dashboard:*\n${websiteUrl}`
+        return text
       }
-
-      text += `⚠️ *Important Advice:* Please ensure your water motors and underground storage tanks are ready.\n\n`
-      text += `🌐 *Live Expense & Water Tracker:*\n${websiteUrl}`
-      return text
     }
 
-    if (activeTemplate === 'expense') {
-      const rec = totals.record
-      const isDeficit = totals.totalSaving < 0
-
-      let text = `📊 *MONTHLY FINANCIAL STATEMENT: ${currentMonthKey.toUpperCase()}*\n`
-      text += `📍 *North Town Residents Management*\n\n`
-      text += `💵 *Opening Balance:* PKR ${Number(rec.openingBalance || 0).toLocaleString('en-PK')}\n`
-      text += `📥 *Monthly Collection:* PKR ${Number(rec.monthlyCollection || 0).toLocaleString('en-PK')}\n`
-      text += `🛒 *Total Monthly Expense:* PKR ${Number(totals.totalExpense || 0).toLocaleString('en-PK')}\n`
-      text += `📈 *Monthly Saving:* PKR ${Number(totals.saving || 0).toLocaleString('en-PK')}\n`
-      text += `${isDeficit ? '⚠️ *Total Accumulated Deficit*' : '💰 *Total Accumulated Saving*'}: PKR ${Number(Math.abs(totals.totalSaving || 0)).toLocaleString('en-PK')}\n\n`
-
-      if (rec.note) {
-        text += `📝 *Management Note:*\n"${rec.note}"\n\n`
+    // ─── 2. MONTHLY EXPENSE & FINANCIAL SHEET ───
+    if (templateKey === 'expense') {
+      if (lang === 'ur') {
+        let text = `📊 *ماہانہ مالیاتی رپورٹ: ${currentMonthKey}*\n`
+        text += `📍 *نارتھ ٹاؤن ریذیڈنٹس مینجمنٹ کمیٹی*\n\n`
+        text += `💵 *ابتدائی بیلنس (Opening):* PKR ${Number(rec.openingBalance || 0).toLocaleString('en-PK')}\n`
+        text += `📥 *ماہانہ کلیکشن (Collection):* PKR ${Number(rec.monthlyCollection || 0).toLocaleString('en-PK')}\n`
+        text += `🛒 *کل اخراجات (Total Expense):* PKR ${Number(totals.totalExpense || 0).toLocaleString('en-PK')}\n`
+        text += `📈 *اس ماہ کی بچت (Monthly Saving):* PKR ${Number(totals.saving || 0).toLocaleString('en-PK')}\n`
+        text += `${isDeficit ? '⚠️ *مجموعی خسارہ (Total Deficit)*' : '💰 *مجموعی جمع شدہ بچت (Total Saving)*'}: PKR ${Number(Math.abs(totals.totalSaving || 0)).toLocaleString('en-PK')}\n\n`
+        if (rec.note) {
+          text += `📝 *انتظامیہ کا اہم نوٹ:*\n"${rec.note}"\n\n`
+        }
+        text += `📄 *تفصیلی اخراجات اور بلز دیکھنے کے لیے لنک ملاحظہ فرمائیں:*\n${websiteUrl}`
+        return text
+      } else {
+        let text = `📊 *MONTHLY FINANCIAL STATEMENT: ${currentMonthKey.toUpperCase()}*\n`
+        text += `📍 *North Town Residents*\n\n`
+        text += `💵 *Opening Balance:* PKR ${Number(rec.openingBalance || 0).toLocaleString('en-PK')}\n`
+        text += `📥 *Monthly Collection:* PKR ${Number(rec.monthlyCollection || 0).toLocaleString('en-PK')}\n`
+        text += `🛒 *Total Expenses:* PKR ${Number(totals.totalExpense || 0).toLocaleString('en-PK')}\n`
+        text += `📈 *Monthly Saving:* PKR ${Number(totals.saving || 0).toLocaleString('en-PK')}\n`
+        text += `${isDeficit ? '⚠️ *Total Deficit*' : '💰 *Total Saving*'}: PKR ${Number(Math.abs(totals.totalSaving || 0)).toLocaleString('en-PK')}\n\n`
+        if (rec.note) text += `📝 *Note:*\n"${rec.note}"\n\n`
+        text += `📄 *Check Detailed Statement:*\n${websiteUrl}`
+        return text
       }
-
-      text += `📄 *Full Statement Breakdown & Receipts:*\n${websiteUrl}`
-      return text
     }
 
-    if (activeTemplate === 'dues') {
-      let text = `🔔 *REMINDER: MONTHLY MAINTENANCE DUES*\n`
-      text += `📍 *North Town Residents*\n\n`
-      text += `Dear Residents,\n`
-      text += `This is a gentle reminder to please clear your monthly maintenance & security collection for *${currentMonthKey}* at your earliest convenience.\n\n`
-      text += `Timely payments ensure uninterrupted security, sweeper cleanliness, and neighborhood maintenance.\n\n`
-      text += `📞 *Point of Contact:* Mr. Majeed (+92 301 3377675) & Mr. Fahad Rizwan (+92 344 3160446)\n\n`
-      text += `🌐 *View Monthly Expenses & Savings Online:*\n${websiteUrl}\n\n`
-      text += `Thank you for your cooperation! 🙏`
-      return text
+    // ─── 3. MAINTENANCE DUES REMINDER ───
+    if (templateKey === 'dues') {
+      if (lang === 'ur') {
+        let text = `🔔 *یاددہانی: ماہانہ مینٹیننس و سیکیورٹی فیس*\n`
+        text += `📍 *نارتھ ٹاؤن ریذیڈنٹس (North Town Residents)*\n\n`
+        text += `معزز رہائشی بھائیو اور بہنو،\nالسلام علیکم!\n\n`
+        text += `آپ سے مؤدبانہ گزارش ہے کہ برائے مہربانی ماہ *${currentMonthKey}* کی ماہانہ مینٹیننس و سیکیورٹی فیس جلد از جلد جمع کروا دیں۔\n\n`
+        text += `بروقت ادائیگی سے سیکیورٹی گارڈز، سویپرز کی تنخواہیں اور گلی کے انتظامات بلاتعطل جاری رہتے ہیں۔\n\n`
+        text += `📞 *رابطہ برائے ادائیگی:*\n`
+        text += `• جناب عبدالمجید صاحب: 0301-3377675\n`
+        text += `• جناب فہد رضوان صاحب: 0344-3160446\n\n`
+        text += `🌐 *ماہانہ حساب کتاب آن لائن دیکھیں:*\n${websiteUrl}\n\n`
+        text += `آپ کے تعاون کا بہت شکریہ! جزاکم اللہ خیراً۔`
+        return text
+      } else {
+        let text = `🔔 *REMINDER: MONTHLY MAINTENANCE DUES*\n`
+        text += `📍 *North Town Residents*\n\n`
+        text += `Dear Residents,\n`
+        text += `Please clear your monthly maintenance collection for *${currentMonthKey}* at your earliest convenience.\n\n`
+        text += `Timely payments ensure uninterrupted security, sweeper cleanliness, and neighborhood maintenance.\n\n`
+        text += `📞 *Contacts:* Mr. Majeed (0301-3377675) | Mr. Fahad (0344-3160446)\n\n`
+        text += `🌐 *Expense Summary:* ${websiteUrl}\n\n`
+        text += `Thank you for your cooperation! 🙏`
+        return text
+      }
     }
 
-    // Custom
-    if (customUrdu) {
-      return `📢 *انتظامیہ کی طرف سے ضروری اطلاع*\n📍 *North Town Residents*\n\nتمام معزز رہائشیوں سے گزارش ہے کہ مندرجہ ذیل اعلان پر توجہ فرمائیں: \n\n[یہاں اپنا پیغام لکھیں]\n\nشکریہ،\nانتظامیہ نارتھ ٹاؤن ریذیڈنٹس`
+    // ─── 4. CUSTOM / IMPORTANT NOTICE ───
+    if (lang === 'ur') {
+      return `📢 *انتظامیہ کی طرف سے ضروری اطلاع*\n📍 *نارتھ ٹاؤن ریذیڈنٹس (North Town Residents)*\n\nمعزز رہائشیوں،\nالسلام علیکم!\n\n[یہاں اپنا پیغام درج کریں]\n\nشکریہ،\nانتظامیہ کمیٹی نارتھ ٹاؤن ریذیڈنٹس\n🌐 ${websiteUrl}`
+    } else {
+      return `📢 *IMPORTANT NOTICE*\n📍 *North Town Residents*\n\nDear Residents,\n\n[Write your announcement here]\n\nThank you,\nManagement Committee\n🌐 ${websiteUrl}`
     }
-
-    return `📢 *IMPORTANT ANNOUNCEMENT*\n📍 *North Town Residents*\n\nDear Residents,\n\nPlease take note of the following announcement:\n\n[Write announcement here]\n\nRegards,\nManagement Committee\n🌐 ${websiteUrl}`
-  }, [activeTemplate, predictionData, totals, currentMonthKey, customUrdu])
-
-  const [messageText, setMessageText] = useState(generatedMessage)
-
-  // Update messageText when template changes
-  const handleSelectTemplate = (tmpl) => {
-    setActiveTemplate(tmpl)
-    // Delay message update to next cycle
-    setTimeout(() => {
-      // Re-trigger memo
-    }, 0)
   }
 
-  // Sync state if template changed
-  const applyTemplate = (tmpl, isUrdu = false) => {
+  // Active message text state initialized with current template and language
+  const [messageText, setMessageText] = useState(() => buildTemplateMessage('water', 'ur'))
+
+  // Switch Template handler
+  const handleSelectTemplate = (tmpl) => {
     setActiveTemplate(tmpl)
-    if (tmpl === 'custom') setCustomUrdu(isUrdu)
-    // Directly generate
-    const websiteUrl = 'https://monthly-expense-dashboard.vercel.app/view'
-    if (tmpl === 'water') {
-      const last = predictionData.lastSupply
-      const p = predictionData.prediction
-      let text = `💧 *WATER SUPPLY ANNOUNCEMENT & FORECAST*\n📍 *North Town Residents*\n\n`
-      if (predictionData.hasEnoughData) {
-        text += `✅ *Recent Supply:* ${last.formattedStart} – ${last.formattedEnd}\n`
-        text += `🔮 *Next Expected Arrival:* *${p.windowFormatted}*\n`
-        text += `🎯 *Most Probable Start:* ${p.predictedDateFormatted}\n`
-        text += `⏳ *Estimated Duration:* ${p.avgDurationText}\n`
-        text += `🔄 *Cadence:* Every ~${p.avgIntervalDays} days (${p.reliabilityScore}% regularity)\n\n`
-      }
-      text += `⚠️ *Notice:* Please keep water storage tanks clean and ready.\n\n`
-      text += `🌐 *Live Dashboard:*\n${websiteUrl}`
-      setMessageText(text)
-    } else if (tmpl === 'expense') {
-      const rec = totals.record
-      const isDeficit = totals.totalSaving < 0
-      let text = `📊 *MONTHLY FINANCIAL STATEMENT: ${currentMonthKey.toUpperCase()}*\n📍 *North Town Residents*\n\n`
-      text += `💵 *Opening Balance:* PKR ${Number(rec.openingBalance || 0).toLocaleString('en-PK')}\n`
-      text += `📥 *Monthly Collection:* PKR ${Number(rec.monthlyCollection || 0).toLocaleString('en-PK')}\n`
-      text += `🛒 *Total Expenses:* PKR ${Number(totals.totalExpense || 0).toLocaleString('en-PK')}\n`
-      text += `📈 *Monthly Saving:* PKR ${Number(totals.saving || 0).toLocaleString('en-PK')}\n`
-      text += `${isDeficit ? '⚠️ *Total Deficit*' : '💰 *Total Saving*'}: PKR ${Number(Math.abs(totals.totalSaving || 0)).toLocaleString('en-PK')}\n\n`
-      if (rec.note) text += `📝 *Note:*\n"${rec.note}"\n\n`
-      text += `📄 *Check Detailed Statement:*\n${websiteUrl}`
-      setMessageText(text)
-    } else if (tmpl === 'dues') {
-      let text = `🔔 *REMINDER: MONTHLY MAINTENANCE DUES*\n📍 *North Town Residents*\n\n`
-      text += `Dear Residents,\nPlease clear your monthly maintenance collection for *${currentMonthKey}* at your earliest convenience.\n\n`
-      text += `📞 *Contacts:* Mr. Majeed (0301-3377675) | Mr. Fahad (0344-3160446)\n\n`
-      text += `🌐 *Expense Summary:* ${websiteUrl}\nThank you!`
-      setMessageText(text)
-    } else if (tmpl === 'custom') {
-      if (isUrdu) {
-        setMessageText(`📢 *انتظامیہ کی طرف سے ضروری اطلاع*\n📍 *North Town Residents*\n\nتمام معزز رہائشیوں سے گزارش ہے کہ:\n[اپنا پیغام یہاں درج کریں]\n\nشکریہ،\nانتظامیہ`)
-      } else {
-        setMessageText(`📢 *IMPORTANT NOTICE*\n📍 *North Town Residents*\n\nDear Residents,\n[Write your announcement here]\n\nThank you,\nManagement`)
-      }
-    }
+    setMessageText(buildTemplateMessage(tmpl, msgLanguage))
+  }
+
+  // Switch Language handler
+  const handleLanguageChange = (newLang) => {
+    setMsgLanguage(newLang)
+    setMessageText(buildTemplateMessage(activeTemplate, newLang))
   }
 
   // ─── Actions ─────────────────────────────────────────────────
@@ -272,11 +270,9 @@ export default function WhatsAppBroadcastHub({
           cleanPhone = '+' + cleanPhone
         }
 
-        // Remaining text is name
         let name = line.replace(rawPhone, '').replace(/^[~\s,-]+|[~\s,-]+$/g, '').trim()
         if (!name) name = 'Resident'
 
-        // Detect house / sector tag if present (e.g. 7D/1, 7D2, 7D)
         const houseMatch = line.match(/7[dD][\s/-]?\d?/i)
         const houseNo = houseMatch ? houseMatch[0].toUpperCase() : ''
 
@@ -414,16 +410,45 @@ export default function WhatsAppBroadcastHub({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column: Composer Controls */}
           <div className="lg:col-span-7 space-y-6">
-            {/* Quick Templates */}
+            {/* Quick Templates with Language Switcher */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-primary/10 space-y-4">
-              <h3 className="text-sm font-extrabold text-slate-700 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <Sparkles size={16} className="text-amber-500" /> Pre-built Notice Templates
-              </h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-700/60 pb-3">
+                <h3 className="text-sm font-extrabold text-slate-700 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                  <Sparkles size={16} className="text-amber-500" /> Select Notice Template
+                </h3>
+
+                {/* 🇵🇰 اردو / 🇬🇧 English Toggle */}
+                <div className="flex items-center bg-slate-100 dark:bg-slate-700/60 p-1 rounded-xl border border-slate-200 dark:border-slate-600">
+                  <button
+                    type="button"
+                    onClick={() => handleLanguageChange('ur')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all font-urdu ${
+                      msgLanguage === 'ur'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                    }`}
+                  >
+                    🇵🇰 اردو (Urdu)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleLanguageChange('en')}
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                      msgLanguage === 'en'
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                    }`}
+                  >
+                    🇬🇧 English
+                  </button>
+                </div>
+              </div>
               
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {/* 1. Water Supply */}
                 <button
                   type="button"
-                  onClick={() => applyTemplate('water')}
+                  onClick={() => handleSelectTemplate('water')}
                   className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all ${
                     activeTemplate === 'water'
                       ? 'border-blue-500 bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-200 shadow-sm'
@@ -431,12 +456,16 @@ export default function WhatsAppBroadcastHub({
                   }`}
                 >
                   <Droplet size={18} className="text-blue-500 mb-2" />
-                  <span className="text-xs font-bold">Water Supply &amp; Forecast</span>
+                  <div>
+                    <span className="text-xs font-bold block">Water Supply</span>
+                    <span className="text-[11px] font-urdu text-blue-600 dark:text-blue-300 font-bold block">پانی کی سپلائی</span>
+                  </div>
                 </button>
 
+                {/* 2. Monthly Expense */}
                 <button
                   type="button"
-                  onClick={() => applyTemplate('expense')}
+                  onClick={() => handleSelectTemplate('expense')}
                   className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all ${
                     activeTemplate === 'expense'
                       ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 shadow-sm'
@@ -444,12 +473,16 @@ export default function WhatsAppBroadcastHub({
                   }`}
                 >
                   <FileText size={18} className="text-emerald-500 mb-2" />
-                  <span className="text-xs font-bold">Monthly Expense Sheet</span>
+                  <div>
+                    <span className="text-xs font-bold block">Monthly Expense</span>
+                    <span className="text-[11px] font-urdu text-emerald-600 dark:text-emerald-300 font-bold block">ماہانہ اخراجات</span>
+                  </div>
                 </button>
 
+                {/* 3. Dues Reminder */}
                 <button
                   type="button"
-                  onClick={() => applyTemplate('dues')}
+                  onClick={() => handleSelectTemplate('dues')}
                   className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all ${
                     activeTemplate === 'dues'
                       ? 'border-amber-500 bg-amber-50/70 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 shadow-sm'
@@ -457,12 +490,16 @@ export default function WhatsAppBroadcastHub({
                   }`}
                 >
                   <AlertTriangle size={18} className="text-amber-500 mb-2" />
-                  <span className="text-xs font-bold">Dues Payment Reminder</span>
+                  <div>
+                    <span className="text-xs font-bold block">Dues Reminder</span>
+                    <span className="text-[11px] font-urdu text-amber-600 dark:text-amber-300 font-bold block">فیس کی یاددہانی</span>
+                  </div>
                 </button>
 
+                {/* 4. Custom Notice */}
                 <button
                   type="button"
-                  onClick={() => applyTemplate('custom', false)}
+                  onClick={() => handleSelectTemplate('custom')}
                   className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all ${
                     activeTemplate === 'custom'
                       ? 'border-purple-500 bg-purple-50/70 dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 shadow-sm'
@@ -470,36 +507,22 @@ export default function WhatsAppBroadcastHub({
                   }`}
                 >
                   <Megaphone size={18} className="text-purple-500 mb-2" />
-                  <span className="text-xs font-bold">Custom Notice</span>
+                  <div>
+                    <span className="text-xs font-bold block">Custom Notice</span>
+                    <span className="text-[11px] font-urdu text-purple-600 dark:text-purple-300 font-bold block">خاص اطلاع</span>
+                  </div>
                 </button>
               </div>
-
-              {activeTemplate === 'custom' && (
-                <div className="flex items-center gap-3 pt-2">
-                  <span className="text-xs font-bold text-slate-500">Notice Language:</span>
-                  <button
-                    type="button"
-                    onClick={() => applyTemplate('custom', false)}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold ${!customUrdu ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'}`}
-                  >
-                    English
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyTemplate('custom', true)}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold font-urdu ${customUrdu ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'}`}
-                  >
-                    اردو (Urdu)
-                  </button>
-                </div>
-              )}
             </div>
 
             {/* Message Text Editor */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-primary/10 space-y-4">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-extrabold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-                  Message Content (WhatsApp Formatted)
+                <label className="text-sm font-extrabold text-slate-700 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                  <span>Message Content (WhatsApp Formatted)</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${msgLanguage === 'ur' ? 'bg-emerald-100 text-emerald-800 font-urdu' : 'bg-blue-100 text-blue-800'}`}>
+                    {msgLanguage === 'ur' ? 'اردو' : 'English'}
+                  </span>
                 </label>
                 <div className="flex items-center gap-2">
                   <button
@@ -517,9 +540,13 @@ export default function WhatsAppBroadcastHub({
                 value={messageText}
                 onChange={e => setMessageText(e.target.value)}
                 rows={11}
-                dir={customUrdu ? 'rtl' : 'ltr'}
-                className={`w-full p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary outline-none text-sm font-medium leading-relaxed ${customUrdu ? 'font-urdu' : 'font-sans'}`}
-                placeholder="Type your announcement here..."
+                dir={msgLanguage === 'ur' ? 'rtl' : 'ltr'}
+                className={`w-full p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary outline-none ${
+                  msgLanguage === 'ur'
+                    ? 'font-urdu text-[15px] leading-relaxed text-slate-900 dark:text-slate-100'
+                    : 'font-sans text-xs md:text-sm font-medium leading-relaxed text-slate-900 dark:text-slate-100'
+                }`}
+                placeholder={msgLanguage === 'ur' ? 'یہاں اپنا پیغام درج کریں...' : 'Type your announcement here...'}
               />
 
               <div className="flex items-center justify-between text-xs text-slate-400">
@@ -582,9 +609,14 @@ export default function WhatsAppBroadcastHub({
                   TODAY
                 </div>
 
-                <div className="self-start max-w-[92%] bg-emerald-900/90 border border-emerald-700/50 text-white p-3.5 rounded-2xl rounded-tl-sm text-xs leading-relaxed whitespace-pre-wrap shadow-md">
+                <div
+                  dir={msgLanguage === 'ur' ? 'rtl' : 'ltr'}
+                  className={`self-start max-w-[92%] bg-emerald-900/90 border border-emerald-700/50 text-white p-3.5 rounded-2xl rounded-tl-sm leading-relaxed whitespace-pre-wrap shadow-md ${
+                    msgLanguage === 'ur' ? 'font-urdu text-[14px] text-right' : 'text-xs text-left'
+                  }`}
+                >
                   {messageText}
-                  <div className="flex items-center justify-end gap-1 mt-1 text-[9px] text-emerald-300/80 font-mono">
+                  <div className={`flex items-center gap-1 mt-1 text-[9px] text-emerald-300/80 font-mono ${msgLanguage === 'ur' ? 'justify-start' : 'justify-end'}`}>
                     <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     <CheckCheck size={12} className="text-emerald-300" />
                   </div>
