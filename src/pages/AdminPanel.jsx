@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ListChecks, Camera, FileBarChart2, Settings, LogOut,
-  Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff, Sparkles
+  Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff, Sparkles, MessageSquare
 } from 'lucide-react'
 import {
   loadData, addExpense, updateExpense, deleteExpense,
@@ -15,6 +15,7 @@ import SummaryCards from '../components/SummaryCards'
 import ExpenseTable from '../components/ExpenseTable'
 import Charts from '../components/Charts'
 import WaterSupplyTracker from '../components/WaterSupplyTracker'
+import WhatsAppBroadcastHub from '../components/WhatsAppBroadcastHub'
 import { exportToCSV, printReport } from '../utils/export'
 import { predictNextWaterSupply } from '../utils/waterPrediction'
 
@@ -27,6 +28,11 @@ const defaultData = {
   monthlyRecords: [],
   expenses: [],
   waterSupply: [],
+  contacts: [],
+  groups: [
+    { id: '1', name: 'N.T.R.C Sector 7D/1', link: '' },
+    { id: '2', name: 'NTRG 2 Asad Hanzalla street', link: '' }
+  ],
 }
 
 export default function AdminPanel() {
@@ -307,6 +313,7 @@ export default function AdminPanel() {
     { id: 'capital',   icon: <Camera         size={18}/>, label: 'Capital' },
     { id: 'reports',   icon: <FileBarChart2  size={18}/>, label: 'Reports' },
     { id: 'water',     icon: <Droplet        size={18}/>, label: 'Water Supply' },
+    { id: 'broadcast', icon: <MessageSquare  size={18}/>, label: 'WhatsApp Hub' },
     { id: 'settings',  icon: <Settings       size={18}/>, label: 'Settings' },
   ]
 
@@ -785,6 +792,18 @@ export default function AdminPanel() {
                </form>
              </div>
            </div>
+        )}
+
+        {/* WhatsApp Broadcast & Directory Hub */}
+        {activeTab === 'broadcast' && (
+          <WhatsAppBroadcastHub
+            data={data}
+            setData={setData}
+            selectedMonth={selectedMonth}
+            selectedYear={selectedYear}
+            totals={totals}
+            showNotif={showNotif}
+          />
         )}
 
         {/* Settings Tab / Data Migration */}

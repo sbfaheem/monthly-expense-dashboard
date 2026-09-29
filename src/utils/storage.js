@@ -75,14 +75,23 @@ export const loadData = async () => {
   const waterSupplyCol = collection(db, 'water_supply')
   const waterSupplyPromise = getDocs(waterSupplyCol)
 
-  const [settingsDoc, recordsSnapshot, expensesSnapshot, waterSupplySnapshot] = await Promise.all([
+  const contactsCol = collection(db, 'whatsapp_contacts')
+  const contactsQuery = query(contactsCol, orderBy('createdAt', 'desc'))
+  const contactsPromise = getDocs(contactsQuery).catch(() => null)
+
+  const groupsDocRef = doc(db, 'settings', 'whatsapp_groups')
+  const groupsPromise = getDoc(groupsDocRef).catch(() => null)
+
+  const [settingsDoc, recordsSnapshot, expensesSnapshot, waterSupplySnapshot, contactsSnapshot, groupsDoc] = await Promise.all([
     settingsDocPromise,
     recordsPromise,
     expensesPromise,
-    waterSupplyPromise
+    waterSupplyPromise,
+    contactsPromise,
+    groupsPromise
   ]).catch(err => {
     console.error("Firebase data load error:", err)
-    return [null, null, null, null]
+    return [null, null, null, null, null, null]
   })
 
   let settings = {
@@ -142,7 +151,32 @@ export const loadData = async () => {
     }
   }) : []
 
-  return { settings, monthlyRecords, expenses, waterSupply }
+  const contacts = contactsSnapshot ? contactsSnapshot.docs.map(d => {
+    const data = d.data()
+    return {
+      id: d.id,
+      name: data.name || '',
+      phone: data.phone || '',
+      houseNo: data.houseNo || '',
+      tag: data.tag || 'Resident',
+      createdAt: data.createdAt || 0
+    }
+  }) : []
+
+  const defaultGroups = [
+    { id: '1', name: 'N.T.R.C Sector 7D/1', link: '' },
+    { id: '2', name: 'NTRG 2 Asad Hanzalla street', link: '' }
+  ]
+
+  let groups = defaultGroups
+  if (groupsDoc && groupsDoc.exists()) {
+    const gData = groupsDoc.data()
+    if (Array.isArray(gData.groups) && gData.groups.length > 0) {
+      groups = gData.groups
+    }
+  }
+
+  return { settings, monthlyRecords, expenses, waterSupply, contacts, groups }
 }
 
 // ─── Settings ────────────────────────────────────────────────
@@ -322,5 +356,60 @@ export const migrateSupabaseToFirebase = async (supRecords, supExpenses) => {
     expensesAdded,
     freshData: await loadData()
   }
+}
+
+// ─── WhatsApp Contacts & Groups CRUD ──────────────────────────
+
+export const addWhatsAppContact = async (contact) => {
+  const col = collection(db, 'whatsapp_contacts')
+  await addDoc(col, {
+    name: contact.name || '',
+    phone: contact.phone || '',
+    houseNo: contact.houseNo || '',
+    tag: contact.tag || 'Resident',
+    createdAt: Date.now()
+  })
+  return loadData()
+}
+
+export const updateWhatsAppContact = async (contact) => {
+  const docRef = doc(db, 'whatsapp_contacts', contact.id)
+  await updateDoc(docRef, {
+    name: contact.name || '',
+    phone: contact.phone || '',
+    houseNo: contact.houseNo || '',
+    tag: contact.tag || 'Resident'
+  })
+  return loadData()
+}
+
+export const deleteWhatsAppContact = async (id) => {
+  const docRef = doc(db, 'whatsapp_contacts', id)
+  await deleteDoc(docRef)
+  return loadData()
+}
+
+export const bulkAddWhatsAppContacts = async (contactsList = []) => {
+  if (!contactsList.length) return loadData()
+  const batch = writeBatch(db)
+  const col = collection(db, 'whatsapp_contacts')
+  contactsList.forEach(c => {
+    const newDoc = doc(col)
+    batch.set(newDoc, {
+      name: c.name || '',
+      phone: c.phone || '',
+      houseNo: c.houseNo || '',
+      tag: c.tag || 'Resident',
+      createdAt: Date.now()
+    })
+  })
+  await batch.commit()
+  return loadData()
+}
+
+export const updateWhatsAppGroups = async (groups) => {
+  const docRef = doc(db, 'settings', 'whatsapp_groups')
+  await setDoc(docRef, { groups, updatedAt: Date.now() }, { merge: true })
+  return loadData()
 }
 
