@@ -541,6 +541,7 @@ export default function ViewerDashboard() {
           <div className="lg:col-span-2 space-y-6">
             <ExpenseTable
               expenses={monthlyExpenses}
+              allExpenses={data.expenses}
               settings={data.settings}
               selectedMonth={currentMonthKey}
               totals={totals}
