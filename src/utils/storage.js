@@ -32,8 +32,8 @@ export const getLastDataMonth = (data) => {
   return { month: m, year: Number(y) }
 }
 
-import { calculateMonthlyFinances } from './finance'
-export { calculateMonthlyFinances }
+import { calculateMonthlyFinances, calculateMultiMonthContinuity } from './finance'
+export { calculateMonthlyFinances, calculateMultiMonthContinuity }
 
 export const calculateTotals = (expenses, settings, monthlyRecords, selectedMonth) => {
   const [selMonthName, selYearStr] = selectedMonth.split(' ')
@@ -47,11 +47,52 @@ export const calculateTotals = (expenses, settings, monthlyRecords, selectedMont
   const isCurrentMonth = selMonthName === curMonthName && selYear === curYear
   const isPendingCurrentMonth = isCurrentMonth && today.getDate() !== lastDayOfMonth
 
-  const monthlyExpenses = expenses.filter(e => e.month === selectedMonth)
-  const monthRecord = monthlyRecords.find(r => r.month === selectedMonth)
+  const continuityMap = calculateMultiMonthContinuity(monthlyRecords || [], expenses || [], settings || {})
+  const continuityData = continuityMap.get(selectedMonth)
+
+  const monthlyExpenses = (expenses || []).filter(e => e.month === selectedMonth)
+  const monthRecord = (monthlyRecords || []).find(r => r.month === selectedMonth)
   const isNoData = isPendingCurrentMonth || (!monthRecord && monthlyExpenses.length === 0)
   
-  const record = (isPendingCurrentMonth || !monthRecord) ? {
+  if (isPendingCurrentMonth) {
+    return {
+      totalExpense: 0,
+      netCashFlow: 0,
+      status: "Surplus",
+      closingBalance: 0,
+      isOverdrawn: false,
+      saving: 0,
+      totalSaving: 0,
+      record: {
+        openingBalance: 0,
+        monthlyCollection: 0,
+        isManualSaving: false,
+        manualSaving: 0,
+        cctvExpense: 0,
+        showCctvExpense: false,
+        isNoData: true
+      }
+    }
+  }
+
+  if (continuityData) {
+    return {
+      totalExpense: continuityData.totalExpense,
+      netCashFlow: continuityData.netCashFlow,
+      status: continuityData.status,
+      closingBalance: continuityData.closingBalance,
+      isOverdrawn: continuityData.isOverdrawn,
+      // Backwards-compatible aliases
+      saving: continuityData.netCashFlow,
+      totalSaving: continuityData.closingBalance,
+      record: {
+        ...continuityData.record,
+        isNoData
+      }
+    }
+  }
+
+  const record = !monthRecord ? {
     openingBalance: 0,
     monthlyCollection: 0,
     isManualSaving: false,
@@ -60,11 +101,10 @@ export const calculateTotals = (expenses, settings, monthlyRecords, selectedMont
     showCctvExpense: false,
   } : monthRecord
 
-  const activeExpenses = isPendingCurrentMonth ? [] : monthlyExpenses
   const finances = calculateMonthlyFinances(
     record.openingBalance || 0,
     record.monthlyCollection || 0,
-    activeExpenses
+    monthlyExpenses
   )
 
   const netCashFlow = record.isManualSaving ? Number(record.manualSaving) : finances.netCashFlow
@@ -75,12 +115,11 @@ export const calculateTotals = (expenses, settings, monthlyRecords, selectedMont
   const isOverdrawn = closingBalance < 0
 
   return {
-    totalExpense: isPendingCurrentMonth ? 0 : finances.totalExpense,
+    totalExpense: finances.totalExpense,
     netCashFlow,
     status,
     closingBalance,
     isOverdrawn,
-    // Backwards-compatible aliases
     saving: netCashFlow,
     totalSaving: closingBalance,
     record: { ...record, isNoData }
