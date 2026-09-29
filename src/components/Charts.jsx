@@ -19,14 +19,16 @@ import { getParentCategory } from '../utils/normalizeExpense'
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Filler)
 
 const CATEGORY_COLORS = {
-  'Salaries & Payroll': '#2563eb', // Blue
-  'Community & Utilities': '#8b5cf6', // Purple
-  'Electrical & Infrastructure': '#f59e0b', // Amber
-  'Supplies & Hardware': '#10b981', // Emerald
-  'Capital Expenditures (CapEx)': '#ef4444', // Red
+  'Salaries & Payroll': '#1E293B', // Slate Navy
+  'Payroll': '#1E293B',
+  'Community & Utilities': '#8B5CF6', // Purple
+  'Electrical & Maintenance': '#F59E0B', // Amber
+  'Electrical & Infrastructure': '#F59E0B', // Amber
+  'Supplies & Hardware': '#06B6D4', // Cyan
+  'Capital Expenditures (CapEx)': '#EF4444', // Red
 }
 
-const FALLBACK_PALETTE = ['#2563eb', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4', '#ec4899', '#6366f1']
+const FALLBACK_PALETTE = ['#1E293B', '#8B5CF6', '#F59E0B', '#06B6D4', '#EF4444', '#3B82F6', '#EC4899', '#6366F1']
 
 // Persistent Center Metric Plugin for Donut Hole
 const centerTextPlugin = {
