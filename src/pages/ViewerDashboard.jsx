@@ -6,6 +6,7 @@ import ExpenseTable from '../components/ExpenseTable'
 import Charts from '../components/Charts'
 import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import { exportToCSV, printReport } from '../utils/export'
+import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
 import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck } from 'lucide-react'
 
 // Helper to normalize phone numbers for robust matching (last 10 digits)
@@ -741,7 +742,13 @@ export default function ViewerDashboard() {
       </main>
       
       <footer className="bg-white dark:bg-background-dark border-t border-primary/10 py-6 text-center text-slate-400 text-xs">
-         <p>© 2026 ExpensePro Management System.</p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-3 text-slate-500 dark:text-slate-400 font-medium">
+          <span>© 2026 Sector 7D/1 Residents Management System</span>
+          <span className="hidden sm:inline text-slate-300 dark:text-slate-600">•</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-bold border border-slate-200 dark:border-slate-700">
+            Version {APP_VERSION} <span className="text-slate-400 font-normal">({APP_RELEASE_DATE})</span>
+          </span>
+        </div>
       </footer>
 
       {/* Resident Identity / Check-in Modal */}

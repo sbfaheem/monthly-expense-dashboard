@@ -19,6 +19,7 @@ import WhatsAppBroadcastHub from '../components/WhatsAppBroadcastHub'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
 import { exportToCSV, printReport } from '../utils/export'
 import { predictNextWaterSupply } from '../utils/waterPrediction'
+import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const CATEGORIES = ['Security', 'Maintenance', 'Utilities', 'Miscellaneous', 'Capital']
@@ -364,6 +365,9 @@ export default function AdminPanel() {
           <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-red-500 hover:bg-red-50 transition-colors">
             <LogOut size={18}/> Logout
           </button>
+          <div className="pt-2 text-center text-[10px] text-slate-400 font-medium">
+            Sector 7D/1 • {APP_VERSION} ({APP_RELEASE_DATE})
+          </div>
         </div>
       </aside>
 
