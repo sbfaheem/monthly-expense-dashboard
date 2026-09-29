@@ -39,16 +39,16 @@ export default function WhatsAppSnapshotModal({
     if (!cardRef.current) return
     setDownloading(true)
     try {
-      // Dynamically load html2canvas
-      const html2canvasModule = await import('html2canvas')
-      const html2canvas = html2canvasModule.default || html2canvasModule
+      // Dynamically load html2canvas-pro which natively supports OKLCH, OKLAB and modern CSS
+      const html2canvasModule = await import('html2canvas-pro')
+      const html2canvas = html2canvasModule.default || html2canvasModule.html2canvas || html2canvasModule
 
       // Wait a tick for DOM stabilization
       await new Promise(r => setTimeout(r, 150))
 
       const element = cardRef.current
 
-      // html2canvas config with onclone to ensure all OKLCH colors are sanitized to hex/rgb
+      // html2canvas-pro config with onclone to ensure clean rendering
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
@@ -66,6 +66,9 @@ export default function WhatsAppSnapshotModal({
             clonedCard.style.maxWidth = '580px'
             clonedCard.style.backgroundColor = '#0f172a'
             clonedCard.style.color = '#ffffff'
+            clonedCard.style.border = '2px solid #334155'
+            clonedCard.style.borderRadius = '24px'
+            clonedCard.style.boxShadow = '0 25px 50px -12px rgba(0,0,0,0.5)'
           }
         }
       })
@@ -146,7 +149,7 @@ export default function WhatsAppSnapshotModal({
         {/* Scrollable Preview Container */}
         <div className="flex-1 overflow-y-auto py-3 space-y-3 pr-1">
           <div className="flex justify-center">
-            {/* The 1080px Target Snapshot Card (Styled with standard HEX colors for 100% html2canvas compatibility) */}
+            {/* The 1080px Target Snapshot Card (Styled with standard HEX colors for 100% canvas compatibility) */}
             <div
               ref={cardRef}
               data-snapshot-card="true"
@@ -155,9 +158,11 @@ export default function WhatsAppSnapshotModal({
                 maxWidth: '540px',
                 backgroundColor: '#0f172a',
                 color: '#ffffff',
+                border: '2px solid #334155',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                 fontFamily: "'Manrope', system-ui, sans-serif"
               }}
-              className="rounded-3xl p-5 sm:p-6 border-2 border-slate-700 shadow-2xl space-y-4 text-white"
+              className="rounded-3xl p-5 sm:p-6 space-y-4 text-white"
             >
               {/* Card Header */}
               <div style={{ borderBottom: '1px solid #1e293b' }} className="pb-3.5 flex items-start justify-between">
