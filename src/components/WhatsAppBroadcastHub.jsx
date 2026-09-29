@@ -181,10 +181,13 @@ export default function WhatsAppBroadcastHub({
   }
 
   const handleShareToGroup = (group) => {
+    try {
+      navigator.clipboard.writeText(messageText)
+    } catch (e) {}
     const encoded = encodeURIComponent(messageText)
     const url = `https://api.whatsapp.com/send?text=${encoded}`
     window.open(url, '_blank')
-    showNotif(`Opening WhatsApp for: ${group.name}`)
+    showNotif(`Message copied! Select "${group.name}" in WhatsApp and click Send.`)
   }
 
   const handleSendToCurrentContact = () => {
@@ -558,11 +561,16 @@ export default function WhatsAppBroadcastHub({
             {/* Dispatch Buttons: Send to Community Groups */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-primary/10 space-y-4">
               <div>
-                <h3 className="text-sm font-extrabold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
-                  1-Click Broadcast to Community Groups
-                </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Sends this announcement directly into your community WhatsApp groups with one click:
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-extrabold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                    1-Click Broadcast to Community Groups
+                  </h3>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/40 px-2 py-0.5 rounded-full font-bold">
+                    Reaches All Members
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Click a group button below. WhatsApp will open with your announcement already typed — simply tap the group and press <strong>Send</strong>:
                 </p>
               </div>
 
@@ -571,20 +579,29 @@ export default function WhatsAppBroadcastHub({
                   <button
                     key={g.id}
                     onClick={() => handleShareToGroup(g)}
-                    className="flex items-center justify-between p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all text-emerald-900 dark:text-emerald-200 group active:scale-98"
+                    className="flex items-center justify-between p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all text-emerald-900 dark:text-emerald-200 group active:scale-98 shadow-sm"
                   >
                     <div className="flex items-center gap-3 text-left">
-                      <div className="size-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                      <div className="size-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
                         WA
                       </div>
                       <div>
                         <span className="text-xs font-black block group-hover:text-emerald-700">{g.name}</span>
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Post to Group</span>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                          Click to Send to Group <ArrowRight size={10} />
+                        </span>
                       </div>
                     </div>
-                    <Send size={16} className="text-emerald-600 group-hover:translate-x-0.5 transition-transform" />
+                    <Send size={16} className="text-emerald-600 group-hover:translate-x-1 transition-transform" />
                   </button>
                 ))}
+              </div>
+
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-slate-800 flex items-start gap-2.5 text-xs text-slate-600 dark:text-slate-400">
+                <span className="text-base flex-shrink-0">💡</span>
+                <p className="leading-relaxed">
+                  <strong>How It Works:</strong> When you click <strong>Post to Group</strong>, WhatsApp opens with your chosen notice pre-filled. Tap the group (<strong>N.T.R.C Sector 7D/1</strong> or <strong>NTRG 2 Asad Hanzalla street</strong>) and press Send. Everyone in the group receives it instantly! The text is also auto-copied to your clipboard if you prefer to paste directly.
+                </p>
               </div>
             </div>
           </div>
