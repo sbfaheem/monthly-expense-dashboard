@@ -882,14 +882,14 @@ export default function ViewerDashboard() {
                   <UserCheck size={18} />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">Resident Check-In</h3>
-                  <p className="text-xs text-slate-500">Record your review with the management committee</p>
+                  <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">{t.checkInTitle}</h3>
+                  <p className="text-xs text-slate-500">{t.checkInSubtitle}</p>
                 </div>
               </div>
               <button
                 onClick={handleDismissModal}
                 className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-                title="Close"
+                title={t.closeBtn}
               >
                 <X size={18} />
               </button>
@@ -900,14 +900,14 @@ export default function ViewerDashboard() {
               {/* Non-Coercive Reassurance Notice */}
               <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl">
                 <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-200 leading-relaxed">
-                  ℹ️ <strong>No WhatsApp group membership required:</strong> You can view the full monthly expense dashboard directly. Enter your Name, Phone Number, and House Address so the management committee knows you have reviewed the accounts.
+                  ℹ️ <strong>{t.checkInNoticeBold}</strong> {t.checkInNoticeText}
                 </p>
               </div>
 
               {/* Group Selector */}
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5">
-                  Select Community / WhatsApp Group:
+                  {t.selectGroupLabel}
                 </label>
                 <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl">
                   <button
@@ -919,7 +919,7 @@ export default function ViewerDashboard() {
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
-                    Asad Hanzalla
+                    {t.grpAsadHanzalla}
                   </button>
                   <button
                     type="button"
@@ -930,7 +930,7 @@ export default function ViewerDashboard() {
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
-                    Sector 7D/1
+                    {t.grpSector7D}
                   </button>
                   <button
                     type="button"
@@ -941,7 +941,7 @@ export default function ViewerDashboard() {
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
-                    No Group
+                    {t.grpNoGroup}
                   </button>
                 </div>
               </div>
@@ -951,10 +951,10 @@ export default function ViewerDashboard() {
                 <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                      ⚡ Quick 1-Tap Pick from Directory
+                      {t.quickPickTitle}
                     </span>
                     <span className="text-[10px] text-slate-400 font-medium">
-                      {filteredDirectoryContacts.length} residents listed
+                      {filteredDirectoryContacts.length} {isUrdu ? 'رہائشی درج ہیں' : 'residents listed'}
                     </span>
                   </div>
 
@@ -962,7 +962,7 @@ export default function ViewerDashboard() {
                     <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Type your name or house # to find instantly..."
+                      placeholder={t.searchDirectoryPlaceholder}
                       value={residentSearchQuery}
                       onChange={(e) => setResidentSearchQuery(e.target.value)}
                       className="w-full pl-8 pr-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none focus:ring-2 focus:ring-primary"
@@ -971,7 +971,7 @@ export default function ViewerDashboard() {
 
                   <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
                     {filteredDirectoryContacts.length === 0 ? (
-                      <p className="text-center py-2 text-[11px] text-slate-400">No match found. Enter details below!</p>
+                      <p className="text-center py-2 text-[11px] text-slate-400">{t.noMatchFound}</p>
                     ) : (
                       filteredDirectoryContacts.map((c) => (
                         <button
@@ -989,7 +989,7 @@ export default function ViewerDashboard() {
                             </p>
                           </div>
                           <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
-                            Select <ArrowRight size={11} />
+                            {t.selectResidentBtn} <ArrowRight size={11} />
                           </span>
                         </button>
                       ))
@@ -1001,18 +1001,18 @@ export default function ViewerDashboard() {
               {/* Manual Household Entry Form */}
               <div>
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
-                  Or Enter Your Household Details
+                  {t.manualEntryHeading}
                 </h4>
                 <form onSubmit={handleManualCheckIn} className="space-y-3">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                      Full Name *
+                      {t.yourFullName}
                     </label>
                     <div className="relative">
                       <User size={14} className="absolute left-3 top-3 text-slate-400" />
                       <input
                         type="text"
-                        placeholder="e.g. Muhammad Asif / Tariq Mehmood"
+                        placeholder={isUrdu ? "مثلاً: محمد آصف / طارق محمود" : "e.g. Muhammad Asif / Tariq Mehmood"}
                         value={manualName}
                         onChange={(e) => setManualName(e.target.value)}
                         className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
@@ -1024,13 +1024,13 @@ export default function ViewerDashboard() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div>
                       <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                        Contact / WhatsApp Phone *
+                        {t.contactPhoneLabel}
                       </label>
                       <div className="relative">
                         <Phone size={14} className="absolute left-3 top-3 text-slate-400" />
                         <input
                           type="tel"
-                          placeholder="e.g. 0300 1234567"
+                          placeholder={t.phonePlaceholder}
                           value={manualPhone}
                           onChange={(e) => setManualPhone(e.target.value)}
                           className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
@@ -1041,13 +1041,13 @@ export default function ViewerDashboard() {
 
                     <div>
                       <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                        House / Flat Address *
+                        {t.houseAddressLabel}
                       </label>
                       <div className="relative">
                         <Home size={14} className="absolute left-3 top-3 text-slate-400" />
                         <input
                           type="text"
-                          placeholder="e.g. R-100 Sector 7D/1 or A-4 Sector 7D/1"
+                          placeholder={t.addressPlaceholder}
                           value={manualAddress}
                           onChange={(e) => setManualAddress(e.target.value)}
                           className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary"
@@ -1061,7 +1061,7 @@ export default function ViewerDashboard() {
                     type="submit"
                     className="w-full py-2.5 bg-primary text-white text-xs font-extrabold rounded-xl hover:bg-primary-hover shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-98"
                   >
-                    <Check size={14} /> Save Profile &amp; View Dashboard
+                    <Check size={14} /> {t.saveProfileBtn}
                   </button>
                 </form>
               </div>
@@ -1069,13 +1069,13 @@ export default function ViewerDashboard() {
 
             {/* Modal Footer with Dismiss */}
             <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs flex-shrink-0">
-              <span className="text-[11px] text-slate-400">Statement: <strong>{currentMonthKey}</strong></span>
+              <span className="text-[11px] text-slate-400">{t.statementLabel} <strong>{translateMonth(currentMonthKey, lang)}</strong></span>
               <button
                 type="button"
                 onClick={handleDismissModal}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-semibold hover:underline transition-colors text-[11px]"
               >
-                Close ✕
+                {t.closeBtn}
               </button>
             </div>
           </div>

@@ -140,7 +140,30 @@ export const translations = {
     thankYouTitle: "Thank You for Your Feedback!",
     thankYouSubtitle: "Your rating and suggestions have been recorded in the Admin Panel for the management committee to review.",
     doneReturnBtn: "Done / Return to Dashboard",
-    reviewingStatement: "Reviewing statement:"
+    reviewingStatement: "Reviewing statement:",
+
+    // Resident Check-In Modal
+    checkInTitle: "Resident Check-In",
+    checkInSubtitle: "Record your review with the management committee",
+    checkInNoticeBold: "No WhatsApp group membership required:",
+    checkInNoticeText: "You can view the full monthly expense dashboard directly. Enter your Name, Phone Number, and House Address so the management committee knows you have reviewed the accounts.",
+    selectGroupLabel: "Select Community / WhatsApp Group:",
+    grpAsadHanzalla: "Asad Hanzalla",
+    grpSector7D: "Sector 7D/1",
+    grpNoGroup: "No Group",
+    quickPickTitle: "⚡ Quick 1-Tap Pick from Directory",
+    residentsListed: "{count} residents listed",
+    searchDirectoryPlaceholder: "Type your name or house # to find instantly...",
+    noMatchFound: "No match found. Enter details below!",
+    selectResidentBtn: "Select",
+    manualEntryHeading: "Or Enter Your Household Details",
+    contactPhoneLabel: "Contact / WhatsApp Phone *",
+    phonePlaceholder: "e.g. 0300 1234567",
+    houseAddressLabel: "House / Flat Address *",
+    addressPlaceholder: "e.g. R-100 Sector 7D/1 or A-4 Sector 7D/1",
+    saveProfileBtn: "Save Profile & View Dashboard",
+    statementLabel: "Statement:",
+    closeBtn: "Close ✕"
   },
   ur: {
     // Navigation & General
@@ -283,7 +306,30 @@ export const translations = {
     thankYouTitle: "آپ کی قیمتی رائے کا شکریہ!",
     thankYouSubtitle: "آپ کی ریٹنگ اور تجاویز انتظامی کمیٹی کے جائزے کے لیے محفوظ کر لی گئی ہیں۔",
     doneReturnBtn: "مکمل / ڈیش بورڈ پر واپس جائیں",
-    reviewingStatement: "زیرِ جائزہ رپورٹ:"
+    reviewingStatement: "زیرِ جائزہ رپورٹ:",
+
+    // Resident Check-In Modal
+    checkInTitle: "رہائشی چیک اِن (اندراج)",
+    checkInSubtitle: "انتظامی کمیٹی کے ریکارڈ میں اپنا اندراج کروائیں",
+    checkInNoticeBold: "کسی واٹس ایپ گروپ میں شمولیت لازمی نہیں:",
+    checkInNoticeText: "آپ ماہانہ اخراجات کا مکمل ڈیش بورڈ بلا روک ٹوک دیکھ سکتے ہیں۔ اپنا نام، فون نمبر اور مکان کا پتہ درج کریں تاکہ کمیٹی کو معلوم ہو کہ آپ نے حسابات دیکھ لیے ہیں۔",
+    selectGroupLabel: "علاقہ / واٹس ایپ گروپ منتخب کریں:",
+    grpAsadHanzalla: "اسد حنظلہ اسٹریٹ",
+    grpSector7D: "سیکٹر 7D/1",
+    grpNoGroup: "کوئی گروپ نہیں",
+    quickPickTitle: "⚡ ڈائریکٹری سے 1 کلک میں منتخب کریں",
+    residentsListed: "{count} رہائشی درج ہیں",
+    searchDirectoryPlaceholder: "اپنا نام یا مکان نمبر لکھ کر تلاش کریں...",
+    noMatchFound: "کوئی نام نہیں ملا، نیچے تفصیل درج کریں!",
+    selectResidentBtn: "منتخب کریں",
+    manualEntryHeading: "یا اپنے گھر کی تفصیلات خود درج کریں",
+    contactPhoneLabel: "فون / واٹس ایپ نمبر *",
+    phonePlaceholder: "مثلاً: 0300 1234567",
+    houseAddressLabel: "مکان / فلیٹ کا پتہ *",
+    addressPlaceholder: "مثلاً: R-100 سیکٹر 7D/1 یا A-4",
+    saveProfileBtn: "پروفائل محفوظ کریں اور ڈیش بورڈ دیکھیں",
+    statementLabel: "رپورٹ برائے:",
+    closeBtn: "بند کریں ✕"
   }
 };
 
