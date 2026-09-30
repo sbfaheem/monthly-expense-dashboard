@@ -10,7 +10,7 @@ import DynamicAlertBanner from '../components/DynamicAlertBanner'
 import WhatsAppSnapshotModal from '../components/WhatsAppSnapshotModal'
 import { exportToCSV, printReport } from '../utils/export'
 import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
-import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2 } from 'lucide-react'
+import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2, Calendar } from 'lucide-react'
 
 // Helper to normalize phone numbers for robust matching (last 10 digits)
 const normalizePhone = (p) => (p || '').replace(/[^0-9]/g, '').slice(-10)
@@ -565,42 +565,133 @@ export default function ViewerDashboard() {
               selectedMonth={currentMonthKey}
             />
             
-            {/* Disclaimer / Report Info Panel */}
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-primary/10 shadow-sm space-y-5">
-              <div>
-                <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Scope of Responsibility:</h4>
-                <p className="text-[13px] text-slate-500 leading-relaxed">
-                  The management has taken over responsibility effective <strong className="text-slate-700 dark:text-slate-300 font-bold">December 01, 2025</strong>. Therefore, this financial summary only covers collections and expenditures from that date onward.
-                </p>
+            {/* Card 2: Report Governance & Audit */}
+            <div className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-2xl border border-primary/10 shadow-sm space-y-4">
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-xl">assignment_turned_in</span>
+                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                    Governance &amp; Scope
+                  </h4>
+                </div>
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50 px-2.5 py-0.5 rounded-full">
+                  <ShieldCheck size={12} /> Official Record
+                </span>
               </div>
-              <div className="border-t border-primary/5 pt-4">
-                <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Nature of Report:</h4>
-                <p className="text-[13px] text-slate-500 leading-relaxed">
-                  This document is a Financial Summary of Collections & Expenditures, providing an overview of total receipts and related expenses during the reporting period.
-                </p>
+
+              {/* Compact Metadata Chips */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/70 dark:border-slate-700/60 space-y-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1">
+                    <Calendar size={11} className="text-primary" /> Handover Date
+                  </span>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-100">
+                    Dec 01, 2025
+                  </p>
+                </div>
+                <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/70 dark:border-slate-700/60 space-y-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1">
+                    <ShieldCheck size={11} className="text-emerald-500" /> Trust Badge
+                  </span>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-100">
+                    Verified Financial Summary
+                  </p>
+                </div>
               </div>
+
+              {/* Scope & Purpose Summary Bullets */}
+              <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 pt-1 border-t border-slate-100 dark:border-slate-700/60 leading-relaxed">
+                <li className="flex items-start gap-2">
+                  <span className="size-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                  <span><strong>Scope:</strong> Covers collections &amp; expenditures managed from Dec 01, 2025 onward.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="size-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
+                  <span><strong>Purpose:</strong> Monthly public financial transparency for society residents.</span>
+                </li>
+              </ul>
             </div>
 
-            {/* Notes/Contact Panel */}
-            <div className="bg-primary/5 dark:bg-primary/10 p-6 rounded-2xl border border-primary/20">
-              <h4 className="font-bold text-primary mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined">contact_support</span> Management Contacts
-              </h4>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="size-8 rounded bg-primary text-white flex items-center justify-center font-bold">M</div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Mr. Majeed</p>
-                    <p className="text-xs text-slate-500">Project Supervisor</p>
-                    <p className="text-xs text-primary font-medium">+92 300 1234567</p>
+            {/* Card 3: Management & Inquiries (Interactive WhatsApp + Call) */}
+            <div className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-2xl border border-primary/10 shadow-sm space-y-4">
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-3">
+                <h4 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm sm:text-base">
+                  <span className="material-symbols-outlined text-primary text-xl">contact_phone</span>
+                  Management &amp; Inquiries
+                </h4>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-slate-500">
+                  Direct Contact
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {/* Contact 1: Mr. Majeed */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/70 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="size-9 rounded-xl bg-primary/10 text-primary dark:bg-primary/20 flex items-center justify-center font-black text-sm flex-shrink-0">
+                      M
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100">
+                        Mr. Majeed
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                        Project Supervisor • <span className="font-mono text-slate-700 dark:text-slate-300">0301-3377675</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 self-end sm:self-center">
+                    <a
+                      href="tel:+923013377675"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all shadow-2xs active:scale-95"
+                    >
+                      <Phone size={12} className="text-primary" />
+                      <span>Call</span>
+                    </a>
+                    <a
+                      href="https://wa.me/923013377675?text=Assalam-o-Alaikum%20Mr.%20Majeed%2C%20regarding%20Sector%207D%2F1%20financial%20statement..."
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-2xs active:scale-95"
+                    >
+                      <MessageSquare size={12} />
+                      <span>Chat</span>
+                    </a>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <div className="size-8 rounded bg-secondary-gold text-white flex items-center justify-center font-bold">F</div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Mr. Fahad Rizwan</p>
-                    <p className="text-xs text-slate-500">Financial Auditor</p>
-                    <p className="text-xs text-primary font-medium">+92 321 7654321</p>
+
+                {/* Contact 2: Mr. Fahad Rizwan */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/70 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="size-9 rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 flex items-center justify-center font-black text-sm flex-shrink-0">
+                      F
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100">
+                        Mr. Fahad Rizwan
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                        Financial Auditor • <span className="font-mono text-slate-700 dark:text-slate-300">0344-3160446</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 self-end sm:self-center">
+                    <a
+                      href="tel:+923443160446"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition-all shadow-2xs active:scale-95"
+                    >
+                      <Phone size={12} className="text-primary" />
+                      <span>Call</span>
+                    </a>
+                    <a
+                      href="https://wa.me/923443160446?text=Assalam-o-Alaikum%20Mr.%20Fahad%2C%20regarding%20Sector%207D%2F1%20financial%20statement..."
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-2xs active:scale-95"
+                    >
+                      <MessageSquare size={12} />
+                      <span>Chat</span>
+                    </a>
                   </div>
                 </div>
               </div>
