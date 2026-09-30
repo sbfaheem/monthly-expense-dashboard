@@ -272,12 +272,12 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
   const lineExpense = lineLabels.map(m => expenseMap[m] || 0)
   const lineCollection = lineLabels.map(m => collectionMap[m] || 0)
 
-  // Compute MoM peak calculation for the last data point
+  // Compute MoM peak calculation for the last data point: PKR 306,285 (+12% MoM)
   const lastLineIdx = lineExpense.length - 1
   const peakExpense = lineExpense[lastLineIdx] || 0
   const prevExpense = lastLineIdx > 0 ? lineExpense[lastLineIdx - 1] : 0
   const peakMomPct = prevExpense > 0 ? Math.round(((peakExpense - prevExpense) / prevExpense) * 100) : 0
-  const peakCalloutLabel = `PKR ${peakExpense.toLocaleString('en-PK')} (Peak: ${peakMomPct >= 0 ? `+${peakMomPct}` : peakMomPct}% MoM)`
+  const peakCalloutLabel = `PKR ${peakExpense.toLocaleString('en-PK')} (${peakMomPct >= 0 ? `+${peakMomPct}` : peakMomPct}% MoM)`
 
   const lineChartData = {
     labels: lineLabels.map(l => {
@@ -289,37 +289,32 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
         label: 'Monthly Collection',
         data: lineCollection,
         borderColor: '#10B981', // Emerald Green baseline
-        borderWidth: 2,
+        borderWidth: 2.5,
         borderDash: [4, 4], // strokeDasharray: "4 4"
         fill: false,
-        tension: 0.25,
-        pointRadius: 3,
+        tension: 0.3,
+        pointRadius: 3.5,
         pointBackgroundColor: '#10B981',
         pointBorderColor: '#ffffff',
         pointBorderWidth: 1.5,
-        pointHoverRadius: 5,
+        pointHoverRadius: 6,
       },
       {
-        label: 'Total Expenses',
+        label: 'Monthly Expense',
         data: lineExpense,
-        borderColor: '#6366F1', // Indigo stroke
+        borderColor: '#EF4444', // Red Expense Line
         borderWidth: 2.5,
-        tension: 0.4,
-        fill: true,
-        backgroundColor: (context) => {
-          const ctx = context.chart?.ctx
-          const chartArea = context.chart?.chartArea
-          if (!ctx || !chartArea) return 'rgba(99, 102, 241, 0.15)'
-          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-          gradient.addColorStop(0, 'rgba(99, 102, 241, 0.15)') // 15% opacity Indigo
-          gradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)')  // Transparent
-          return gradient
+        tension: 0.35,
+        fill: {
+          target: 0,
+          above: 'rgba(239, 68, 68, 0.18)', // Soft red when Expense surges above Collection (August Deficit)
+          below: 'rgba(16, 185, 129, 0.18)', // Subtle green when Collection sits higher than Expense (Surplus)
         },
-        pointRadius: lineExpense.map((_, i) => (i === lineExpense.length - 1 ? 6 : 4)),
-        pointBackgroundColor: lineExpense.map((_, i) => (i === lineExpense.length - 1 ? '#EF4444' : '#6366F1')),
+        pointRadius: lineExpense.map((_, i) => (i === lineExpense.length - 1 ? 6.5 : 3.5)),
+        pointBackgroundColor: '#EF4444',
         pointBorderColor: '#ffffff',
         pointBorderWidth: 2,
-        pointHoverRadius: lineExpense.map((_, i) => (i === lineExpense.length - 1 ? 8 : 6)),
+        pointHoverRadius: lineExpense.map((_, i) => (i === lineExpense.length - 1 ? 8.5 : 6)),
       }
     ]
   }
@@ -384,17 +379,7 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
     },
     plugins: {
       legend: {
-        display: true,
-        position: 'top',
-        align: 'end',
-        labels: {
-          font: { family: 'Manrope', size: 11, weight: '600' },
-          boxWidth: 10,
-          boxHeight: 10,
-          usePointStyle: true,
-          pointStyle: 'rectRounded',
-          padding: 12
-        }
+        display: false
       },
       tooltip: {
         enabled: true,
@@ -453,17 +438,7 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
     },
     plugins: {
       legend: {
-        display: true,
-        position: 'top',
-        align: 'end',
-        labels: {
-          font: { size: 11, family: 'Manrope', weight: '600' },
-          usePointStyle: true,
-          pointStyle: 'rectRounded',
-          boxWidth: 10,
-          boxHeight: 10,
-          padding: 12
-        }
+        display: false
       },
       tooltip: {
         enabled: true,
@@ -572,6 +547,33 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
               Trend Line
             </button>
           </div>
+        </div>
+
+        {/* Standard Minimalist Legend Badges */}
+        <div className="flex items-center justify-between flex-wrap gap-2.5 pt-1">
+          <div className="flex items-center gap-3 sm:gap-4 text-xs font-bold">
+            <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200">
+              <span className="size-2.5 rounded-full bg-emerald-500 inline-block shadow-xs"></span>
+              Monthly Collection
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200">
+              <span className="size-2.5 rounded-full bg-rose-500 inline-block shadow-xs"></span>
+              {trendTab === 'comparison' ? 'Total Expenses' : 'Monthly Expense'}
+            </span>
+          </div>
+
+          {trendTab === 'trend' && (
+            <div className="flex items-center gap-2.5 text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+              <span className="inline-flex items-center gap-1">
+                <span className="w-2.5 h-1.5 rounded-xs bg-emerald-500/25 border border-emerald-500/60 inline-block"></span>
+                Surplus Area
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="w-2.5 h-1.5 rounded-xs bg-rose-500/25 border border-rose-500/60 inline-block"></span>
+                Deficit Area
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Chart Viewport */}
