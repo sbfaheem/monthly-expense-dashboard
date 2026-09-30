@@ -131,8 +131,13 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
   })
 
   const barLabels = monthEntries.map(e => {
-    const parts = e.month.split(' ')
-    return parts.length >= 2 ? `${parts[0]} '${parts[1].slice(2)}` : e.month
+    const parts = e.month.trim().split(/\s+/)
+    if (parts.length >= 2) {
+      const monthAbbr = parts[0].slice(0, 3)
+      const yearAbbr = parts[1].length === 4 ? `'${parts[1].slice(2)}` : parts[1]
+      return `${monthAbbr} ${yearAbbr}`
+    }
+    return e.month
   })
 
   const collectionData = monthEntries.map(e => e.collection)
@@ -183,7 +188,10 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
   }
 
   const lineChartData = {
-    labels: lineLabels.map(l => l.split(' ')[0]),
+    labels: lineLabels.map(l => {
+      const parts = l.trim().split(/\s+/)
+      return parts.length >= 2 ? `${parts[0].slice(0, 3)} '${parts[1].slice(2)}` : parts[0].slice(0, 3)
+    }),
     datasets: [{
       label: 'Expense',
       data: lineExpense,
@@ -255,14 +263,19 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
       y: {
         ticks: {
           callback: v => `${(v / 1000).toFixed(0)}k`,
-          font: { family: 'Manrope' }
+          font: { family: 'Manrope', size: 10 }
         },
         grid: { color: 'rgba(0,102,0,0.05)' },
         beginAtZero: true
       },
       x: {
         grid: { display: false },
-        ticks: { font: { family: 'Manrope' } }
+        ticks: {
+          font: { family: 'Manrope', size: 10, weight: '600' },
+          maxRotation: 0,
+          minRotation: 0,
+          padding: 6
+        }
       }
     }
   }
@@ -274,8 +287,16 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
       legend: { position: 'top', labels: { font: { size: 11, family: 'Manrope' } } },
     },
     scales: {
-      y: { ticks: { callback: v => `${(v / 1000).toFixed(0)}k`, font: { family: 'Manrope' } }, grid: { color: 'rgba(0,102,0,0.05)' } },
-      x: { grid: { display: false }, ticks: { font: { family: 'Manrope' } } }
+      y: { ticks: { callback: v => `${(v / 1000).toFixed(0)}k`, font: { family: 'Manrope', size: 10 } }, grid: { color: 'rgba(0,102,0,0.05)' } },
+      x: {
+        grid: { display: false },
+        ticks: {
+          font: { family: 'Manrope', size: 10, weight: '600' },
+          maxRotation: 0,
+          minRotation: 0,
+          padding: 6
+        }
+      }
     }
   }
 
