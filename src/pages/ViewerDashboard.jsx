@@ -355,41 +355,47 @@ export default function ViewerDashboard() {
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
       {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-primary/10 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-6 py-4 lg:px-10">
-        <div className="flex items-center gap-4 text-primary">
-          <div className="size-8 bg-primary text-white rounded-lg flex items-center justify-center">
-            <span className="material-symbols-outlined">account_balance_wallet</span>
+      <header className="sticky top-0 z-50 w-full border-b border-primary/10 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md overflow-x-auto no-scrollbar scroll-smooth">
+        <div className="flex items-center justify-between gap-4 px-4 sm:px-6 lg:px-10 py-3 sm:py-4 min-w-max">
+          <div className="flex items-center gap-3 text-primary flex-shrink-0">
+            <div className="size-8 bg-primary text-white rounded-lg flex items-center justify-center flex-shrink-0">
+              <span className="material-symbols-outlined">account_balance_wallet</span>
+            </div>
+            <div className="flex flex-col">
+              <h2 className="text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold leading-tight tracking-tight whitespace-nowrap">
+                {isUrdu ? (t.appTitle || 'ماہانہ اخراجات ڈیش بورڈ') : 'ExpensePro'}
+              </h2>
+              <span className="text-primary text-[10px] sm:text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
+                {isUrdu ? 'مشاہدہ موڈ' : 'Viewer Mode'}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <h2 className="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight">
-              {isUrdu ? (t.appTitle || 'ماہانہ اخراجات ڈیش بورڈ') : 'ExpensePro'}
-            </h2>
-            <span className="text-primary text-xs font-semibold uppercase tracking-wider">{isUrdu ? 'مشاہدہ موڈ' : 'Viewer Mode'}</span>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2 sm:gap-3">
-          <LanguageSwitcher />
-          <div className="hidden md:flex items-center gap-2 bg-slate-100 dark:bg-primary/10 px-3 py-1.5 rounded-full">
-            <span className="material-symbols-outlined text-sm text-primary">visibility</span>
-            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{isUrdu ? 'صرف پڑھنے کی اجازت' : 'Read-only Access'}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowWhatsAppSnapshotModal(true)}
-              className="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-black shadow-sm transition-all active:scale-95 flex-shrink-0"
-              title="Download 1080px WhatsApp Card Summary"
-            >
-              <Share2 size={16} />
-              <span className="hidden sm:inline">{t.exportWhatsApp || 'Download WhatsApp Summary'}</span>
-              <span className="sm:hidden">{isUrdu ? 'واٹس ایپ سمری' : 'WhatsApp Card'}</span>
-            </button>
-            <button onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)} className="flex items-center justify-center rounded-xl h-10 w-10 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex-shrink-0" title="Export CSV">
-              <span className="material-symbols-outlined">download</span>
-            </button>
-            <button onClick={printReport} className="flex items-center justify-center rounded-xl h-10 w-10 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex-shrink-0" title="Print Report">
-              <span className="material-symbols-outlined">print</span>
-            </button>
+          
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <LanguageSwitcher />
+            <div className="hidden md:flex items-center gap-2 bg-slate-100 dark:bg-primary/10 px-3 py-1.5 rounded-full flex-shrink-0">
+              <span className="material-symbols-outlined text-sm text-primary">visibility</span>
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                {isUrdu ? 'صرف پڑھنے کی اجازت' : 'Read-only Access'}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              <button
+                onClick={() => setShowWhatsAppSnapshotModal(true)}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-black shadow-sm transition-all active:scale-95 flex-shrink-0 whitespace-nowrap"
+                title="Download 1080px WhatsApp Card Summary"
+              >
+                <Share2 size={16} />
+                <span className="hidden sm:inline">{t.exportWhatsApp || 'Download WhatsApp Summary'}</span>
+                <span className="sm:hidden">{isUrdu ? 'واٹس ایپ سمری' : 'WhatsApp Card'}</span>
+              </button>
+              <button onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)} className="flex items-center justify-center rounded-xl h-9 w-9 sm:h-10 sm:w-10 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex-shrink-0" title="Export CSV">
+                <span className="material-symbols-outlined text-sm sm:text-base">download</span>
+              </button>
+              <button onClick={printReport} className="flex items-center justify-center rounded-xl h-9 w-9 sm:h-10 sm:w-10 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex-shrink-0" title="Print Report">
+                <span className="material-symbols-outlined text-sm sm:text-base">print</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>

@@ -43,7 +43,7 @@ const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAd
         </p>
       </div>
 
-      <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap">
+      <div className="flex items-center gap-1.5 sm:gap-3 overflow-x-auto no-scrollbar py-1 max-w-full flex-nowrap sm:flex-wrap">
         {/* Language Switcher adjacent to Month Selector */}
         <LanguageSwitcher />
 
