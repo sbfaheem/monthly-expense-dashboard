@@ -35,12 +35,12 @@ const ExpenseTable = ({
   let priorMonthShort = 'Prior'
   let curMonthShort = 'Current'
 
-  if (selectedMonth) {
-    const parts = selectedMonth.trim().split(' ')
-    const mName = parts[0]
+  if (selectedMonth && typeof selectedMonth === 'string') {
+    const parts = selectedMonth.trim().split(/\s+/)
+    const mName = parts[0] || ''
     const year = Number(parts[1])
     const mIndex = MONTH_NAMES.indexOf(mName)
-    curMonthShort = `${mName.slice(0, 3)} ${year}`
+    curMonthShort = `${mName.slice(0, 3)} ${year || ''}`.trim()
 
     if (mIndex !== -1 && year) {
       let priorMIndex = mIndex - 1

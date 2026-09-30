@@ -22,22 +22,50 @@ export const resolveGroupName = (grpStr) => {
 }
 
 export const getLastDataMonth = (data) => {
-  if (data.monthlyRecords && data.monthlyRecords.length > 0) {
-    const sorted = [...data.monthlyRecords].sort((a, b) => new Date(b.month) - new Date(a.month))
-    const parts = sorted[0].month.split(' ')
-    return { month: parts[0], year: Number(parts[1]) }
+  if (data?.monthlyRecords && data.monthlyRecords.length > 0) {
+    const sorted = [...data.monthlyRecords].sort((a, b) => getMonthSortKey(b.month) - getMonthSortKey(a.month))
+    const parts = (sorted[0]?.month || '').trim().split(/\s+/)
+    if (parts.length >= 2) {
+      return { month: parts[0], year: Number(parts[1]) || new Date().getFullYear() }
+    }
   }
   const now = new Date()
-  const [m, y] = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).split(' ')
-  return { month: m, year: Number(y) }
+  const m = now.toLocaleDateString('en-US', { month: 'long' })
+  const y = now.getFullYear()
+  return { month: m, year: y }
 }
 
-import { calculateMonthlyFinances, calculateMultiMonthContinuity } from './finance'
-export { calculateMonthlyFinances, calculateMultiMonthContinuity }
+import { calculateMonthlyFinances, calculateMultiMonthContinuity, getMonthSortKey } from './finance'
+export { calculateMonthlyFinances, calculateMultiMonthContinuity, getMonthSortKey }
 
 export const calculateTotals = (expenses, settings, monthlyRecords, selectedMonth) => {
-  const [selMonthName, selYearStr] = selectedMonth.split(' ')
-  const selYear = Number(selYearStr)
+  const defaultRecord = {
+    openingBalance: 0,
+    monthlyCollection: 0,
+    isManualSaving: false,
+    manualSaving: 0,
+    cctvExpense: 0,
+    showCctvExpense: false,
+    note: '',
+    isNoData: true
+  }
+
+  if (!selectedMonth || typeof selectedMonth !== 'string') {
+    return {
+      totalExpense: 0,
+      netCashFlow: 0,
+      status: "Surplus",
+      closingBalance: 0,
+      isOverdrawn: false,
+      saving: 0,
+      totalSaving: 0,
+      record: defaultRecord
+    }
+  }
+
+  const parts = selectedMonth.trim().split(/\s+/)
+  const selMonthName = parts[0] || ''
+  const selYear = Number(parts[1]) || 0
   
   const today = new Date()
   const curMonthName = today.toLocaleDateString('en-US', { month: 'long' })
@@ -63,43 +91,33 @@ export const calculateTotals = (expenses, settings, monthlyRecords, selectedMont
       isOverdrawn: false,
       saving: 0,
       totalSaving: 0,
-      record: {
-        openingBalance: 0,
-        monthlyCollection: 0,
-        isManualSaving: false,
-        manualSaving: 0,
-        cctvExpense: 0,
-        showCctvExpense: false,
-        isNoData: true
-      }
+      record: defaultRecord
     }
   }
 
   if (continuityData) {
     return {
-      totalExpense: continuityData.totalExpense,
-      netCashFlow: continuityData.netCashFlow,
-      status: continuityData.status,
-      closingBalance: continuityData.closingBalance,
-      isOverdrawn: continuityData.isOverdrawn,
+      totalExpense: continuityData.totalExpense || 0,
+      netCashFlow: continuityData.netCashFlow || 0,
+      status: continuityData.status || (continuityData.netCashFlow >= 0 ? "Surplus" : "Deficit"),
+      closingBalance: continuityData.closingBalance || 0,
+      isOverdrawn: !!continuityData.isOverdrawn,
       // Backwards-compatible aliases
-      saving: continuityData.netCashFlow,
-      totalSaving: continuityData.closingBalance,
+      saving: continuityData.netCashFlow || 0,
+      totalSaving: continuityData.closingBalance || 0,
       record: {
-        ...continuityData.record,
+        ...defaultRecord,
+        ...(continuityData.record || {}),
+        note: continuityData.record?.note || monthRecord?.note || '',
         isNoData
       }
     }
   }
 
-  const record = !monthRecord ? {
-    openingBalance: 0,
-    monthlyCollection: 0,
-    isManualSaving: false,
-    manualSaving: 0,
-    cctvExpense: 0,
-    showCctvExpense: false,
-  } : monthRecord
+  const record = !monthRecord ? defaultRecord : {
+    ...defaultRecord,
+    ...monthRecord
+  }
 
   const finances = calculateMonthlyFinances(
     record.openingBalance || 0,
@@ -115,7 +133,7 @@ export const calculateTotals = (expenses, settings, monthlyRecords, selectedMont
   const isOverdrawn = closingBalance < 0
 
   return {
-    totalExpense: finances.totalExpense,
+    totalExpense: finances.totalExpense || 0,
     netCashFlow,
     status,
     closingBalance,

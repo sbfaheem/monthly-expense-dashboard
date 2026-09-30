@@ -10,12 +10,14 @@ function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/view" replace />} />
       <Route path="/view" element={<ViewerDashboard />} />
+      <Route path="/index.html" element={<Navigate to="/view" replace />} />
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin/*" element={
         <ProtectedRoute>
           <AdminPanel />
         </ProtectedRoute>
       } />
+      <Route path="*" element={<Navigate to="/view" replace />} />
     </Routes>
   )
 }

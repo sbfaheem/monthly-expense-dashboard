@@ -153,12 +153,12 @@ const peakCalloutPlugin = {
 }
 
 function formatShortMonth(monthStr) {
-  if (!monthStr) return ''
+  if (!monthStr || typeof monthStr !== 'string') return ''
   const parts = monthStr.trim().split(/\s+/)
   if (parts.length >= 2) {
-    const month = parts[0].slice(0, 3)
-    const year = parts[1].length === 4 ? `'${parts[1].slice(2)}` : parts[1]
-    return `${month} ${year}`
+    const month = (parts[0] || '').slice(0, 3)
+    const year = parts[1]?.length === 4 ? `'${parts[1].slice(2)}` : parts[1] || ''
+    return `${month} ${year}`.trim()
   }
   return monthStr
 }
@@ -221,12 +221,13 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
   })
 
   const barLabels = monthEntries.map(e => {
+    if (!e?.month) return ''
     if (isUrdu) return translateMonth(e.month, 'ur')
     const parts = e.month.trim().split(/\s+/)
     if (parts.length >= 2) {
-      const monthAbbr = parts[0].slice(0, 3)
-      const yearAbbr = parts[1].length === 4 ? `'${parts[1].slice(2)}` : parts[1]
-      return `${monthAbbr} ${yearAbbr}`
+      const monthAbbr = (parts[0] || '').slice(0, 3)
+      const yearAbbr = parts[1]?.length === 4 ? `'${parts[1].slice(2)}` : parts[1] || ''
+      return `${monthAbbr} ${yearAbbr}`.trim()
     }
     return e.month
   })

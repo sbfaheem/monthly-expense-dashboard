@@ -526,25 +526,25 @@ export default function ViewerDashboard() {
 
         {/* Summary Cards */}
         <SummaryCards
-          openingBalance={totals.record.openingBalance}
-          monthlyCollection={totals.record.monthlyCollection}
-          totalExpense={totals.totalExpense}
-          netCashFlow={totals.netCashFlow}
-          status={totals.status}
-          closingBalance={totals.closingBalance}
-          isOverdrawn={totals.isOverdrawn}
-          saving={totals.saving}
-          totalSaving={totals.totalSaving}
-          currency={data.settings.currency}
-          isNoData={totals.record.isNoData}
+          openingBalance={totals?.record?.openingBalance ?? 0}
+          monthlyCollection={totals?.record?.monthlyCollection ?? 0}
+          totalExpense={totals?.totalExpense ?? 0}
+          netCashFlow={totals?.netCashFlow ?? 0}
+          status={totals?.status || 'Surplus'}
+          closingBalance={totals?.closingBalance ?? 0}
+          isOverdrawn={totals?.isOverdrawn ?? false}
+          saving={totals?.saving ?? 0}
+          totalSaving={totals?.totalSaving ?? 0}
+          currency={data?.settings?.currency || 'PKR'}
+          isNoData={totals?.record?.isNoData ?? false}
         />
 
         {/* Contextual Dynamic Resident Alert Banner (Deficit vs Surplus) */}
         <DynamicAlertBanner
-          netCashFlow={totals.netCashFlow}
-          currency={data.settings?.currency || 'PKR'}
-          customNote={totals.record?.note}
-          isNoData={totals.record?.isNoData}
+          netCashFlow={totals?.netCashFlow ?? 0}
+          currency={data?.settings?.currency || 'PKR'}
+          customNote={totals?.record?.note}
+          isNoData={totals?.record?.isNoData ?? false}
         />
 
         {/* Main Content Grid */}

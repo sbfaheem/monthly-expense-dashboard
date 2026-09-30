@@ -171,8 +171,8 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
             </div>
 
             <div className="flex items-center gap-3">
-              <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${predictionData.prediction.statusBadge.color}`}>
-                {translateWaterStatus(predictionData.prediction.statusBadge.label, lang)}
+              <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${predictionData.prediction?.statusBadge?.color || 'bg-blue-100 text-blue-800'}`}>
+                {translateWaterStatus(predictionData.prediction?.statusBadge?.label, lang)}
               </span>
               {isAdmin && (
                 <button
@@ -196,10 +196,10 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
                 <span>{t.expectedWindow}</span>
               </div>
               <p className="text-xl md:text-2xl font-black text-white tracking-tight">
-                {translateMonth(predictionData.prediction.windowFormatted, lang)}
+                {translateMonth(predictionData.prediction?.windowFormatted, lang)}
               </p>
               <p className="text-xs text-slate-300 mt-1 font-medium">
-                {t.mostLikely} <span className="text-indigo-200 font-bold">{translateMonth(predictionData.prediction.predictedDateFormatted, lang)}</span>
+                {t.mostLikely} <span className="text-indigo-200 font-bold">{translateMonth(predictionData.prediction?.predictedDateFormatted, lang)}</span>
               </p>
             </div>
 
@@ -211,12 +211,12 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
               </div>
               <p className="text-xl md:text-2xl font-black text-white tracking-tight">
                 {isUrdu 
-                  ? predictionData.prediction.avgDurationText
+                  ? (predictionData.prediction?.avgDurationText || '')
                       .replace(/(\d+)d/g, '$1 دن')
                       .replace(/(\d+)h/g, '$1 گھنٹے')
                       .replace(/hours/g, 'گھنٹے')
                       .replace(/hour/g, 'گھنٹہ')
-                  : predictionData.prediction.avgDurationText
+                  : (predictionData.prediction?.avgDurationText || '')
                 }
               </p>
               <p className="text-xs text-slate-300 mt-1 font-medium">
@@ -231,13 +231,13 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
                 <span>{t.supplyCadence}</span>
               </div>
               <p className="text-xl md:text-2xl font-black text-white tracking-tight">
-                {isUrdu ? `ہر ~${predictionData.prediction.avgIntervalDays} دن بعد` : `Every ~${predictionData.prediction.avgIntervalDays} Days`}
+                {isUrdu ? `ہر ~${predictionData.prediction?.avgIntervalDays || 0} دن بعد` : `Every ~${predictionData.prediction?.avgIntervalDays || 0} Days`}
               </p>
               <p className="text-xs text-slate-300 mt-1 font-medium">
                 {t.recentLabel} <span className="text-teal-200 font-bold">
                   {isUrdu 
-                    ? predictionData.recentIntervalsInDays.slice(-3).map(n => `${n} دن`).join('، ')
-                    : `${predictionData.recentIntervalsInDays.slice(-3).join('d, ')}d`
+                    ? (predictionData.recentIntervalsInDays || []).slice(-3).map(n => `${n} دن`).join('، ')
+                    : `${(predictionData.recentIntervalsInDays || []).slice(-3).join('d, ')}d`
                   }
                 </span>
               </p>
@@ -251,12 +251,12 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-xl md:text-2xl font-black text-white tracking-tight">
-                  {predictionData.prediction.reliabilityScore}%
+                  {predictionData.prediction?.reliabilityScore || 0}%
                 </span>
                 <span className="text-xs text-emerald-400 font-bold">{t.highRegularity}</span>
               </div>
               <p className="text-xs text-slate-300 mt-1 font-medium">
-                {t.lastRecordedLabel} {translateMonth(predictionData.lastSupply.formattedStart.split(',')[0], lang)}
+                {t.lastRecordedLabel} {translateMonth(predictionData.lastSupply?.formattedStart?.split(',')?.[0] || '', lang)}
               </p>
             </div>
           </div>
