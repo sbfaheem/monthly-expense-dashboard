@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -7,7 +7,7 @@
   --color-background-light: #f5f8f5;
   --color-background-dark: #0f230f;
   --font-display: 'Manrope', sans-serif;
-  --font-urdu: 'Noto Naskh Arabic', serif;
+  --font-urdu: 'Noto Sans Arabic', system-ui, -apple-system, sans-serif;
 }
 
 html {
@@ -24,7 +24,16 @@ body {
 }
 
 .font-urdu {
-  font-family: var(--font-urdu), 'Manrope', sans-serif;
+  font-family: 'Noto Sans Arabic', system-ui, -apple-system, sans-serif !important;
+  letter-spacing: 0 !important;
+}
+
+/* RTL spacing and alignment fixes */
+[dir="rtl"] .text-left {
+  text-align: right !important;
+}
+[dir="rtl"] .text-right {
+  text-align: left !important;
 }
 
 .material-symbols-outlined { 
