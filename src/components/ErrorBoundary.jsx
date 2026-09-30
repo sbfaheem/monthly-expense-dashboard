@@ -49,6 +49,13 @@ export class ErrorBoundary extends React.Component {
                   ? 'براہ کرم صفحہ ریفریش کریں یا دوبارہ لاگ ان کریں۔' 
                   : 'An unexpected error occurred while rendering the dashboard. Please reload to continue.'}
               </p>
+              {this.state.error && (
+                <div className="mt-3 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-xl text-left">
+                  <p className="text-xs font-mono font-bold text-red-700 dark:text-red-300 break-words">
+                    {this.state.error.message || String(this.state.error)}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-2">

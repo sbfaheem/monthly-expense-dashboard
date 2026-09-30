@@ -1,5 +1,7 @@
 import { db } from './firebase'
 import { collection, doc, getDoc, getDocs, query, orderBy, limit, setDoc, addDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore'
+import { calculateMonthlyFinances, calculateMultiMonthContinuity, getMonthSortKey } from './finance'
+export { calculateMonthlyFinances, calculateMultiMonthContinuity, getMonthSortKey }
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -23,7 +25,11 @@ export const resolveGroupName = (grpStr) => {
 
 export const getLastDataMonth = (data) => {
   if (data?.monthlyRecords && data.monthlyRecords.length > 0) {
-    const sorted = [...data.monthlyRecords].sort((a, b) => getMonthSortKey(b.month) - getMonthSortKey(a.month))
+    const sorted = [...data.monthlyRecords].sort((a, b) => {
+      const bKey = typeof getMonthSortKey === 'function' ? getMonthSortKey(b?.month) : 0
+      const aKey = typeof getMonthSortKey === 'function' ? getMonthSortKey(a?.month) : 0
+      return bKey - aKey
+    })
     const parts = (sorted[0]?.month || '').trim().split(/\s+/)
     if (parts.length >= 2) {
       return { month: parts[0], year: Number(parts[1]) || new Date().getFullYear() }
@@ -34,9 +40,6 @@ export const getLastDataMonth = (data) => {
   const y = now.getFullYear()
   return { month: m, year: y }
 }
-
-import { calculateMonthlyFinances, calculateMultiMonthContinuity, getMonthSortKey } from './finance'
-export { calculateMonthlyFinances, calculateMultiMonthContinuity, getMonthSortKey }
 
 export const calculateTotals = (expenses, settings, monthlyRecords, selectedMonth) => {
   const defaultRecord = {
