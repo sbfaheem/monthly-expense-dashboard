@@ -8,6 +8,7 @@ import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import MonthlyVarianceBanner from '../components/MonthlyVarianceBanner'
 import DynamicAlertBanner from '../components/DynamicAlertBanner'
 import WhatsAppSnapshotModal from '../components/WhatsAppSnapshotModal'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { exportToCSV, printReport } from '../utils/export'
 import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
 import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2, Calendar } from 'lucide-react'
@@ -361,7 +362,8 @@ export default function ViewerDashboard() {
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <LanguageSwitcher />
           <div className="hidden md:flex items-center gap-2 bg-slate-100 dark:bg-primary/10 px-3 py-1.5 rounded-full">
             <span className="material-symbols-outlined text-sm text-primary">visibility</span>
             <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Read-only Access</span>

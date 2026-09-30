@@ -1,4 +1,5 @@
 import { Calendar, ChevronLeft } from 'lucide-react'
+import { LanguageSwitcher } from './LanguageSwitcher'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
@@ -36,7 +37,10 @@ const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAd
         <p className="text-slate-500 dark:text-slate-400 font-medium">Detailed financial overview for the current billing cycle.</p>
       </div>
 
-      <div className="flex items-center gap-1.5 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap">
+        {/* Language Switcher adjacent to Month Selector */}
+        <LanguageSwitcher />
+
         {/* Month/Year Dropdowns */}
         <div className="flex items-center border border-primary/20 rounded-xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm h-10 flex-shrink-0">
           <select 
