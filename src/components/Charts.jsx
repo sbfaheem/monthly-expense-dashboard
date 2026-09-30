@@ -395,7 +395,16 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
         titleFont: { family: 'Manrope', size: 12, weight: '700' },
         bodyFont: { family: 'Manrope', size: 11, weight: '600' },
         callbacks: {
-          label: ctx => ` ${ctx.dataset.label}: PKR ${Number(ctx.raw).toLocaleString('en-PK')}`
+          label: ctx => ` ${ctx.dataset.label}: PKR ${Number(ctx.raw).toLocaleString('en-PK')}`,
+          afterBody: (items) => {
+            if (!items || items.length === 0) return ''
+            const idx = items[0].dataIndex
+            const entry = monthEntries[idx]
+            if (!entry) return ''
+            const net = entry.collection - entry.expenses
+            const isDef = net < 0
+            return `\n${isDef ? '🔴 Net Deficit' : '🟢 Net Surplus'}: ${isDef ? '-' : '+'}PKR ${Math.abs(net).toLocaleString('en-PK')}`
+          }
         }
       }
     },
@@ -454,7 +463,16 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
         titleFont: { family: 'Manrope', size: 12, weight: '700' },
         bodyFont: { family: 'Manrope', size: 11, weight: '600' },
         callbacks: {
-          label: ctx => ` ${ctx.dataset.label}: PKR ${Number(ctx.raw).toLocaleString('en-PK')}`
+          label: ctx => ` ${ctx.dataset.label}: PKR ${Number(ctx.raw).toLocaleString('en-PK')}`,
+          afterBody: (items) => {
+            if (!items || items.length === 0) return ''
+            const idx = items[0].dataIndex
+            const coll = lineCollection[idx] || 0
+            const exp = lineExpense[idx] || 0
+            const net = coll - exp
+            const isDef = net < 0
+            return `\n${isDef ? '🔴 Net Deficit' : '🟢 Net Surplus'}: ${isDef ? '-' : '+'}PKR ${Math.abs(net).toLocaleString('en-PK')}`
+          }
         }
       },
       peakCallout: {
