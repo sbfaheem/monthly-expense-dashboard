@@ -548,9 +548,9 @@ export default function ViewerDashboard() {
         />
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
           {/* Table Section */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="xl:col-span-8 space-y-6">
             <ExpenseTable
               expenses={monthlyExpenses}
               allExpenses={data.expenses}
@@ -562,7 +562,7 @@ export default function ViewerDashboard() {
           </div>
 
           {/* Sidebar Content */}
-          <div className="space-y-6">
+          <div className="xl:col-span-4 space-y-6">
             <Charts
               expenses={monthlyExpenses}
               allExpenses={data.expenses}
@@ -631,70 +631,80 @@ export default function ViewerDashboard() {
 
               <div className="space-y-3">
                 {/* Contact 1: Mr. Majeed */}
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/70 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 space-y-3 shadow-2xs">
                   <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center justify-center font-black text-sm flex-shrink-0 shadow-2xs">
+                    <div className="size-11 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center justify-center font-black text-base flex-shrink-0 shadow-xs border border-emerald-200/60">
                       M
                     </div>
-                    <div>
-                      <p className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100">
-                        {isUrdu ? 'جناب عبدالمجید صاحب' : 'Mr. Majeed'}
-                      </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                        {t.supervisorRole || 'Project Supervisor'} • <a href="tel:03013377675" className="font-mono text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline">0301-3377675</a>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <p className="text-sm sm:text-base font-black text-slate-800 dark:text-slate-100 truncate">
+                          {isUrdu ? 'جناب عبدالمجید صاحب' : 'Mr. Majeed'}
+                        </p>
+                        <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                          {t.supervisorRole || 'Project Supervisor'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium font-mono mt-0.5">
+                        <a href="tel:03013377675" className="hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline">0301-3377675</a>
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 self-end sm:self-center">
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <a
                       href="tel:03013377675"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition active:scale-95 shadow-2xs"
+                      className="inline-flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition active:scale-95 shadow-2xs border border-slate-200 dark:border-slate-700"
                     >
-                      <Phone size={12} className="text-slate-600 dark:text-slate-300" />
+                      <Phone size={13} className="text-slate-500" />
                       <span>{t.btnCall || 'Call'}</span>
                     </a>
                     <a
                       href="https://wa.me/923013377675?text=Hello%20Mr.%20Majeed,%20regarding%20August%20Expense%20Sheet"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-lg transition active:scale-95 shadow-2xs border border-emerald-200/50 dark:border-emerald-800/40"
+                      className="inline-flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-xl transition active:scale-95 shadow-2xs border border-emerald-200/60 dark:border-emerald-800/40"
                     >
-                      <MessageSquare size={12} className="text-emerald-600 dark:text-emerald-400" />
+                      <MessageSquare size={13} className="text-emerald-600 dark:text-emerald-400" />
                       <span>{t.btnChat || 'WhatsApp'}</span>
                     </a>
                   </div>
                 </div>
 
                 {/* Contact 2: Mr. Fahad Rizwan */}
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/70 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 space-y-3 shadow-2xs">
                   <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 flex items-center justify-center font-black text-sm flex-shrink-0 shadow-2xs">
+                    <div className="size-11 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 flex items-center justify-center font-black text-base flex-shrink-0 shadow-xs border border-amber-200/60">
                       F
                     </div>
-                    <div>
-                      <p className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100">
-                        {isUrdu ? 'جناب فہد رضوان صاحب' : 'Mr. Fahad Rizwan'}
-                      </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                        {t.auditorRole || 'Financial Auditor'} • <a href="tel:03443160446" className="font-mono text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 hover:underline">0344-3160446</a>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <p className="text-sm sm:text-base font-black text-slate-800 dark:text-slate-100 truncate">
+                          {isUrdu ? 'جناب فہد رضوان صاحب' : 'Mr. Fahad Rizwan'}
+                        </p>
+                        <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-full border border-amber-200/60">
+                          {t.auditorRole || 'Financial Auditor'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium font-mono mt-0.5">
+                        <a href="tel:03443160446" className="hover:text-amber-600 dark:hover:text-amber-400 hover:underline">0344-3160446</a>
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 self-end sm:self-center">
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                     <a
                       href="tel:03443160446"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition active:scale-95 shadow-2xs"
+                      className="inline-flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition active:scale-95 shadow-2xs border border-slate-200 dark:border-slate-700"
                     >
-                      <Phone size={12} className="text-slate-600 dark:text-slate-300" />
+                      <Phone size={13} className="text-slate-500" />
                       <span>{t.btnCall || 'Call'}</span>
                     </a>
                     <a
                       href="https://wa.me/923443160446?text=Hello%20Mr.%20Fahad,%20regarding%20August%20Expense%20Sheet"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-lg transition active:scale-95 shadow-2xs border border-emerald-200/50 dark:border-emerald-800/40"
+                      className="inline-flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-xl transition active:scale-95 shadow-2xs border border-emerald-200/60 dark:border-emerald-800/40"
                     >
-                      <MessageSquare size={12} className="text-emerald-600 dark:text-emerald-400" />
+                      <MessageSquare size={13} className="text-emerald-600 dark:text-emerald-400" />
                       <span>{t.btnChat || 'WhatsApp'}</span>
                     </a>
                   </div>

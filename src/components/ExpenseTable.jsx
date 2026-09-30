@@ -114,7 +114,7 @@ const ExpenseTable = ({
         {/* ========================================================================= */}
         {/* 📱 MOBILE VIEW: Layman-Friendly Vertically Stacked Cards (NO horizontal scroll) */}
         {/* ========================================================================= */}
-        <div className="block md:hidden p-3 sm:p-4 space-y-3">
+        <div className="block md:hidden p-3.5 sm:p-5 space-y-3.5">
           {tableRows.length === 0 ? (
             <div className="py-8 text-center text-slate-400 font-bold text-xs">
               {isUrdu ? `${translateMonth(selectedMonth, 'ur')} کے لیے کوئی اخراجات نہیں ملے۔` : `No expense records found for ${selectedMonth}.`}
@@ -125,81 +125,81 @@ const ExpenseTable = ({
               return (
                 <div
                   key={row.id || row.name}
-                  className="bg-slate-50/70 dark:bg-slate-800/60 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-700/80 space-y-2.5 shadow-2xs"
+                  className="bg-slate-50/90 dark:bg-slate-800/80 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-700/80 space-y-3 shadow-xs transition-all"
                 >
                   {/* Card Header: Item Name + Category */}
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-sm font-black text-slate-900 dark:text-slate-100 leading-tight">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <span className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 leading-snug">
                       {isUrdu ? translateItemName(row.name, 'ur') : row.name}
                     </span>
-                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border flex-shrink-0 ${catClass}`}>
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border flex-shrink-0 ${catClass}`}>
                       {isUrdu ? translateCategory(row.category, 'ur') : row.category}
                     </span>
                   </div>
 
                   {/* Side-by-Side Comparison Box */}
-                  <div className="grid grid-cols-2 gap-2 bg-white dark:bg-slate-900/80 p-2.5 rounded-xl border border-slate-100 dark:border-slate-750 text-xs">
+                  <div className="grid grid-cols-2 gap-3 bg-white dark:bg-slate-900/90 p-3 sm:p-3.5 rounded-xl border border-slate-100 dark:border-slate-750">
                     {/* Prior Month */}
                     <div>
-                      <span className="text-[10px] font-extrabold text-slate-400 block uppercase">
+                      <span className="text-[11px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">
                         {hasPriorData ? translateMonth(priorMonthShort, isUrdu ? 'ur' : 'en') : (t.colPrevious || 'Prior Month')}
                       </span>
-                      <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 font-mono mt-0.5 block">
+                      <span className="text-sm sm:text-base font-bold text-slate-600 dark:text-slate-300 font-mono block">
                         {hasPriorData && row.priorAmount > 0 ? `${displayCurrency} ${fmt(row.priorAmount)}` : '—'}
                       </span>
                     </div>
 
                     {/* Current Month */}
-                    <div className="border-l border-slate-100 dark:border-slate-800 pl-2">
-                      <span className="text-[10px] font-extrabold text-primary block uppercase">
+                    <div className="border-l border-slate-100 dark:border-slate-800 pl-3">
+                      <span className="text-[11px] font-extrabold text-primary block uppercase tracking-wider mb-0.5">
                         {translateMonth(curMonthShort, isUrdu ? 'ur' : 'en')} ({isUrdu ? 'موجودہ' : 'Current'})
                       </span>
-                      <span className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 font-mono mt-0.5 block">
+                      <span className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 font-mono block">
                         {displayCurrency} {fmt(row.currentAmount)}
                       </span>
                     </div>
                   </div>
 
                   {/* Variance Status Pill & Actions */}
-                  <div className="flex items-center justify-between gap-2 pt-0.5">
+                  <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
                     {!hasPriorData ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400">
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-400">
                         {isUrdu ? 'ابتدائی بنیاد' : 'Starting Baseline'}
                       </span>
                     ) : row.isNew ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-                        <Sparkles size={12} /> ✨ {isUrdu ? t.statusNew : 'New this month'}
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-black bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 shadow-2xs">
+                        <Sparkles size={14} /> ✨ {isUrdu ? t.statusNew : 'New this month'}
                       </span>
                     ) : row.diff > 0 ? (
-                      <span className="inline-flex items-center gap-1 font-black text-rose-600 dark:text-rose-400 text-xs bg-rose-50 dark:bg-rose-950/50 px-2.5 py-1 rounded-xl border border-rose-200/80 dark:border-rose-900/60">
-                        <ArrowUpRight size={13} className="stroke-[3]" />
+                      <span className="inline-flex items-center gap-1.5 font-black text-rose-600 dark:text-rose-400 text-xs sm:text-sm bg-rose-50 dark:bg-rose-950/50 px-3 py-1.5 rounded-xl border border-rose-200/80 dark:border-rose-900/60">
+                        <ArrowUpRight size={15} className="stroke-[3]" />
                         +{displayCurrency} {fmt(row.diff)}
-                        {row.pct && <span className="text-[10px] font-extrabold text-rose-500">({isUrdu ? `${t.statusHigher} ` : ''}+{row.pct}%)</span>}
+                        {row.pct && <span className="text-xs font-extrabold text-rose-500">({isUrdu ? `${t.statusHigher} ` : ''}+{row.pct}%)</span>}
                       </span>
                     ) : row.diff < 0 ? (
-                      <span className="inline-flex items-center gap-1 font-black text-emerald-600 dark:text-emerald-400 text-xs bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60">
-                        <ArrowDownRight size={13} className="stroke-[3]" />
+                      <span className="inline-flex items-center gap-1.5 font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1.5 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60">
+                        <ArrowDownRight size={15} className="stroke-[3]" />
                         -{displayCurrency} {fmt(row.diff)}
-                        {row.pct && <span className="text-[10px] font-extrabold text-emerald-600">({isUrdu ? `${t.statusSaved} ` : ''}{row.pct}%)</span>}
+                        {row.pct && <span className="text-xs font-extrabold text-emerald-600">({isUrdu ? `${t.statusSaved} ` : ''}{row.pct}%)</span>}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 font-semibold text-slate-400 dark:text-slate-500 text-[11px]">
-                        <Minus size={12} /> — {t.statusUnchanged || 'Unchanged'}
+                      <span className="inline-flex items-center gap-1 font-bold text-slate-400 dark:text-slate-500 text-xs sm:text-sm">
+                        <Minus size={14} /> — {t.statusUnchanged || 'Unchanged'}
                       </span>
                     )}
 
                     {/* Mobile Admin Actions */}
                     {isAdmin && (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => onEdit && onEdit(row.expense)}
-                          className="text-[11px] bg-blue-50 text-blue-600 px-2 py-1 rounded-lg font-black hover:bg-blue-100"
+                          className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-100"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => onDelete && onDelete(row.id)}
-                          className="text-[11px] bg-red-50 text-red-600 px-2 py-1 rounded-lg font-black hover:bg-red-100"
+                          className="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg font-bold hover:bg-red-100"
                         >
                           Del
                         </button>
@@ -216,18 +216,18 @@ const ExpenseTable = ({
         {/* 💻 DESKTOP / TABLET VIEW: Spacious 4-Column Table */}
         {/* ========================================================================= */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left whitespace-nowrap">
-            <thead className="text-xs font-black text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+          <table className="w-full text-left">
+            <thead className="text-xs font-black text-slate-500 uppercase tracking-wider bg-slate-50/70 dark:bg-slate-900/60 border-b border-slate-200/80 dark:border-slate-800">
               <tr>
-                <th className="px-6 py-4">{t.colItem || 'Line Item'}</th>
-                <th className="px-6 py-4 text-right">
+                <th className="px-4 lg:px-5 py-4 w-[34%]">{t.colItem || 'Line Item'}</th>
+                <th className="px-3 lg:px-4 py-4 text-right w-[20%]">
                   {hasPriorData ? `${t.colPrevious || 'Prior'} (${translateMonth(priorMonthShort, isUrdu ? 'ur' : 'en')})` : (t.colPrevious || 'Prior Month')}
                 </th>
-                <th className="px-6 py-4 text-right">
+                <th className="px-3 lg:px-4 py-4 text-right w-[22%]">
                   {`${t.colCurrent || 'Current'} (${translateMonth(curMonthShort, isUrdu ? 'ur' : 'en')})`}
                 </th>
-                <th className="px-6 py-4 text-right">{isUrdu ? `${t.colVariance || 'فرق'} اور ${t.colStatus || 'حیثیت'}` : 'Variance & Status'}</th>
-                {isAdmin && <th className="px-6 py-4 text-center w-24 border-l border-slate-100 dark:border-slate-800">Actions</th>}
+                <th className="px-4 lg:px-5 py-4 text-right w-[24%]">{isUrdu ? `${t.colVariance || 'فرق'} اور ${t.colStatus || 'حیثیت'}` : 'Variance & Status'}</th>
+                {isAdmin && <th className="px-4 py-4 text-center w-24 border-l border-slate-100 dark:border-slate-800">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -243,21 +243,21 @@ const ExpenseTable = ({
                   return (
                     <tr key={row.id || row.name} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
                       {/* Column 1: Line Item & Normalized Parent Category Tag */}
-                      <td className="px-6 py-4">
+                      <td className="px-4 lg:px-5 py-4">
                         <div className="flex flex-col gap-1">
-                          <span className="text-sm font-black text-slate-900 dark:text-slate-100">
+                          <span className="text-sm lg:text-base font-black text-slate-900 dark:text-slate-100 leading-snug">
                             {isUrdu ? translateItemName(row.name, 'ur') : row.name}
                           </span>
-                          <span className={`inline-flex items-center w-fit text-[10px] font-bold px-2 py-0.5 rounded-md border ${catClass}`}>
+                          <span className={`inline-flex items-center w-fit text-[11px] font-bold px-2.5 py-0.5 rounded-md border ${catClass}`}>
                             {isUrdu ? translateCategory(row.category, 'ur') : row.category}
                           </span>
                         </div>
                       </td>
 
                       {/* Column 2: Prior Month (PKR) */}
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-3 lg:px-4 py-4 text-right">
                         {hasPriorData && row.priorAmount > 0 ? (
-                          <span className="text-sm font-semibold text-slate-600 dark:text-slate-300 font-mono">
+                          <span className="text-sm lg:text-base font-semibold text-slate-600 dark:text-slate-300 font-mono whitespace-nowrap">
                             {displayCurrency} {fmt(row.priorAmount)}
                           </span>
                         ) : (
@@ -268,31 +268,31 @@ const ExpenseTable = ({
                       </td>
 
                       {/* Column 3: Current Month (PKR) */}
-                      <td className="px-6 py-4 text-right">
-                        <span className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 font-mono">
+                      <td className="px-3 lg:px-4 py-4 text-right">
+                        <span className="text-sm lg:text-base font-black text-slate-900 dark:text-slate-100 font-mono whitespace-nowrap">
                           {displayCurrency} {fmt(row.currentAmount)}
                         </span>
                       </td>
 
                       {/* Column 4: Variance & Status Badge */}
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-4 lg:px-5 py-4 text-right">
                         {!hasPriorData ? (
                           <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400">
                             {isUrdu ? 'ابتدائی بنیاد' : 'Baseline'}
                           </span>
                         ) : row.isNew ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 shadow-2xs">
-                            <Sparkles size={12} /> {isUrdu ? t.statusNew : 'NEW'}
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 shadow-2xs">
+                            <Sparkles size={13} /> {isUrdu ? t.statusNew : 'NEW'}
                           </span>
                         ) : row.diff > 0 ? (
-                          <span className="inline-flex items-center gap-1 font-black text-rose-600 dark:text-rose-400 text-xs sm:text-sm bg-rose-50 dark:bg-rose-950/50 px-2.5 py-1 rounded-xl border border-rose-200/80 dark:border-rose-900/60">
-                            <TrendingUp size={13} className="stroke-[2.5]" />
+                          <span className="inline-flex items-center gap-1 font-black text-rose-600 dark:text-rose-400 text-xs lg:text-sm bg-rose-50 dark:bg-rose-950/50 px-2.5 py-1.5 rounded-xl border border-rose-200/80 dark:border-rose-900/60 whitespace-nowrap">
+                            <TrendingUp size={14} className="stroke-[2.5]" />
                             +{displayCurrency} {fmt(row.diff)}
                             {row.pct && <span className="text-[11px] font-extrabold text-rose-500">({isUrdu ? `${t.statusHigher} ` : ''}▲ {row.pct}%)</span>}
                           </span>
                         ) : row.diff < 0 ? (
-                          <span className="inline-flex items-center gap-1 font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60">
-                            <TrendingDown size={13} className="stroke-[2.5]" />
+                          <span className="inline-flex items-center gap-1 font-black text-emerald-600 dark:text-emerald-400 text-xs lg:text-sm bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1.5 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60 whitespace-nowrap">
+                            <TrendingDown size={14} className="stroke-[2.5]" />
                             -{displayCurrency} {fmt(row.diff)}
                             {row.pct && <span className="text-[11px] font-extrabold text-emerald-600">({isUrdu ? `${t.statusSaved} ` : ''}▼ {Math.abs(row.pct)}%)</span>}
                           </span>
@@ -305,7 +305,7 @@ const ExpenseTable = ({
 
                       {/* Actions column for Admin */}
                       {isAdmin && (
-                        <td className="px-6 py-4 border-l border-slate-100 dark:border-slate-800 text-center">
+                        <td className="px-4 py-4 border-l border-slate-100 dark:border-slate-800 text-center">
                           <div className="flex justify-center gap-1.5">
                             <button
                               onClick={() => onEdit && onEdit(row.expense)}
