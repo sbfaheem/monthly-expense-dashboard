@@ -162,3 +162,65 @@ export const translations = {
     btnChat: "واٹس ایپ"
   }
 };
+
+export const URDU_MONTHS = {
+  January: 'جنوری',
+  February: 'فروری',
+  March: 'مارچ',
+  April: 'اپریل',
+  May: 'مئی',
+  June: 'جون',
+  July: 'جولائی',
+  August: 'اگست',
+  September: 'ستمبر',
+  October: 'اکتوبر',
+  November: 'نومبر',
+  December: 'دسمبر'
+};
+
+export function translateCategory(category, lang = 'en') {
+  if (lang !== 'ur' || !category) return category;
+  const map = {
+    'Salaries & Payroll': translations.ur.catSalaries,
+    'Payroll': translations.ur.catSalaries,
+    'Electrical & Infrastructure': translations.ur.catElectrical,
+    'Electrical & Maintenance': translations.ur.catElectrical,
+    'Supplies & Hardware': translations.ur.catSupplies,
+    'Community & Utilities': translations.ur.catCommunity,
+    'Capital Expenditures (CapEx)': translations.ur.catCapEx,
+    'Capital Expenditures': translations.ur.catCapEx,
+  };
+  return map[category] || category;
+}
+
+export function translateItemName(name, lang = 'en') {
+  if (lang !== 'ur' || !name) return name;
+  const lower = name.toLowerCase().trim();
+  if (lower.includes('security') || lower.includes('guard')) return translations.ur.itemSecurity;
+  if (lower.includes('sweeper') || lower.includes('jamadar') || lower.includes('khakrob')) return translations.ur.itemSweeper;
+  if (lower.includes('electrician') && (lower.includes('arham') || lower.includes('extra'))) return translations.ur.itemElectricianExtra;
+  if (lower.includes('electrician')) return translations.ur.itemElectrician;
+  if (lower.includes('electrical') || lower.includes('accessories') || lower.includes('wire')) return translations.ur.itemElectricalAcc;
+  if (lower.includes('bulb') || lower.includes('streetlight') || lower.includes('light')) return translations.ur.itemBulbRepair;
+  if (lower.includes('uniform')) return translations.ur.itemUniforms;
+  if (lower.includes('cleaning') || lower.includes('jhado') || lower.includes('bans') || lower.includes('broom')) return translations.ur.itemCleaning;
+  if (lower.includes('lock') || lower.includes('tala')) return translations.ur.itemLock;
+  if (lower.includes('park') || lower.includes('grass') || lower.includes('mali') || lower.includes('gardener')) return translations.ur.itemPark;
+  if (lower.includes('water') || lower.includes('tanker')) return translations.ur.itemWaterTanker;
+  if (lower.includes('event') || lower.includes('independence') || lower.includes('14 aug') || lower.includes('azadi')) return translations.ur.itemEvent;
+  if (lower.includes('cctv') || lower.includes('camera')) return translations.ur.itemCCTV;
+  if (lower.includes('welder') || lower.includes('axe') || lower.includes('kulhari')) return 'ویلڈر چارجز اور کلہاڑی';
+  if (lower.includes('chamber') || lower.includes('dhakan') || lower.includes('cover')) return 'چیمبر ڈھکن';
+  return name;
+}
+
+export function translateMonth(monthStr, lang = 'en') {
+  if (lang !== 'ur' || !monthStr) return monthStr;
+  let res = monthStr;
+  Object.entries(URDU_MONTHS).forEach(([enM, urM]) => {
+    res = res.replace(new RegExp(enM, 'g'), urM);
+    res = res.replace(new RegExp(enM.slice(0, 3), 'g'), urM);
+  });
+  return res;
+}
+

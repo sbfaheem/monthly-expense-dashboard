@@ -1,8 +1,14 @@
 import { useMemo } from 'react'
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Sparkles, Info } from 'lucide-react'
 import { computeMonthlyVariance } from '../utils/variance'
+import { useLanguage } from '../context/LanguageContext'
+import { translateItemName, translateMonth } from '../utils/translations'
 
 export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [], currency = 'PKR' }) {
+  const { lang, t } = useLanguage()
+  const isUrdu = lang === 'ur'
+  const displayCurrency = isUrdu ? 'روپے' : currency
+
   const variance = useMemo(() => {
     return computeMonthlyVariance(selectedMonth, allExpenses, currency)
   }, [selectedMonth, allExpenses, currency])
@@ -19,10 +25,10 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
         </div>
         <div>
           <h4 className="text-sm sm:text-base font-black text-slate-800 dark:text-slate-100">
-            Initial Financial Record: {selectedMonth}
+            {isUrdu ? `ابتدائی مالیاتی ریکارڈ: ${translateMonth(selectedMonth, 'ur')}` : `Initial Financial Record: ${selectedMonth}`}
           </h4>
           <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
-            This is the starting ledger cycle. Month-over-month variance analytics will compare subsequent months automatically.
+            {isUrdu ? 'یہ ابتدائی ریکارڈ ہے۔ اگلے مہینوں کا تقابلی جائزہ خودکار طور پر ظاہر ہوگا۔' : 'This is the starting ledger cycle. Month-over-month variance analytics will compare subsequent months automatically.'}
           </p>
         </div>
       </div>
@@ -46,14 +52,14 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
               <h3 className="text-base sm:text-xl md:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                What Changed This Month?
+                {isUrdu ? 'اس ماہ کیا تبدیل ہوا؟' : 'What Changed This Month?'}
               </h3>
               <span className="text-xs sm:text-sm font-extrabold px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 shadow-2xs">
-                vs. {variance.priorMonth}
+                {isUrdu ? `بمقابلہ ${translateMonth(variance.priorMonth, 'ur')}` : `vs. ${variance.priorMonth}`}
               </span>
             </div>
             <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
-              Automated month-over-month expense variance analysis &amp; top drivers
+              {isUrdu ? 'ماہانہ اخراجات کے فرق اور اہم عوامل کا خودکار جائزہ' : 'Automated month-over-month expense variance analysis & top drivers'}
             </p>
           </div>
         </div>
@@ -75,7 +81,7 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
               <ArrowDownRight size={18} className="text-emerald-600 dark:text-emerald-400 stroke-[3]" />
             )}
             <span>
-              Total {isTotalIncrease ? 'Increase' : 'Reduction'}: {isTotalIncrease ? '+' : '-'}{currency} {fmt(variance.totalDiff)}
+              {isTotalIncrease ? (isUrdu ? 'کل اضافہ' : 'Total Increase') : (isUrdu ? 'کل بچت / کمی' : 'Total Reduction')}: {isTotalIncrease ? '+' : '-'}{displayCurrency} {fmt(variance.totalDiff)}
               {variance.totalPct ? ` (${isTotalIncrease ? '+' : ''}${variance.totalPct}%)` : ''}
             </span>
           </div>
@@ -89,15 +95,15 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
           <div className="flex items-center justify-between">
             <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-rose-800 dark:text-rose-300 flex items-center gap-2">
               <TrendingUp size={16} className="text-rose-600 stroke-[2.5]" />
-              Largest Increases
+              {isUrdu ? 'سب سے زیادہ اضافہ' : 'Largest Increases'}
             </span>
             <span className="text-xs font-black text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/50 px-2.5 py-0.5 rounded-full">
-              {variance.increases.length} items
+              {variance.increases.length} {isUrdu ? 'شعبے' : 'items'}
             </span>
           </div>
 
           {variance.increases.length === 0 ? (
-            <p className="text-sm font-bold text-slate-400 py-3 text-center italic">No expense increases recorded.</p>
+            <p className="text-sm font-bold text-slate-400 py-3 text-center italic">{isUrdu ? 'کوئی اضافہ درج نہیں ہوا۔' : 'No expense increases recorded.'}</p>
           ) : (
             <div className="space-y-2.5">
               {variance.increases.map((item, idx) => (
@@ -107,15 +113,19 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
                 >
                   <div className="min-w-0 pr-3">
                     <p className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 truncate leading-tight">
-                      {item.name}
+                      {isUrdu ? translateItemName(item.name, 'ur') : item.name}
                     </p>
                     <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1 truncate">
-                      {item.isNew ? 'New expense item this month' : `Was ${currency} ${fmt(item.prev)} in ${variance.priorMonth.split(' ')[0]}`}
+                      {item.isNew 
+                        ? (isUrdu ? 'اس ماہ کا نیا خرچ' : 'New expense item this month') 
+                        : (isUrdu 
+                            ? `گزشتہ ماہ (${translateMonth(variance.priorMonth.split(' ')[0], 'ur')}) میں ${displayCurrency} ${fmt(item.prev)} تھا` 
+                            : `Was ${currency} ${fmt(item.prev)} in ${variance.priorMonth.split(' ')[0]}`)}
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <span className="text-sm sm:text-base md:text-lg font-black text-rose-600 dark:text-rose-400 block leading-tight">
-                      +{currency} {fmt(item.diff)}
+                      +{displayCurrency} {fmt(item.diff)}
                     </span>
                     {item.pct && (
                       <span className="text-xs sm:text-sm font-black text-rose-500 dark:text-rose-400/90 block mt-0.5">
@@ -134,15 +144,15 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
           <div className="flex items-center justify-between">
             <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
               <TrendingDown size={16} className="text-emerald-600 stroke-[2.5]" />
-              Largest Reductions &amp; Savings
+              {isUrdu ? 'سب سے زیادہ بچت اور کمی' : 'Largest Reductions & Savings'}
             </span>
             <span className="text-xs font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 px-2.5 py-0.5 rounded-full">
-              {variance.reductions.length} items
+              {variance.reductions.length} {isUrdu ? 'شعبے' : 'items'}
             </span>
           </div>
 
           {variance.reductions.length === 0 ? (
-            <p className="text-sm font-bold text-slate-400 py-3 text-center italic">No expense reductions recorded.</p>
+            <p className="text-sm font-bold text-slate-400 py-3 text-center italic">{isUrdu ? 'کوئی بچت / کمی ریکارڈ نہیں ہوئی۔' : 'No expense reductions recorded.'}</p>
           ) : (
             <div className="space-y-2.5">
               {variance.reductions.map((item, idx) => (
@@ -152,15 +162,17 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
                 >
                   <div className="min-w-0 pr-3">
                     <p className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 truncate leading-tight">
-                      {item.name}
+                      {isUrdu ? translateItemName(item.name, 'ur') : item.name}
                     </p>
                     <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1 truncate">
-                      {item.isEliminated ? `Completed (${currency} ${fmt(item.prev)} saved)` : `Reduced from ${currency} ${fmt(item.prev)}`}
+                      {item.isEliminated 
+                        ? (isUrdu ? `مکمل ہوا (${displayCurrency} ${fmt(item.prev)} بچت)` : `Completed (${currency} ${fmt(item.prev)} saved)`) 
+                        : (isUrdu ? `${displayCurrency} ${fmt(item.prev)} سے کم ہوا` : `Reduced from ${currency} ${fmt(item.prev)}`)}
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <span className="text-sm sm:text-base md:text-lg font-black text-emerald-600 dark:text-emerald-400 block leading-tight">
-                      -{currency} {fmt(item.diff)}
+                      -{displayCurrency} {fmt(item.diff)}
                     </span>
                     {item.pct && (
                       <span className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400/90 block mt-0.5">

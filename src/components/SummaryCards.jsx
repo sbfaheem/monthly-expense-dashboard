@@ -1,3 +1,5 @@
+import { useLanguage } from '../context/LanguageContext'
+
 const SummaryCards = ({
   openingBalance = 0,
   monthlyCollection = 0,
@@ -11,6 +13,9 @@ const SummaryCards = ({
   currency = 'PKR',
   isNoData = false
 }) => {
+  const { lang, t } = useLanguage()
+  const isUrdu = lang === 'ur'
+  const displayCurrency = isUrdu ? 'روپے' : currency
   const fmt = (n) => Number(n || 0).toLocaleString('en-PK')
   
   // Use standardized finance props if provided, fallback to saving/totalSaving
@@ -22,9 +27,9 @@ const SummaryCards = ({
 
   const cards = [
     {
-      label: 'Opening Balance',
+      label: t.openingBalance || 'Opening Balance',
       value: fmt(openingBalance),
-      note: isNoData ? '0% change' : 'Previous closing',
+      note: isNoData ? '0%' : (isUrdu ? 'گزشتہ اختتامی' : 'Previous closing'),
       icon: 'account_balance',
       iconColor: 'text-slate-400',
       noteIcon: 'trending_flat',
@@ -32,9 +37,9 @@ const SummaryCards = ({
       cardClass: 'bg-white dark:bg-slate-800 border border-primary/10'
     },
     {
-      label: 'Monthly Collection',
+      label: t.monthlyCollection || 'Monthly Collection',
       value: fmt(monthlyCollection),
-      note: isNoData ? '0% vs target' : 'Resident collections',
+      note: isNoData ? '0%' : (isUrdu ? 'رہائشیوں سے وصولی' : 'Resident collections'),
       icon: 'payments',
       iconColor: 'text-orange-500',
       noteIcon: 'receipt_long',
@@ -42,9 +47,9 @@ const SummaryCards = ({
       cardClass: 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-orange-500'
     },
     {
-      label: 'Total Expense',
+      label: t.totalExpense || 'Total Expense',
       value: fmt(totalExpense),
-      note: isNoData ? '0% efficiency' : 'Total operational spend',
+      note: isNoData ? '0%' : (isUrdu ? 'کل آپریشنل اخراجات' : 'Total operational spend'),
       icon: 'shopping_cart',
       iconColor: 'text-primary',
       noteIcon: 'receipt',
@@ -52,9 +57,11 @@ const SummaryCards = ({
       cardClass: 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-primary'
     },
     {
-      label: isSurplus ? 'Monthly Surplus' : 'Monthly Deficit',
+      label: isSurplus ? (t.netSurplus || 'Monthly Surplus') : (t.netDeficit || 'Monthly Deficit'),
       value: fmt(Math.abs(actualNetCashFlow)),
-      note: isNoData ? '0% net' : (isSurplus ? 'Surplus (+ Cash Flow)' : 'Deficit (- Net Outflow)'),
+      note: isNoData ? '0%' : (isSurplus 
+        ? (isUrdu ? 'بچت (+ مثبت کیش فلو)' : 'Surplus (+ Cash Flow)') 
+        : (isUrdu ? 'خسارہ (- منفی کیش فلو)' : 'Deficit (- Net Outflow)')),
       icon: isSurplus ? 'savings' : 'trending_down',
       iconColor: isSurplus ? 'text-green-500' : 'text-red-500',
       noteIcon: isSurplus ? 'check_circle' : 'warning',
@@ -65,9 +72,11 @@ const SummaryCards = ({
         : 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 border-l-4 border-l-red-500'
     },
     {
-      label: !actualOverdrawn ? 'Closing Balance (Surplus)' : 'Closing Balance (Deficit)',
+      label: !actualOverdrawn ? (t.closingBalance || 'Closing Balance') : `${t.closingBalance || 'Closing Balance'} (${t.overdrawn || 'Overdrawn'})`,
       value: fmt(Math.abs(actualClosing)),
-      note: isNoData ? '0% net' : (!actualOverdrawn ? 'Accumulated Reserve' : 'Overdrawn / Deficit'),
+      note: isNoData ? '0%' : (!actualOverdrawn 
+        ? (isUrdu ? 'جمع شدہ محفوظ فنڈ' : 'Accumulated Reserve') 
+        : (isUrdu ? 'خسارہ / بقایا جات' : 'Overdrawn / Deficit')),
       icon: 'account_balance_wallet',
       iconColor: !actualOverdrawn ? 'text-secondary-gold' : 'text-red-500',
       noteIcon: !actualOverdrawn ? 'stars' : 'warning',
@@ -88,7 +97,7 @@ const SummaryCards = ({
             <span className={`material-symbols-outlined ${card.iconColor}`}>{card.icon}</span>
           </div>
           <div className={`text-2xl font-bold tracking-tight ${card.valueColor || 'text-slate-900 dark:text-slate-100'}`}>
-            {currency} {card.value}
+            {displayCurrency} {card.value}
           </div>
           <div className={`mt-2 text-xs font-semibold flex items-center gap-1 ${card.noteColor}`}>
             <span className="material-symbols-outlined text-xs">{card.noteIcon}</span> {card.note}

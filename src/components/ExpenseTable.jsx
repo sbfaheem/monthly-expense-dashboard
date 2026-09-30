@@ -1,6 +1,8 @@
 import { normalizeItem, getParentCategory } from '../utils/normalizeExpense'
 import { MONTH_NAMES } from '../utils/finance'
 import { Sparkles, TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { useLanguage } from '../context/LanguageContext'
+import { translateCategory, translateItemName, translateMonth } from '../utils/translations'
 
 const CATEGORY_STYLES = {
   'Salaries & Payroll': 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700',
@@ -22,7 +24,10 @@ const ExpenseTable = ({
   onDelete,
   isAdmin = false
 }) => {
+  const { lang, t } = useLanguage()
+  const isUrdu = lang === 'ur'
   const currency = settings.currency || 'PKR'
+  const displayCurrency = isUrdu ? 'روپے' : currency
   const fmt = (n) => Number(Math.abs(n || 0)).toLocaleString('en-PK')
 
   // Determine prior month
@@ -91,17 +96,17 @@ const ExpenseTable = ({
         <div className="px-5 sm:px-6 py-4 bg-slate-50/90 dark:bg-slate-800/90 border-b border-slate-200/80 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 flex-wrap">
             <h3 className="text-sm sm:text-base md:text-lg font-black text-slate-900 dark:text-slate-100">
-              Month-over-Month Expense Breakdown
+              {t.tableTitle || 'Month-over-Month Expense Breakdown'}
             </h3>
             <span className="text-[11px] sm:text-xs font-black bg-primary/10 text-primary px-2.5 py-0.5 rounded-full border border-primary/20">
-              {tableRows.length} Line Items
+              {tableRows.length} {isUrdu ? 'اخراجات کی مدیں' : 'Line Items'}
             </span>
           </div>
           <div className="text-xs font-bold text-slate-500 dark:text-slate-400">
             {hasPriorData ? (
-              <span>Comparing <strong>{curMonthShort}</strong> vs. <strong>{priorMonthShort}</strong></span>
+              <span>{isUrdu ? 'موازنہ:' : 'Comparing'} <strong>{translateMonth(curMonthShort, isUrdu ? 'ur' : 'en')}</strong> {isUrdu ? 'بمقابلہ' : 'vs.'} <strong>{translateMonth(priorMonthShort, isUrdu ? 'ur' : 'en')}</strong></span>
             ) : (
-              <span>Baseline period for <strong>{curMonthShort}</strong></span>
+              <span>{isUrdu ? 'ابتدائی دورانیہ برائے' : 'Baseline period for'} <strong>{translateMonth(curMonthShort, isUrdu ? 'ur' : 'en')}</strong></span>
             )}
           </div>
         </div>
@@ -112,7 +117,7 @@ const ExpenseTable = ({
         <div className="block md:hidden p-3 sm:p-4 space-y-3">
           {tableRows.length === 0 ? (
             <div className="py-8 text-center text-slate-400 font-bold text-xs">
-              No expense records found for {selectedMonth}.
+              {isUrdu ? `${translateMonth(selectedMonth, 'ur')} کے لیے کوئی اخراجات نہیں ملے۔` : `No expense records found for ${selectedMonth}.`}
             </div>
           ) : (
             tableRows.map((row) => {
@@ -125,10 +130,10 @@ const ExpenseTable = ({
                   {/* Card Header: Item Name + Category */}
                   <div className="flex items-start justify-between gap-2">
                     <span className="text-sm font-black text-slate-900 dark:text-slate-100 leading-tight">
-                      {row.name}
+                      {isUrdu ? translateItemName(row.name, 'ur') : row.name}
                     </span>
                     <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border flex-shrink-0 ${catClass}`}>
-                      {row.category}
+                      {isUrdu ? translateCategory(row.category, 'ur') : row.category}
                     </span>
                   </div>
 
@@ -137,20 +142,20 @@ const ExpenseTable = ({
                     {/* Prior Month */}
                     <div>
                       <span className="text-[10px] font-extrabold text-slate-400 block uppercase">
-                        {hasPriorData ? priorMonthShort : 'Prior Month'}
+                        {hasPriorData ? translateMonth(priorMonthShort, isUrdu ? 'ur' : 'en') : (t.colPrevious || 'Prior Month')}
                       </span>
                       <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 font-mono mt-0.5 block">
-                        {hasPriorData && row.priorAmount > 0 ? `${currency} ${fmt(row.priorAmount)}` : '—'}
+                        {hasPriorData && row.priorAmount > 0 ? `${displayCurrency} ${fmt(row.priorAmount)}` : '—'}
                       </span>
                     </div>
 
                     {/* Current Month */}
                     <div className="border-l border-slate-100 dark:border-slate-800 pl-2">
                       <span className="text-[10px] font-extrabold text-primary block uppercase">
-                        {curMonthShort} (Current)
+                        {translateMonth(curMonthShort, isUrdu ? 'ur' : 'en')} ({isUrdu ? 'موجودہ' : 'Current'})
                       </span>
                       <span className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 font-mono mt-0.5 block">
-                        {currency} {fmt(row.currentAmount)}
+                        {displayCurrency} {fmt(row.currentAmount)}
                       </span>
                     </div>
                   </div>
@@ -159,27 +164,27 @@ const ExpenseTable = ({
                   <div className="flex items-center justify-between gap-2 pt-0.5">
                     {!hasPriorData ? (
                       <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400">
-                        Starting Baseline
+                        {isUrdu ? 'ابتدائی بنیاد' : 'Starting Baseline'}
                       </span>
                     ) : row.isNew ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
-                        <Sparkles size={12} /> ✨ New this month
+                        <Sparkles size={12} /> ✨ {isUrdu ? t.statusNew : 'New this month'}
                       </span>
                     ) : row.diff > 0 ? (
                       <span className="inline-flex items-center gap-1 font-black text-rose-600 dark:text-rose-400 text-xs bg-rose-50 dark:bg-rose-950/50 px-2.5 py-1 rounded-xl border border-rose-200/80 dark:border-rose-900/60">
                         <ArrowUpRight size={13} className="stroke-[3]" />
-                        +{currency} {fmt(row.diff)}
-                        {row.pct && <span className="text-[10px] font-extrabold text-rose-500">(+{row.pct}%)</span>}
+                        +{displayCurrency} {fmt(row.diff)}
+                        {row.pct && <span className="text-[10px] font-extrabold text-rose-500">({isUrdu ? `${t.statusHigher} ` : ''}+{row.pct}%)</span>}
                       </span>
                     ) : row.diff < 0 ? (
                       <span className="inline-flex items-center gap-1 font-black text-emerald-600 dark:text-emerald-400 text-xs bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60">
                         <ArrowDownRight size={13} className="stroke-[3]" />
-                        -{currency} {fmt(row.diff)}
-                        {row.pct && <span className="text-[10px] font-extrabold text-emerald-600">({row.pct}%)</span>}
+                        -{displayCurrency} {fmt(row.diff)}
+                        {row.pct && <span className="text-[10px] font-extrabold text-emerald-600">({isUrdu ? `${t.statusSaved} ` : ''}{row.pct}%)</span>}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 font-semibold text-slate-400 dark:text-slate-500 text-[11px]">
-                        <Minus size={12} /> — Unchanged
+                        <Minus size={12} /> — {t.statusUnchanged || 'Unchanged'}
                       </span>
                     )}
 
@@ -214,14 +219,14 @@ const ExpenseTable = ({
           <table className="w-full text-left whitespace-nowrap">
             <thead className="text-xs font-black text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
               <tr>
-                <th className="px-6 py-4">Line Item</th>
+                <th className="px-6 py-4">{t.colItem || 'Line Item'}</th>
                 <th className="px-6 py-4 text-right">
-                  {hasPriorData ? `Prior (${priorMonthShort})` : 'Prior Month'}
+                  {hasPriorData ? `${t.colPrevious || 'Prior'} (${translateMonth(priorMonthShort, isUrdu ? 'ur' : 'en')})` : (t.colPrevious || 'Prior Month')}
                 </th>
                 <th className="px-6 py-4 text-right">
-                  {`Current (${curMonthShort})`}
+                  {`${t.colCurrent || 'Current'} (${translateMonth(curMonthShort, isUrdu ? 'ur' : 'en')})`}
                 </th>
-                <th className="px-6 py-4 text-right">Variance &amp; Status</th>
+                <th className="px-6 py-4 text-right">{isUrdu ? `${t.colVariance || 'فرق'} اور ${t.colStatus || 'حیثیت'}` : 'Variance & Status'}</th>
                 {isAdmin && <th className="px-6 py-4 text-center w-24 border-l border-slate-100 dark:border-slate-800">Actions</th>}
               </tr>
             </thead>
@@ -229,7 +234,7 @@ const ExpenseTable = ({
               {tableRows.length === 0 ? (
                 <tr>
                   <td colSpan={isAdmin ? 5 : 4} className="px-6 py-8 text-center text-slate-400 font-bold text-sm">
-                    No expense records found for {selectedMonth}.
+                    {isUrdu ? `${translateMonth(selectedMonth, 'ur')} کے لیے کوئی اخراجات نہیں ملے۔` : `No expense records found for ${selectedMonth}.`}
                   </td>
                 </tr>
               ) : (
@@ -241,10 +246,10 @@ const ExpenseTable = ({
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">
                           <span className="text-sm font-black text-slate-900 dark:text-slate-100">
-                            {row.name}
+                            {isUrdu ? translateItemName(row.name, 'ur') : row.name}
                           </span>
                           <span className={`inline-flex items-center w-fit text-[10px] font-bold px-2 py-0.5 rounded-md border ${catClass}`}>
-                            {row.category}
+                            {isUrdu ? translateCategory(row.category, 'ur') : row.category}
                           </span>
                         </div>
                       </td>
@@ -253,7 +258,7 @@ const ExpenseTable = ({
                       <td className="px-6 py-4 text-right">
                         {hasPriorData && row.priorAmount > 0 ? (
                           <span className="text-sm font-semibold text-slate-600 dark:text-slate-300 font-mono">
-                            {currency} {fmt(row.priorAmount)}
+                            {displayCurrency} {fmt(row.priorAmount)}
                           </span>
                         ) : (
                           <span className="text-sm font-bold text-slate-300 dark:text-slate-600 font-mono">
@@ -265,7 +270,7 @@ const ExpenseTable = ({
                       {/* Column 3: Current Month (PKR) */}
                       <td className="px-6 py-4 text-right">
                         <span className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 font-mono">
-                          {currency} {fmt(row.currentAmount)}
+                          {displayCurrency} {fmt(row.currentAmount)}
                         </span>
                       </td>
 
@@ -273,27 +278,27 @@ const ExpenseTable = ({
                       <td className="px-6 py-4 text-right">
                         {!hasPriorData ? (
                           <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400">
-                            Baseline
+                            {isUrdu ? 'ابتدائی بنیاد' : 'Baseline'}
                           </span>
                         ) : row.isNew ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 shadow-2xs">
-                            <Sparkles size={12} /> NEW
+                            <Sparkles size={12} /> {isUrdu ? t.statusNew : 'NEW'}
                           </span>
                         ) : row.diff > 0 ? (
                           <span className="inline-flex items-center gap-1 font-black text-rose-600 dark:text-rose-400 text-xs sm:text-sm bg-rose-50 dark:bg-rose-950/50 px-2.5 py-1 rounded-xl border border-rose-200/80 dark:border-rose-900/60">
                             <TrendingUp size={13} className="stroke-[2.5]" />
-                            +{currency} {fmt(row.diff)}
-                            {row.pct && <span className="text-[11px] font-extrabold text-rose-500">(▲ {row.pct}%)</span>}
+                            +{displayCurrency} {fmt(row.diff)}
+                            {row.pct && <span className="text-[11px] font-extrabold text-rose-500">({isUrdu ? `${t.statusHigher} ` : ''}▲ {row.pct}%)</span>}
                           </span>
                         ) : row.diff < 0 ? (
                           <span className="inline-flex items-center gap-1 font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60">
                             <TrendingDown size={13} className="stroke-[2.5]" />
-                            -{currency} {fmt(row.diff)}
-                            {row.pct && <span className="text-[11px] font-extrabold text-emerald-600">(▼ {Math.abs(row.pct)}%)</span>}
+                            -{displayCurrency} {fmt(row.diff)}
+                            {row.pct && <span className="text-[11px] font-extrabold text-emerald-600">({isUrdu ? `${t.statusSaved} ` : ''}▼ {Math.abs(row.pct)}%)</span>}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 font-semibold text-slate-400 dark:text-slate-500 text-xs">
-                            <Minus size={12} /> — Unchanged
+                            <Minus size={12} /> — {t.statusUnchanged || 'Unchanged'}
                           </span>
                         )}
                       </td>
@@ -330,35 +335,41 @@ const ExpenseTable = ({
       <div className="bg-white dark:bg-slate-850 rounded-3xl shadow-md shadow-slate-200/50 dark:shadow-none border border-slate-200/80 dark:border-slate-750 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
          <div className="px-5 sm:px-6 py-4 flex justify-between items-center bg-slate-50/60 dark:bg-slate-900/40">
            <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-             TOTAL MONTHLY EXPENSE
+             {isUrdu ? 'کل ماہانہ اخراجات' : 'TOTAL MONTHLY EXPENSE'}
            </span>
            <span className="text-base sm:text-xl font-black text-primary font-mono">
-             {currency} {fmt(totals.totalExpense)}
+             {displayCurrency} {fmt(totals.totalExpense)}
            </span>
          </div>
          
          <div className="px-5 sm:px-6 py-4 flex justify-between items-center">
            <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-             {(totals.netCashFlow ?? totals.saving) >= 0 ? 'MONTHLY CASH FLOW (SURPLUS)' : 'MONTHLY CASH FLOW (DEFICIT)'}
+             {(totals.netCashFlow ?? totals.saving) >= 0 
+               ? (isUrdu ? 'ماہانہ کیش فلو (سرپلس / بچت)' : 'MONTHLY CASH FLOW (SURPLUS)') 
+               : (isUrdu ? 'ماہانہ کیش فلو (خسارہ)' : 'MONTHLY CASH FLOW (DEFICIT)')}
            </span>
            <span className={`text-base sm:text-xl font-black font-mono ${(totals.netCashFlow ?? totals.saving) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-             {(totals.netCashFlow ?? totals.saving) < 0 ? '-' : '+'} {currency} {fmt(totals.netCashFlow ?? totals.saving)}
+             {(totals.netCashFlow ?? totals.saving) < 0 ? '-' : '+'} {displayCurrency} {fmt(totals.netCashFlow ?? totals.saving)}
            </span>
          </div>
 
          {totals.record?.showCctvExpense && (
            <div className="px-5 sm:px-6 py-4 flex justify-between items-center text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20">
-             <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">Capital Expenditure (CCTV)</span>
-             <span className="text-base sm:text-lg font-black font-mono">- {currency} {fmt(totals.record.cctvExpense)}</span>
+             <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">
+               {isUrdu ? 'بڑے اثاثے (سی سی ٹی وی کیمرے)' : 'Capital Expenditure (CCTV)'}
+             </span>
+             <span className="text-base sm:text-lg font-black font-mono">- {displayCurrency} {fmt(totals.record.cctvExpense)}</span>
            </div>
          )}
 
          <div className="px-5 sm:px-6 py-4 flex justify-between items-center bg-slate-900 dark:bg-black text-white">
            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">
-             {(totals.closingBalance ?? totals.totalSaving) >= 0 ? 'CLOSING BALANCE (ACCUMULATED SURPLUS)' : 'CLOSING BALANCE (OVERDRAWN DEFICIT)'}
+             {(totals.closingBalance ?? totals.totalSaving) >= 0 
+               ? (isUrdu ? 'اختتامی بیلنس (محفوظ فنڈ)' : 'CLOSING BALANCE (ACCUMULATED SURPLUS)') 
+               : (isUrdu ? 'اختتامی بیلنس (خسارہ / بقایا جات)' : 'CLOSING BALANCE (OVERDRAWN DEFICIT)')}
            </span>
            <span className={`text-base sm:text-xl font-black font-mono ${(totals.closingBalance ?? totals.totalSaving) >= 0 ? 'text-secondary-gold' : 'text-red-400'}`}>
-             {(totals.closingBalance ?? totals.totalSaving) < 0 ? '-' : ''} {currency} {fmt(totals.closingBalance ?? totals.totalSaving)}
+             {(totals.closingBalance ?? totals.totalSaving) < 0 ? '-' : ''} {displayCurrency} {fmt(totals.closingBalance ?? totals.totalSaving)}
            </span>
          </div>
       </div>

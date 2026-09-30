@@ -9,6 +9,7 @@ import MonthlyVarianceBanner from '../components/MonthlyVarianceBanner'
 import DynamicAlertBanner from '../components/DynamicAlertBanner'
 import WhatsAppSnapshotModal from '../components/WhatsAppSnapshotModal'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
+import { useLanguage } from '../context/LanguageContext'
 import { exportToCSV, printReport } from '../utils/export'
 import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
 import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2, Calendar } from 'lucide-react'
@@ -32,6 +33,8 @@ const timeAgo = (timestamp) => {
 }
 
 export default function ViewerDashboard() {
+  const { lang, t } = useLanguage()
+  const isUrdu = lang === 'ur'
   const [data, setData] = useState({
     settings: { currency: 'PKR', cctvExpense: 0, showCctvExpense: true, defaultOpeningBalance: 0, defaultMonthlyCollection: 0 },
     monthlyRecords: [],
@@ -358,7 +361,7 @@ export default function ViewerDashboard() {
           </div>
           <div className="flex flex-col">
             <h2 className="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight">ExpensePro</h2>
-            <span className="text-primary text-xs font-semibold uppercase tracking-wider">Viewer Mode</span>
+            <span className="text-primary text-xs font-semibold uppercase tracking-wider">{isUrdu ? 'مشاہدہ موڈ' : 'Viewer Mode'}</span>
           </div>
         </div>
         
@@ -366,7 +369,7 @@ export default function ViewerDashboard() {
           <LanguageSwitcher />
           <div className="hidden md:flex items-center gap-2 bg-slate-100 dark:bg-primary/10 px-3 py-1.5 rounded-full">
             <span className="material-symbols-outlined text-sm text-primary">visibility</span>
-            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Read-only Access</span>
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{isUrdu ? 'صرف پڑھنے کی اجازت' : 'Read-only Access'}</span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -375,8 +378,8 @@ export default function ViewerDashboard() {
               title="Download 1080px WhatsApp Card Summary"
             >
               <Share2 size={16} />
-              <span className="hidden sm:inline">Download WhatsApp Summary</span>
-              <span className="sm:hidden">WhatsApp Card</span>
+              <span className="hidden sm:inline">{t.exportWhatsApp || 'Download WhatsApp Summary'}</span>
+              <span className="sm:hidden">{isUrdu ? 'واٹس ایپ سمری' : 'WhatsApp Card'}</span>
             </button>
             <button onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)} className="flex items-center justify-center rounded-xl h-10 w-10 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex-shrink-0" title="Export CSV">
               <span className="material-symbols-outlined">download</span>
@@ -399,7 +402,7 @@ export default function ViewerDashboard() {
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-slate-100">
-                    Welcome, {resident.name}!
+                    {isUrdu ? `خوش آمدید، ${resident.name}!` : `Welcome, ${resident.name}!`}
                   </span>
                   <span className={`text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
                     (resident.group || detectedGroup || '').includes('7D')
@@ -408,15 +411,15 @@ export default function ViewerDashboard() {
                       ? 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/60 dark:text-emerald-200 dark:border-emerald-800'
                       : 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/60 dark:text-purple-200 dark:border-purple-800'
                   }`}>
-                    {resident.group || detectedGroup || 'Community Resident'}
+                    {resident.group || detectedGroup || (isUrdu ? 'کمیونٹی رہائشی' : 'Community Resident')}
                   </span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
-                    Verified Resident
+                    {isUrdu ? 'مصدقہ رہائشی' : 'Verified Resident'}
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                  Community Identity: <strong className="text-slate-800 dark:text-slate-200">{resident.group || detectedGroup || 'Community Resident'}</strong>
-                  {(resident.houseAddress || resident.houseNo) ? ` • Address: ${resident.houseAddress || resident.houseNo}` : ''} {resident.phone ? `• Contact: ${resident.phone}` : ''}
+                  {isUrdu ? 'کمیونٹی شناخت:' : 'Community Identity:'} <strong className="text-slate-800 dark:text-slate-200">{resident.group || detectedGroup || (isUrdu ? 'کمیونٹی رہائشی' : 'Community Resident')}</strong>
+                  {(resident.houseAddress || resident.houseNo) ? ` • ${isUrdu ? 'پتہ:' : 'Address:'} ${resident.houseAddress || resident.houseNo}` : ''} {resident.phone ? `• ${isUrdu ? 'رابطہ:' : 'Contact:'} ${resident.phone}` : ''}
                 </p>
               </div>
             </div>
@@ -425,7 +428,7 @@ export default function ViewerDashboard() {
                 onClick={() => setShowCheckInModal(true)}
                 className="text-xs font-bold text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 hover:underline"
               >
-                Switch Profile
+                {isUrdu ? 'پروفائل تبدیل کریں' : 'Switch Profile'}
               </button>
               <span className="text-emerald-300 dark:text-emerald-700 hidden sm:inline">•</span>
               <button
@@ -433,7 +436,7 @@ export default function ViewerDashboard() {
                 className="text-xs text-slate-500 hover:text-red-600"
                 title="Forget saved profile on this device"
               >
-                Logout
+                {isUrdu ? 'لاگ آؤٹ' : 'Logout'}
               </button>
             </div>
           </div>
@@ -446,14 +449,14 @@ export default function ViewerDashboard() {
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm sm:text-base font-extrabold text-slate-800 dark:text-slate-100">
-                    Welcome! Visiting from WhatsApp Group:
+                    {isUrdu ? 'خوش آمدید! واٹس ایپ گروپ سے تشریف لائے ہیں:' : 'Welcome! Visiting from WhatsApp Group:'}
                   </span>
                   <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                     {detectedGroup}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Tap &ldquo;Identify Yourself&rdquo; to link your Name &amp; House Address to this device.
+                  {isUrdu ? 'اپنا نام اور گھر کا پتہ اس ڈیوائس سے لنک کرنے کے لیے "شناخت درج کریں" پر کلک کریں۔' : 'Tap "Identify Yourself" to link your Name & House Address to this device.'}
                 </p>
               </div>
             </div>
@@ -462,7 +465,7 @@ export default function ViewerDashboard() {
                 onClick={() => setShowCheckInModal(true)}
                 className="bg-primary hover:bg-primary-hover text-white text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 active:scale-98"
               >
-                <UserCheck size={15} /> Identify Yourself
+                <UserCheck size={15} /> {isUrdu ? 'شناخت درج کریں' : 'Identify Yourself'}
               </button>
             </div>
           </div>
@@ -474,10 +477,10 @@ export default function ViewerDashboard() {
               </div>
               <div>
                 <p className="text-sm font-extrabold text-slate-800 dark:text-slate-100">
-                  Welcome to the Community Expense Portal
+                  {isUrdu ? 'کمیونٹی اخراجات پورٹل میں خوش آمدید' : 'Welcome to the Community Expense Portal'}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  No WhatsApp group membership required! Browse monthly financial accounts, check water schedule, and community records.
+                  {isUrdu ? 'واٹس ایپ گروپ ممبر ہونا ضروری نہیں۔ ماہانہ مالیاتی اکاؤنٹس، پانی کا شیڈول اور کمیونٹی ریکارڈ دیکھیں۔' : 'No WhatsApp group membership required! Browse monthly financial accounts, check water schedule, and community records.'}
                 </p>
               </div>
             </div>
@@ -486,7 +489,7 @@ export default function ViewerDashboard() {
                 onClick={() => setShowCheckInModal(true)}
                 className="bg-primary hover:bg-primary-hover text-white text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 active:scale-98"
               >
-                <UserCheck size={15} /> Identify Yourself
+                <UserCheck size={15} /> {isUrdu ? 'شناخت درج کریں' : 'Identify Yourself'}
               </button>
             </div>
           </div>
@@ -573,11 +576,11 @@ export default function ViewerDashboard() {
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary text-xl">assignment_turned_in</span>
                   <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                    Governance &amp; Scope
+                    {t.governanceTitle || 'Governance & Scope'}
                   </h4>
                 </div>
                 <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50 px-2.5 py-0.5 rounded-full">
-                  <ShieldCheck size={12} /> Official Record
+                  <ShieldCheck size={12} /> {t.effectiveBadge || 'Official Record'}
                 </span>
               </div>
 
@@ -585,18 +588,18 @@ export default function ViewerDashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/70 dark:border-slate-700/60 space-y-0.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1">
-                    <Calendar size={11} className="text-primary" /> Effective Handover Date
+                    <Calendar size={11} className="text-primary" /> {t.effectiveDateLabel || 'Effective Since'}
                   </span>
                   <p className="font-extrabold text-slate-800 dark:text-slate-100">
-                    Dec 01, 2025
+                    {t.effectiveDateValue || 'Dec 01, 2025'}
                   </p>
                 </div>
                 <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/70 dark:border-slate-700/60 space-y-0.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1">
-                    <ShieldCheck size={11} className="text-emerald-500" /> Report Type
+                    <ShieldCheck size={11} className="text-emerald-500" /> {t.reportTypeLabel || 'Report Nature'}
                   </span>
                   <p className="font-extrabold text-slate-800 dark:text-slate-100">
-                    Monthly Collections &amp; Operational Expenses
+                    {t.reportTypeValue || 'Monthly Collections & Operational Expenses'}
                   </p>
                 </div>
               </div>
@@ -605,11 +608,11 @@ export default function ViewerDashboard() {
               <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 pt-1 border-t border-slate-100 dark:border-slate-700/60 leading-relaxed">
                 <li className="flex items-start gap-2">
                   <span className="size-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
-                  <span><strong>Scope:</strong> Covers collections &amp; expenditures managed from Dec 01, 2025 onward.</span>
+                  <span><strong>{isUrdu ? 'دائرہ اختیار:' : 'Scope:'}</strong> {isUrdu ? (t.governanceNote || 'انتظامیہ صرف 01 دسمبر 2025 کے بعد کی وصولیوں اور اخراجات کی پابند و جوابدہ ہے۔') : 'Covers collections & expenditures managed from Dec 01, 2025 onward.'}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="size-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
-                  <span><strong>Purpose:</strong> Monthly public financial transparency for society residents.</span>
+                  <span><strong>{isUrdu ? 'مقصد:' : 'Purpose:'}</strong> {isUrdu ? 'سوسائٹی کے رہائشیوں کے لیے ماہانہ عوامی مالیاتی شفافیت۔' : 'Monthly public financial transparency for society residents.'}</span>
                 </li>
               </ul>
             </div>
@@ -619,10 +622,10 @@ export default function ViewerDashboard() {
               <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-3">
                 <h4 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm sm:text-base">
                   <span className="material-symbols-outlined text-primary text-xl">contact_phone</span>
-                  Management &amp; Inquiries
+                  {t.managementContacts || 'Management Contacts'}
                 </h4>
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-slate-500">
-                  Direct Contact
+                  {isUrdu ? 'براہ راست رابطہ' : 'Direct Contact'}
                 </span>
               </div>
 
@@ -635,10 +638,10 @@ export default function ViewerDashboard() {
                     </div>
                     <div>
                       <p className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100">
-                        Mr. Majeed
+                        {isUrdu ? 'جناب عبدالمجید صاحب' : 'Mr. Majeed'}
                       </p>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                        Project Supervisor • <a href="tel:03013377675" className="font-mono text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline">0301-3377675</a>
+                        {t.supervisorRole || 'Project Supervisor'} • <a href="tel:03013377675" className="font-mono text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline">0301-3377675</a>
                       </p>
                     </div>
                   </div>
@@ -648,7 +651,7 @@ export default function ViewerDashboard() {
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition active:scale-95 shadow-2xs"
                     >
                       <Phone size={12} className="text-slate-600 dark:text-slate-300" />
-                      <span>Call</span>
+                      <span>{t.btnCall || 'Call'}</span>
                     </a>
                     <a
                       href="https://wa.me/923013377675?text=Hello%20Mr.%20Majeed,%20regarding%20August%20Expense%20Sheet"
@@ -657,7 +660,7 @@ export default function ViewerDashboard() {
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-lg transition active:scale-95 shadow-2xs border border-emerald-200/50 dark:border-emerald-800/40"
                     >
                       <MessageSquare size={12} className="text-emerald-600 dark:text-emerald-400" />
-                      <span>WhatsApp</span>
+                      <span>{t.btnChat || 'WhatsApp'}</span>
                     </a>
                   </div>
                 </div>
@@ -670,10 +673,10 @@ export default function ViewerDashboard() {
                     </div>
                     <div>
                       <p className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100">
-                        Mr. Fahad Rizwan
+                        {isUrdu ? 'جناب فہد رضوان صاحب' : 'Mr. Fahad Rizwan'}
                       </p>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                        Financial Auditor • <a href="tel:03443160446" className="font-mono text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 hover:underline">0344-3160446</a>
+                        {t.auditorRole || 'Financial Auditor'} • <a href="tel:03443160446" className="font-mono text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 hover:underline">0344-3160446</a>
                       </p>
                     </div>
                   </div>
@@ -683,7 +686,7 @@ export default function ViewerDashboard() {
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition active:scale-95 shadow-2xs"
                     >
                       <Phone size={12} className="text-slate-600 dark:text-slate-300" />
-                      <span>Call</span>
+                      <span>{t.btnCall || 'Call'}</span>
                     </a>
                     <a
                       href="https://wa.me/923443160446?text=Hello%20Mr.%20Fahad,%20regarding%20August%20Expense%20Sheet"
@@ -692,7 +695,7 @@ export default function ViewerDashboard() {
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-lg transition active:scale-95 shadow-2xs border border-emerald-200/50 dark:border-emerald-800/40"
                     >
                       <MessageSquare size={12} className="text-emerald-600 dark:text-emerald-400" />
-                      <span>WhatsApp</span>
+                      <span>{t.btnChat || 'WhatsApp'}</span>
                     </a>
                   </div>
                 </div>

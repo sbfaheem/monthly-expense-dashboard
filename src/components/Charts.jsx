@@ -16,6 +16,8 @@ import {
 
 import { getParentCategory } from '../utils/normalizeExpense'
 import { getMonthSortKey } from '../utils/finance'
+import { useLanguage } from '../context/LanguageContext'
+import { translateCategory, translateMonth } from '../utils/translations'
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Filler)
 
@@ -162,6 +164,9 @@ function formatShortMonth(monthStr) {
 }
 
 const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selectedMonth = '' }) => {
+  const { lang, t } = useLanguage()
+  const isUrdu = lang === 'ur'
+  const displayCurrency = isUrdu ? 'روپے' : 'PKR'
   const [trendTab, setTrendTab] = useState('comparison') // 'comparison' | 'trend'
   const currentMonth = selectedMonth || expenses[0]?.month || ''
   const shortMonth = formatShortMonth(currentMonth)
@@ -180,7 +185,8 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
 
   const donutLabels = sortedCategories.map(([cat, amt]) => {
     const pct = totalExpense > 0 ? ((amt / totalExpense) * 100).toFixed(1) : '0.0'
-    return `${cat}: PKR ${amt.toLocaleString('en-PK')} (${pct}%)`
+    const catLabel = isUrdu ? translateCategory(cat, 'ur') : cat
+    return `${catLabel}: ${displayCurrency} ${amt.toLocaleString('en-PK')} (${pct}%)`
   })
   const donutData = sortedCategories.map(([, amt]) => amt)
   const donutColors = sortedCategories.map(([cat], i) => CATEGORY_COLORS[cat] || FALLBACK_PALETTE[i % FALLBACK_PALETTE.length])
@@ -215,6 +221,7 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
   })
 
   const barLabels = monthEntries.map(e => {
+    if (isUrdu) return translateMonth(e.month, 'ur')
     const parts = e.month.trim().split(/\s+/)
     if (parts.length >= 2) {
       const monthAbbr = parts[0].slice(0, 3)
@@ -236,7 +243,7 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
     labels: barLabels,
     datasets: [
       {
-        label: 'Monthly Collection',
+        label: t.collection || 'Monthly Collection',
         data: collectionData,
         backgroundColor: '#10B981', // Emerald Green
         borderColor: '#059669',
@@ -245,7 +252,7 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
         hoverBackgroundColor: '#059669',
       },
       {
-        label: 'Total Expenses',
+        label: t.expense || 'Total Expenses',
         data: expenseData,
         backgroundColor: expenseColors, // Red (#EF4444) on deficit, Blue (#3B82F6) on surplus
         borderColor: expenseBorderColors,
@@ -277,16 +284,17 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
   const peakExpense = lineExpense[lastLineIdx] || 0
   const prevExpense = lastLineIdx > 0 ? lineExpense[lastLineIdx - 1] : 0
   const peakMomPct = prevExpense > 0 ? Math.round(((peakExpense - prevExpense) / prevExpense) * 100) : 0
-  const peakCalloutLabel = `PKR ${peakExpense.toLocaleString('en-PK')} (${peakMomPct >= 0 ? `+${peakMomPct}` : peakMomPct}% MoM)`
+  const peakCalloutLabel = `${displayCurrency} ${peakExpense.toLocaleString('en-PK')} (${isUrdu ? (t.peak || 'سب سے زیادہ') : 'Peak'}: ${peakMomPct >= 0 ? `+${peakMomPct}` : peakMomPct}% MoM)`
 
   const lineChartData = {
     labels: lineLabels.map(l => {
+      if (isUrdu) return translateMonth(l, 'ur')
       const parts = l.trim().split(/\s+/)
       return parts.length >= 2 ? `${parts[0].slice(0, 3)} '${parts[1].slice(2)}` : parts[0].slice(0, 3)
     }),
     datasets: [
       {
-        label: 'Monthly Collection',
+        label: t.collection || 'Monthly Collection',
         data: lineCollection,
         borderColor: '#10B981', // Emerald Green baseline
         borderWidth: 2.5,
@@ -300,7 +308,7 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
         pointHoverRadius: 6,
       },
       {
-        label: 'Monthly Expense',
+        label: t.expense || 'Monthly Expense',
         data: lineExpense,
         borderColor: '#EF4444', // Red Expense Line
         borderWidth: 2.5,
@@ -360,8 +368,10 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
       },
       centerText: {
         display: true,
-        primaryText: `PKR ${totalExpense.toLocaleString('en-PK')}`,
-        subText: shortMonth ? `Total Spend (${shortMonth})` : 'Total Spend'
+        primaryText: `${displayCurrency} ${totalExpense.toLocaleString('en-PK')}`,
+        subText: isUrdu 
+          ? `${t.totalSpend || 'مجموعی خرچ'} (${translateMonth(shortMonth, 'ur')})` 
+          : (shortMonth ? `${t.totalSpend || 'Total Spend'} (${shortMonth})` : (t.totalSpend || 'Total Spend'))
       }
     }
   }
@@ -395,7 +405,7 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
         titleFont: { family: 'Manrope', size: 12, weight: '700' },
         bodyFont: { family: 'Manrope', size: 11, weight: '600' },
         callbacks: {
-          label: ctx => ` ${ctx.dataset.label}: PKR ${Number(ctx.raw).toLocaleString('en-PK')}`,
+          label: ctx => ` ${ctx.dataset.label}: ${displayCurrency} ${Number(ctx.raw).toLocaleString('en-PK')}`,
           afterBody: (items) => {
             if (!items || items.length === 0) return ''
             const idx = items[0].dataIndex
@@ -403,7 +413,8 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
             if (!entry) return ''
             const net = entry.collection - entry.expenses
             const isDef = net < 0
-            return `\n${isDef ? '🔴 Net Deficit' : '🟢 Net Surplus'}: ${isDef ? '-' : '+'}PKR ${Math.abs(net).toLocaleString('en-PK')}`
+            const prefix = isUrdu ? (isDef ? '🔴 خالص خسارہ' : '🟢 خالص بچت') : (isDef ? '🔴 Net Deficit' : '🟢 Net Surplus')
+            return `\n${prefix}: ${isDef ? '-' : '+'}${displayCurrency} ${Math.abs(net).toLocaleString('en-PK')}`
           }
         }
       }
@@ -463,7 +474,7 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
         titleFont: { family: 'Manrope', size: 12, weight: '700' },
         bodyFont: { family: 'Manrope', size: 11, weight: '600' },
         callbacks: {
-          label: ctx => ` ${ctx.dataset.label}: PKR ${Number(ctx.raw).toLocaleString('en-PK')}`,
+          label: ctx => ` ${ctx.dataset.label}: ${displayCurrency} ${Number(ctx.raw).toLocaleString('en-PK')}`,
           afterBody: (items) => {
             if (!items || items.length === 0) return ''
             const idx = items[0].dataIndex
@@ -471,7 +482,8 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
             const exp = lineExpense[idx] || 0
             const net = coll - exp
             const isDef = net < 0
-            return `\n${isDef ? '🔴 Net Deficit' : '🟢 Net Surplus'}: ${isDef ? '-' : '+'}PKR ${Math.abs(net).toLocaleString('en-PK')}`
+            const prefix = isUrdu ? (isDef ? '🔴 خالص خسارہ' : '🟢 خالص بچت') : (isDef ? '🔴 Net Deficit' : '🟢 Net Surplus')
+            return `\n${prefix}: ${isDef ? '-' : '+'}${displayCurrency} ${Math.abs(net).toLocaleString('en-PK')}`
           }
         }
       },
@@ -503,7 +515,7 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
           <span className="material-symbols-outlined text-8xl">donut_large</span>
         </div>
         <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center justify-between">
-          Expense Breakdown 
+          {t.expenseBreakdown || 'Expense Breakdown'}
           <span className="material-symbols-outlined text-primary text-lg">donut_large</span>
         </h4>
         <div
@@ -513,7 +525,9 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
           {donutData.length > 0 ? (
             <Doughnut data={donutChartData} options={donutOptions} plugins={[centerTextPlugin]} />
           ) : (
-            <span className="text-slate-400 font-medium">No data for selected month</span>
+            <span className="text-slate-400 font-medium text-xs">
+              {isUrdu ? 'منتخب مہینے کے لیے کوئی ڈیٹا نہیں ہے' : 'No data for selected month'}
+            </span>
           )}
         </div>
       </div>
@@ -528,12 +542,12 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
             </span>
             <div>
               <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm sm:text-base leading-tight">
-                {trendTab === 'comparison' ? 'All Months Comparison' : 'Monthly Expense Trend (6M)'}
+                {trendTab === 'comparison' ? (t.allMonthsComparison || 'All Months Comparison') : (t.monthlyExpenseTrend || 'Monthly Expense Trend (6M)')}
               </h4>
               <p className="text-[11px] text-slate-400 font-medium">
                 {trendTab === 'comparison'
-                  ? 'Collection vs Expenses by month'
-                  : 'Collection baseline benchmark with peak indicator'}
+                  ? (isUrdu ? 'ماہانہ کلیکشن بمقابلہ اخراجات' : 'Collection vs Expenses by month')
+                  : (isUrdu ? 'کلیکشن کے معیار کے ساتھ رجحان اور چوٹی' : 'Collection baseline benchmark with peak indicator')}
               </p>
             </div>
           </div>
@@ -550,7 +564,7 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
               }`}
             >
               <span className="material-symbols-outlined text-sm">bar_chart</span>
-              Grouped Comparison
+              {isUrdu ? 'موازنہ' : 'Grouped Comparison'}
             </button>
             <button
               type="button"
@@ -562,7 +576,7 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
               }`}
             >
               <span className="material-symbols-outlined text-sm">show_chart</span>
-              Trend Line
+              {isUrdu ? 'رجحان' : 'Trend Line'}
             </button>
           </div>
         </div>
@@ -572,11 +586,11 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
           <div className="flex items-center gap-3 sm:gap-4 text-xs font-bold">
             <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200">
               <span className="size-2.5 rounded-full bg-emerald-500 inline-block shadow-xs"></span>
-              Monthly Collection
+              {t.collection || 'Monthly Collection'}
             </span>
             <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200">
               <span className="size-2.5 rounded-full bg-rose-500 inline-block shadow-xs"></span>
-              {trendTab === 'comparison' ? 'Total Expenses' : 'Monthly Expense'}
+              {trendTab === 'comparison' ? (t.expense || 'Total Expenses') : (t.expense || 'Monthly Expense')}
             </span>
           </div>
 
@@ -584,11 +598,11 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
             <div className="flex items-center gap-2.5 text-[11px] font-semibold text-slate-400 dark:text-slate-500">
               <span className="inline-flex items-center gap-1">
                 <span className="w-2.5 h-1.5 rounded-xs bg-emerald-500/25 border border-emerald-500/60 inline-block"></span>
-                Surplus Area
+                {isUrdu ? 'بچت کا علاقہ' : 'Surplus Area'}
               </span>
               <span className="inline-flex items-center gap-1">
                 <span className="w-2.5 h-1.5 rounded-xs bg-rose-500/25 border border-rose-500/60 inline-block"></span>
-                Deficit Area
+                {isUrdu ? 'خسارے کا علاقہ' : 'Deficit Area'}
               </span>
             </div>
           )}
@@ -600,7 +614,9 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
           style={{ touchAction: 'pan-y' }}
         >
           {sortedMonths.length === 0 ? (
-            <span className="text-slate-400 font-medium text-xs">No multi-month data available</span>
+            <span className="text-slate-400 font-medium text-xs">
+              {isUrdu ? 'کوئی کثیر وقتی ڈیٹا دستیاب نہیں ہے' : 'No multi-month data available'}
+            </span>
           ) : trendTab === 'comparison' ? (
             <Bar data={barChartData} options={barOptions} />
           ) : (

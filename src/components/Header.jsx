@@ -1,9 +1,12 @@
 import { Calendar, ChevronLeft } from 'lucide-react'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { useLanguage } from '../context/LanguageContext'
+import { URDU_MONTHS } from '../utils/translations'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
 const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAdmin, title }) => {
+  const { lang, t } = useLanguage()
   const currentDate = new Date()
   const isEndOfMonth = () => {
     const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate()
@@ -24,17 +27,22 @@ const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAd
     onYearChange(currentDate.getFullYear())
   }
 
-  const monthShort = selectedMonth?.substring(0, 3).toUpperCase()
+  const isUrdu = lang === 'ur'
+  const monthDisplay = isUrdu ? (URDU_MONTHS[selectedMonth] || selectedMonth) : selectedMonth?.substring(0, 3).toUpperCase()
 
   return (
     <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
       <div className="space-y-2">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
-          {isEndOfMonth() && !isAdmin
-            ? <>MONTHLY EXPENSE SHEET <span className="text-primary whitespace-nowrap">– {monthShort} {selectedYear}</span></>
-            : title || <>MONTHLY EXPENSE SHEET <span className="text-primary whitespace-nowrap">– {monthShort} {selectedYear}</span></>}
+          {title ? title : isUrdu ? (
+            <>ماہانہ اخراجات شیٹ <span className="text-primary whitespace-nowrap">– {monthDisplay} {selectedYear}</span></>
+          ) : (
+            <>MONTHLY EXPENSE SHEET <span className="text-primary whitespace-nowrap">– {monthDisplay} {selectedYear}</span></>
+          )}
         </h1>
-        <p className="text-slate-500 dark:text-slate-400 font-medium">Detailed financial overview for the current billing cycle.</p>
+        <p className="text-slate-500 dark:text-slate-400 font-medium">
+          {isUrdu ? 'موجودہ بلنگ سائیکل کا تفصیلی مالیاتی جائزہ۔' : 'Detailed financial overview for the current billing cycle.'}
+        </p>
       </div>
 
       <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap">
@@ -46,9 +54,13 @@ const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAd
           <select 
             value={selectedMonth} 
             onChange={e => onMonthChange(e.target.value)}
-            className="w-[78px] sm:w-auto px-1.5 sm:px-3 py-2 text-xs sm:text-sm font-bold bg-transparent text-slate-700 dark:text-slate-300 outline-none border-none cursor-pointer text-center"
+            className="w-[84px] sm:w-auto px-1.5 sm:px-3 py-2 text-xs sm:text-sm font-bold bg-transparent text-slate-700 dark:text-slate-300 outline-none border-none cursor-pointer text-center"
           >
-            {MONTHS.map(m => <option key={m}>{m}</option>)}
+            {MONTHS.map(m => (
+              <option key={m} value={m}>
+                {isUrdu ? URDU_MONTHS[m] || m : m}
+              </option>
+            ))}
           </select>
           <div className="w-px h-full bg-primary/10"></div>
           <select 
@@ -56,7 +68,7 @@ const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAd
             onChange={e => onYearChange(Number(e.target.value))}
             className="w-[64px] sm:w-auto px-1.5 sm:px-3 py-2 text-xs sm:text-sm font-bold bg-transparent text-slate-700 dark:text-slate-300 outline-none border-none cursor-pointer text-center"
           >
-            {years.map(y => <option key={y}>{y}</option>)}
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
 
@@ -66,14 +78,14 @@ const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAd
             className="px-2.5 sm:px-4 h-full flex items-center gap-1 text-xs sm:text-sm font-bold text-slate-500 hover:text-primary hover:bg-primary/5 transition-colors" 
             onClick={goToPrev}
           >
-            <ChevronLeft size={14}/> Prev
+            <ChevronLeft size={14}/> {isUrdu ? 'گزشتہ' : 'Prev'}
           </button>
           <div className="w-px h-full bg-primary/10"></div>
           <button 
             className="px-2.5 sm:px-4 h-full flex items-center gap-1 text-xs sm:text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors" 
             onClick={goToCurrent}
           >
-            <Calendar size={12}/> Current
+            <Calendar size={12}/> {isUrdu ? 'موجودہ' : 'Current'}
           </button>
         </div>
       </div>
