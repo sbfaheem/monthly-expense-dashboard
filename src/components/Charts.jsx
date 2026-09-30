@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Doughnut, Line, Bar } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -162,6 +162,7 @@ function formatShortMonth(monthStr) {
 }
 
 const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selectedMonth = '' }) => {
+  const [trendTab, setTrendTab] = useState('comparison') // 'comparison' | 'trend'
   const currentMonth = selectedMonth || expenses[0]?.month || ''
   const shortMonth = formatShortMonth(currentMonth)
 
@@ -323,11 +324,16 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
     ]
   }
 
-  // Chart options
+  // Chart options with mobile-friendly touch & click interaction
   const donutOptions = {
     responsive: true,
     maintainAspectRatio: false,
     cutout: '70%',
+    events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
+    interaction: {
+      mode: 'nearest',
+      intersect: false,
+    },
     plugins: {
       legend: {
         position: 'bottom',
@@ -341,6 +347,18 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
         }
       },
       tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        titleColor: '#ffffff',
+        bodyColor: '#e2e8f0',
+        borderColor: '#334155',
+        borderWidth: 1,
+        padding: 10,
+        cornerRadius: 8,
+        boxPadding: 4,
+        usePointStyle: true,
+        titleFont: { family: 'Manrope', size: 12, weight: '700' },
+        bodyFont: { family: 'Manrope', size: 11, weight: '600' },
         callbacks: {
           label: ctx => ` ${ctx.label}`
         }
@@ -358,6 +376,12 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
     maintainAspectRatio: false,
     categoryPercentage: 0.75,
     barPercentage: 0.85,
+    events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
+    interaction: {
+      mode: 'index',
+      intersect: false,
+      axis: 'x'
+    },
     plugins: {
       legend: {
         display: true,
@@ -373,6 +397,18 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
         }
       },
       tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        titleColor: '#ffffff',
+        bodyColor: '#e2e8f0',
+        borderColor: '#334155',
+        borderWidth: 1,
+        padding: 10,
+        cornerRadius: 8,
+        boxPadding: 4,
+        usePointStyle: true,
+        titleFont: { family: 'Manrope', size: 12, weight: '700' },
+        bodyFont: { family: 'Manrope', size: 11, weight: '600' },
         callbacks: {
           label: ctx => ` ${ctx.dataset.label}: PKR ${Number(ctx.raw).toLocaleString('en-PK')}`
         }
@@ -402,6 +438,12 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
   const lineOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
+    interaction: {
+      mode: 'index',
+      intersect: false,
+      axis: 'x'
+    },
     layout: {
       padding: {
         top: 36, // Headroom for peak callout badge
@@ -424,6 +466,18 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
         }
       },
       tooltip: {
+        enabled: true,
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        titleColor: '#ffffff',
+        bodyColor: '#e2e8f0',
+        borderColor: '#334155',
+        borderWidth: 1,
+        padding: 10,
+        cornerRadius: 8,
+        boxPadding: 4,
+        usePointStyle: true,
+        titleFont: { family: 'Manrope', size: 12, weight: '700' },
+        bodyFont: { family: 'Manrope', size: 11, weight: '600' },
         callbacks: {
           label: ctx => ` ${ctx.dataset.label}: PKR ${Number(ctx.raw).toLocaleString('en-PK')}`
         }
@@ -459,7 +513,10 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
           Expense Breakdown 
           <span className="material-symbols-outlined text-primary text-lg">donut_large</span>
         </h4>
-        <div className="min-h-[300px] h-80 flex items-center justify-center relative">
+        <div
+          className="min-h-[300px] h-80 flex items-center justify-center relative touch-manipulation"
+          style={{ touchAction: 'pan-y' }}
+        >
           {donutData.length > 0 ? (
             <Doughnut data={donutChartData} options={donutOptions} plugins={[centerTextPlugin]} />
           ) : (
@@ -468,32 +525,66 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
         </div>
       </div>
 
-      {/* MONTHLY EXPENSES BAR */}
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-primary/10 shadow-sm">
-        <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center justify-between">
-          All Months Comparison
-          <span className="material-symbols-outlined text-primary text-lg">bar_chart</span>
-        </h4>
-        <div className="h-60 sm:h-64 flex items-center justify-center">
-          {sortedMonths.length > 0 ? (
+      {/* MULTI-MONTH DYNAMICS: DEDUPLICATED TABBED CARD */}
+      <div className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-2xl border border-primary/10 shadow-sm space-y-4">
+        {/* Header with Title and Segmented Switcher */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-700/60 pb-3.5">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-xl">
+              {trendTab === 'comparison' ? 'bar_chart' : 'ssid_chart'}
+            </span>
+            <div>
+              <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm sm:text-base leading-tight">
+                {trendTab === 'comparison' ? 'All Months Comparison' : 'Monthly Expense Trend (6M)'}
+              </h4>
+              <p className="text-[11px] text-slate-400 font-medium">
+                {trendTab === 'comparison'
+                  ? 'Collection vs Expenses by month'
+                  : 'Collection baseline benchmark with peak indicator'}
+              </p>
+            </div>
+          </div>
+
+          {/* Segmented Switcher [ Grouped Comparison | Trend Line ] */}
+          <div className="flex items-center bg-slate-100 dark:bg-slate-750 p-1 rounded-xl self-start sm:self-auto border border-slate-200/60 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => setTrendTab('comparison')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                trendTab === 'comparison'
+                  ? 'bg-white dark:bg-slate-900 text-primary shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <span className="material-symbols-outlined text-sm">bar_chart</span>
+              Grouped Comparison
+            </button>
+            <button
+              type="button"
+              onClick={() => setTrendTab('trend')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                trendTab === 'trend'
+                  ? 'bg-white dark:bg-slate-900 text-primary shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              <span className="material-symbols-outlined text-sm">show_chart</span>
+              Trend Line
+            </button>
+          </div>
+        </div>
+
+        {/* Chart Viewport */}
+        <div
+          className="h-64 sm:h-72 flex items-center justify-center touch-manipulation"
+          style={{ touchAction: 'pan-y' }}
+        >
+          {sortedMonths.length === 0 ? (
+            <span className="text-slate-400 font-medium text-xs">No multi-month data available</span>
+          ) : trendTab === 'comparison' ? (
             <Bar data={barChartData} options={barOptions} />
           ) : (
-            <span className="text-slate-400 font-medium">No expense data available</span>
-          )}
-        </div>
-      </div>
-
-      {/* MONTHLY TREND LINE */}
-      <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-primary/10 shadow-sm">
-        <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center justify-between">
-          Monthly Expense Trend (6M)
-          <span className="material-symbols-outlined text-primary text-lg">ssid_chart</span>
-        </h4>
-        <div className="h-64 sm:h-72 flex items-center justify-center">
-          {lineLabels.length > 0 ? (
             <Line data={lineChartData} options={lineOptions} plugins={[peakCalloutPlugin]} />
-          ) : (
-             <span className="text-slate-400 font-medium">No trend data available</span>
           )}
         </div>
       </div>
