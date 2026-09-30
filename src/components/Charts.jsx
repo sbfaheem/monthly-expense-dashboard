@@ -15,6 +15,7 @@ import {
 } from 'chart.js'
 
 import { getParentCategory } from '../utils/normalizeExpense'
+import { getMonthSortKey } from '../utils/finance'
 
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Filler)
 
@@ -77,7 +78,7 @@ function formatShortMonth(monthStr) {
   return monthStr
 }
 
-const Charts = ({ expenses = [], allExpenses = [], selectedMonth = '' }) => {
+const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selectedMonth = '' }) => {
   const currentMonth = selectedMonth || expenses[0]?.month || ''
   const shortMonth = formatShortMonth(currentMonth)
 
@@ -100,42 +101,74 @@ const Charts = ({ expenses = [], allExpenses = [], selectedMonth = '' }) => {
   const donutData = sortedCategories.map(([, amt]) => amt)
   const donutColors = sortedCategories.map(([cat], i) => CATEGORY_COLORS[cat] || FALLBACK_PALETTE[i % FALLBACK_PALETTE.length])
 
-  // ── Build sorted chronological month order for bar + line ──
-  const monthOrder = {}
-  allExpenses.forEach(e => {
-    if (!monthOrder[e.month]) {
-      const d = new Date(e.date)
-      monthOrder[e.month] = { ts: d.getFullYear() * 100 + (d.getMonth() + 1), total: 0 }
+  // ── Build grouped data for All Months Comparison (Collection vs Expenses) ──
+  const collectionMap = {}
+  monthlyRecords.forEach(r => {
+    if (r.month) {
+      collectionMap[r.month] = Number(r.monthlyCollection || 0)
     }
-    monthOrder[e.month].total += Number(e.amount || 0)
   })
-  const sortedMonths = Object.keys(monthOrder).sort((a, b) => monthOrder[a].ts - monthOrder[b].ts)
-  const barLabels = sortedMonths.map(m => {
-    const parts = m.split(' ')
-    return parts.length >= 2 ? `${parts[0]} '${parts[1].slice(2)}` : m
+
+  const expenseMap = {}
+  allExpenses.forEach(e => {
+    if (e.month) {
+      expenseMap[e.month] = (expenseMap[e.month] || 0) + Number(e.amount || 0)
+    }
   })
-  const barData = sortedMonths.map(m => monthOrder[m].total)
+
+  const allMonthKeys = Array.from(new Set([...Object.keys(expenseMap), ...Object.keys(collectionMap)]))
+  const sortedMonths = allMonthKeys.sort((a, b) => getMonthSortKey(a) - getMonthSortKey(b))
+
+  const monthEntries = sortedMonths.map(m => {
+    const expenses = expenseMap[m] || 0
+    const collection = collectionMap[m] || 0
+    return {
+      month: m,
+      expenses,
+      collection,
+      isDeficit: expenses > collection
+    }
+  })
+
+  const barLabels = monthEntries.map(e => {
+    const parts = e.month.split(' ')
+    return parts.length >= 2 ? `${parts[0]} '${parts[1].slice(2)}` : e.month
+  })
+
+  const collectionData = monthEntries.map(e => e.collection)
+  const expenseData = monthEntries.map(e => e.expenses)
+
+  // Conditional deficit highlight: entry.expenses > entry.collection ? '#EF4444' : '#3B82F6'
+  const expenseColors = monthEntries.map(entry => (entry.expenses > entry.collection ? '#EF4444' : '#3B82F6'))
+  const expenseBorderColors = monthEntries.map(entry => (entry.expenses > entry.collection ? '#DC2626' : '#2563EB'))
 
   // ── Line chart labels (last 6 months) ──
   const lineLabels = sortedMonths.slice(-6)
-  const lineExpense = lineLabels.map(m => monthOrder[m].total)
+  const lineExpense = lineLabels.map(m => expenseMap[m] || 0)
 
   // Chart data objects
   const barChartData = {
     labels: barLabels,
-    datasets: [{
-      label: 'Expenses (PKR)',
-      data: barData,
-      backgroundColor: sortedMonths.map((_, i) =>
-        i === sortedMonths.length - 1 ? 'rgba(212,175,55,0.85)' : 'rgba(0,102,0,0.8)'
-      ),
-      borderColor: sortedMonths.map((_, i) =>
-        i === sortedMonths.length - 1 ? '#D4AF37' : '#006600'
-      ),
-      borderWidth: 2,
-      borderRadius: 6,
-      hoverBackgroundColor: '#D4AF37',
-    }]
+    datasets: [
+      {
+        label: 'Monthly Collection',
+        data: collectionData,
+        backgroundColor: '#10B981', // Emerald Green
+        borderColor: '#059669',
+        borderWidth: 1.5,
+        borderRadius: 6,
+        hoverBackgroundColor: '#059669',
+      },
+      {
+        label: 'Total Expenses',
+        data: expenseData,
+        backgroundColor: expenseColors, // Red (#EF4444) on deficit, Blue (#3B82F6) on surplus
+        borderColor: expenseBorderColors,
+        borderWidth: 1.5,
+        borderRadius: 6,
+        hoverBackgroundColor: monthEntries.map(entry => (entry.expenses > entry.collection ? '#DC2626' : '#1D4ED8')),
+      }
+    ]
   }
 
   const donutChartData = {
@@ -196,13 +229,41 @@ const Charts = ({ expenses = [], allExpenses = [], selectedMonth = '' }) => {
   const barOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    categoryPercentage: 0.75,
+    barPercentage: 0.85,
     plugins: {
-      legend: { display: false },
-      tooltip: { callbacks: { label: ctx => ` ${Number(ctx.raw).toLocaleString('en-PK')} PKR` } }
+      legend: {
+        display: true,
+        position: 'top',
+        align: 'end',
+        labels: {
+          font: { family: 'Manrope', size: 11, weight: '600' },
+          boxWidth: 10,
+          boxHeight: 10,
+          usePointStyle: true,
+          pointStyle: 'rectRounded',
+          padding: 12
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: PKR ${Number(ctx.raw).toLocaleString('en-PK')}`
+        }
+      }
     },
     scales: {
-      y: { ticks: { callback: v => `${(v / 1000).toFixed(0)}k`, font: { family: 'Manrope' } }, grid: { color: 'rgba(0,102,0,0.05)' }, beginAtZero: true },
-      x: { grid: { display: false }, ticks: { font: { family: 'Manrope' } } }
+      y: {
+        ticks: {
+          callback: v => `${(v / 1000).toFixed(0)}k`,
+          font: { family: 'Manrope' }
+        },
+        grid: { color: 'rgba(0,102,0,0.05)' },
+        beginAtZero: true
+      },
+      x: {
+        grid: { display: false },
+        ticks: { font: { family: 'Manrope' } }
+      }
     }
   }
 
@@ -245,7 +306,7 @@ const Charts = ({ expenses = [], allExpenses = [], selectedMonth = '' }) => {
           All Months Comparison
           <span className="material-symbols-outlined text-primary text-lg">bar_chart</span>
         </h4>
-        <div className="h-48 flex items-center justify-center">
+        <div className="h-60 sm:h-64 flex items-center justify-center">
           {sortedMonths.length > 0 ? (
             <Bar data={barChartData} options={barOptions} />
           ) : (
