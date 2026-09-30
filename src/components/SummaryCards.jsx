@@ -13,7 +13,7 @@ const SummaryCards = ({
   currency = 'PKR',
   isNoData = false
 }) => {
-  const { lang, t } = useLanguage()
+  const { lang, t, isRtl } = useLanguage()
   const isUrdu = lang === 'ur'
   const displayCurrency = isUrdu ? 'روپے' : currency
   const fmt = (n) => Number(n || 0).toLocaleString('en-PK')
@@ -63,13 +63,13 @@ const SummaryCards = ({
         ? (isUrdu ? 'بچت (+ مثبت کیش فلو)' : 'Surplus (+ Cash Flow)') 
         : (isUrdu ? 'خسارہ (- منفی کیش فلو)' : 'Deficit (- Net Outflow)')),
       icon: isSurplus ? 'savings' : 'trending_down',
-      iconColor: isSurplus ? 'text-green-500' : 'text-red-500',
+      iconColor: isSurplus ? 'text-emerald-500' : 'text-rose-500',
       noteIcon: isSurplus ? 'check_circle' : 'warning',
-      noteColor: isSurplus ? 'text-green-500' : 'text-red-500',
-      valueColor: isSurplus ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400',
+      noteColor: isSurplus ? 'text-emerald-500' : 'text-rose-500',
+      valueColor: isSurplus ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
       cardClass: isSurplus 
-        ? 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-green-500' 
-        : 'bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 border-l-4 border-l-red-500'
+        ? 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-emerald-500' 
+        : 'bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900 border-l-4 border-l-rose-500'
     },
     {
       label: !actualOverdrawn ? (t.closingBalance || 'Closing Balance') : `${t.closingBalance || 'Closing Balance'} (${t.overdrawn || 'Overdrawn'})`,
@@ -78,13 +78,13 @@ const SummaryCards = ({
         ? (isUrdu ? 'جمع شدہ محفوظ فنڈ' : 'Accumulated Reserve') 
         : (isUrdu ? 'خسارہ / بقایا جات' : 'Overdrawn / Deficit')),
       icon: 'account_balance_wallet',
-      iconColor: !actualOverdrawn ? 'text-secondary-gold' : 'text-red-500',
+      iconColor: !actualOverdrawn ? 'text-secondary-gold' : 'text-rose-500',
       noteIcon: !actualOverdrawn ? 'stars' : 'warning',
-      noteColor: !actualOverdrawn ? 'text-primary' : 'text-red-500',
-      valueColor: !actualOverdrawn ? 'text-slate-900 dark:text-slate-100' : 'text-red-600 dark:text-red-400',
+      noteColor: !actualOverdrawn ? 'text-primary' : 'text-rose-500',
+      valueColor: !actualOverdrawn ? 'text-slate-900 dark:text-slate-100' : 'text-rose-600 dark:text-rose-400',
       cardClass: !actualOverdrawn 
         ? 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-secondary-gold' 
-        : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 border-l-4 border-l-red-500'
+        : 'bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-900/50 border-l-4 border-l-rose-500'
     },
   ]
 

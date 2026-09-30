@@ -6,7 +6,7 @@ import { URDU_MONTHS } from '../utils/translations'
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
 const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAdmin, title }) => {
-  const { lang, t } = useLanguage()
+  const { lang, t, isRtl } = useLanguage()
   const currentDate = new Date()
   const isEndOfMonth = () => {
     const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate()
@@ -34,10 +34,8 @@ const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAd
     <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
       <div className="space-y-2">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
-          {title ? title : isUrdu ? (
-            <>ماہانہ اخراجات شیٹ <span className="text-primary whitespace-nowrap">– {monthDisplay} {selectedYear}</span></>
-          ) : (
-            <>MONTHLY EXPENSE SHEET <span className="text-primary whitespace-nowrap">– {monthDisplay} {selectedYear}</span></>
+          {title ? title : (
+            <>{t.appTitle || (isUrdu ? 'ماہانہ اخراجات شیٹ' : 'MONTHLY EXPENSE SHEET')} <span className="text-primary whitespace-nowrap">– {monthDisplay} {selectedYear}</span></>
           )}
         </h1>
         <p className="text-slate-500 dark:text-slate-400 font-medium">

@@ -361,7 +361,9 @@ export default function ViewerDashboard() {
             <span className="material-symbols-outlined">account_balance_wallet</span>
           </div>
           <div className="flex flex-col">
-            <h2 className="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight">ExpensePro</h2>
+            <h2 className="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight">
+              {isUrdu ? (t.appTitle || 'ماہانہ اخراجات ڈیش بورڈ') : 'ExpensePro'}
+            </h2>
             <span className="text-primary text-xs font-semibold uppercase tracking-wider">{isUrdu ? 'مشاہدہ موڈ' : 'Viewer Mode'}</span>
           </div>
         </div>

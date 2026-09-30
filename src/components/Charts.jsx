@@ -54,13 +54,13 @@ const centerTextPlugin = {
     ctx.textBaseline = 'middle'
 
     // Primary centered text (bold PKR amount)
-    ctx.font = '700 18px Manrope, Inter, sans-serif'
+    ctx.font = '700 18px Manrope, "Noto Sans Arabic", Inter, sans-serif'
     ctx.fillStyle = isDark ? '#f8fafc' : '#0f172a'
     ctx.fillText(primaryText, centerX, centerY - 8)
 
     // Sub-label text (Total Spend (Month)) in muted gray #6B7280
     if (subText) {
-      ctx.font = '600 12px Manrope, Inter, sans-serif'
+      ctx.font = '600 12px Manrope, "Noto Sans Arabic", Inter, sans-serif'
       ctx.fillStyle = '#6B7280'
       ctx.fillText(subText, centerX, centerY + 14)
     }
@@ -183,9 +183,23 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
   // Sort categories descending by spend
   const sortedCategories = Object.entries(catMap).sort((a, b) => b[1] - a[1])
 
+  const localizedCategory = (catKey) => {
+    const map = {
+      "Salaries & Payroll": t.catSalaries,
+      "Electrical & Infrastructure": t.catElectrical,
+      "Supplies & Hardware": t.catSupplies,
+      "Community & Utilities": t.catCommunity,
+      "Capital Expenditures": t.catCapEx,
+      "Payroll": t.catSalaries,
+      "Electrical & Maintenance": t.catElectrical,
+      "Capital Expenditures (CapEx)": t.catCapEx,
+    };
+    return map[catKey] || (isUrdu ? translateCategory(catKey, 'ur') : catKey);
+  };
+
   const donutLabels = sortedCategories.map(([cat, amt]) => {
     const pct = totalExpense > 0 ? ((amt / totalExpense) * 100).toFixed(1) : '0.0'
-    const catLabel = isUrdu ? translateCategory(cat, 'ur') : cat
+    const catLabel = localizedCategory(cat)
     return `${catLabel}: ${displayCurrency} ${amt.toLocaleString('en-PK')} (${pct}%)`
   })
   const donutData = sortedCategories.map(([, amt]) => amt)
@@ -370,9 +384,7 @@ const Charts = ({ expenses = [], allExpenses = [], monthlyRecords = [], selected
       centerText: {
         display: true,
         primaryText: `${displayCurrency} ${totalExpense.toLocaleString('en-PK')}`,
-        subText: isUrdu 
-          ? `${t.totalSpend || 'مجموعی خرچ'} (${translateMonth(shortMonth, 'ur')})` 
-          : (shortMonth ? `${t.totalSpend || 'Total Spend'} (${shortMonth})` : (t.totalSpend || 'Total Spend'))
+        subText: `${t.totalSpend || (isUrdu ? 'مجموعی خرچ' : 'Total Spend')} (${isUrdu ? translateMonth(selectedMonth || currentMonth, 'ur') : (selectedMonth || currentMonth)})`
       }
     }
   }
