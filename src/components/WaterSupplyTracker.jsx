@@ -1,18 +1,13 @@
 import { useState } from 'react'
 import { Droplet, Clock, Calendar, Sparkles, TrendingUp, Share2, Check, Timer } from 'lucide-react'
 import { predictNextWaterSupply } from '../utils/waterPrediction'
+import { useLanguage } from '../context/LanguageContext'
+import { translateMonth, translateWaterStatus, formatDateTimeLocalized } from '../utils/translations'
 
 export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], isAdmin = false }) {
   const [copied, setCopied] = useState(false)
-
-  const formatDateTime = (dateStr) => {
-    if (!dateStr) return 'Not Set'
-    const dateObj = new Date(dateStr)
-    return dateObj.toLocaleString('en-US', { 
-      month: 'short', day: 'numeric', year: 'numeric', 
-      hour: 'numeric', minute: '2-digit', hour12: true 
-    })
-  }
+  const { lang, t } = useLanguage()
+  const isUrdu = lang === 'ur'
 
   // Calculate durations for each entry and the cumulative total
   let totalMs = 0
@@ -83,10 +78,10 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
         <div className="bg-blue-50 dark:bg-blue-900/10 p-6 rounded-2xl border border-blue-200 dark:border-blue-800 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <h3 className="text-xl font-bold text-blue-800 dark:text-blue-300 flex items-center gap-2">
-              <Droplet className="text-blue-500" /> Water Supply Tracker
+              <Droplet className="text-blue-500" /> {t.waterSupplyTracker}
             </h3>
             <span className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-extrabold px-3 py-1 rounded-full uppercase tracking-wider w-fit">
-              {processedEntries.length} {processedEntries.length === 1 ? 'Period Recorded' : 'Periods Recorded'}
+              {processedEntries.length} {processedEntries.length === 1 ? t.periodRecorded : t.periodsRecorded}
             </span>
           </div>
           
@@ -96,33 +91,47 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
                 <div>
                   <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
                     <Calendar size={15} />
-                    <span className="text-[11px] font-extrabold uppercase tracking-wider">Start Date & Time ({entry.label})</span>
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider">
+                      {t.startDateAndTime} ({isUrdu ? `سپلائی ${index + 1}` : entry.label})
+                    </span>
                   </div>
-                  <p className="font-extrabold text-base md:text-lg text-slate-900 dark:text-white">{formatDateTime(entry.start)}</p>
+                  <p className="font-extrabold text-base md:text-lg text-slate-900 dark:text-white">
+                    {formatDateTimeLocalized(entry.start, lang)}
+                  </p>
                 </div>
                 <div>
                   <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
                     <Calendar size={15} />
-                    <span className="text-[11px] font-extrabold uppercase tracking-wider">End Date & Time ({entry.label})</span>
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider">
+                      {t.endDateAndTime} ({isUrdu ? `سپلائی ${index + 1}` : entry.label})
+                    </span>
                   </div>
-                  <p className="font-extrabold text-base md:text-lg text-slate-900 dark:text-white">{formatDateTime(entry.end)}</p>
+                  <p className="font-extrabold text-base md:text-lg text-slate-900 dark:text-white">
+                    {formatDateTimeLocalized(entry.end, lang)}
+                  </p>
                 </div>
                 <div className="bg-blue-50/50 dark:bg-blue-900/10 px-3 py-2.5 rounded-lg border border-blue-100/50 dark:border-blue-900/30">
                   <div className="flex items-center gap-1.5 text-blue-700 dark:text-blue-400 mb-0.5">
                     <Clock size={15} />
-                    <span className="text-[11px] font-extrabold uppercase tracking-wider">Duration</span>
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider">{t.supplyDuration}</span>
                   </div>
                   {entry.duration ? (
                     <>
                       <p className="font-extrabold text-blue-950 dark:text-blue-200 text-sm md:text-base">
-                        {entry.duration.days} Days, {entry.duration.hours} Hours, {entry.duration.minutes} Minutes
+                        {isUrdu 
+                          ? `${entry.duration.days} دن، ${entry.duration.hours} گھنٹے، ${entry.duration.minutes} منٹ`
+                          : `${entry.duration.days} Days, ${entry.duration.hours} Hours, ${entry.duration.minutes} Minutes`
+                        }
                       </p>
                       <p className="text-xs text-blue-700 dark:text-blue-400 font-bold mt-0.5">
-                        {entry.duration.totalHours} hours {entry.duration.minutes} minutes (or {entry.duration.totalHoursDecimal} hours)
+                        {isUrdu
+                          ? `${entry.duration.totalHours} گھنٹے ${entry.duration.minutes} منٹ (یا ${entry.duration.totalHoursDecimal} گھنٹے)`
+                          : `${entry.duration.totalHours} hours ${entry.duration.minutes} minutes (or ${entry.duration.totalHoursDecimal} hours)`
+                        }
                       </p>
                     </>
                   ) : (
-                    <p className="text-sm font-bold text-slate-400">Pending...</p>
+                    <p className="text-sm font-bold text-slate-400">{t.supplyPending}</p>
                   )}
                 </div>
               </div>
@@ -146,21 +155,24 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-lg md:text-xl font-extrabold text-white tracking-tight">
-                    Next Water Supply Forecast
+                    {t.nextWaterForecast}
                   </h3>
                   <span className="text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 px-2.5 py-0.5 rounded-full">
-                    Predictive Model
+                    {t.predictiveModel}
                   </span>
                 </div>
                 <p className="text-xs text-slate-300 mt-0.5">
-                  Trained on {predictionData.totalTrackedSupplies} recorded supply periods across the last 4–5 months.
+                  {isUrdu 
+                    ? `گزشتہ 4–5 ماہ کے دوران ریکارڈ شدہ ${predictionData.totalTrackedSupplies} سپلائی ادوار پر مبنی۔`
+                    : `Trained on ${predictionData.totalTrackedSupplies} recorded supply periods across the last 4–5 months.`
+                  }
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${predictionData.prediction.statusBadge.color}`}>
-                {predictionData.prediction.statusBadge.label}
+                {translateWaterStatus(predictionData.prediction.statusBadge.label, lang)}
               </span>
               {isAdmin && (
                 <button
@@ -169,7 +181,7 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
                   title="Broadcast this prediction to community WhatsApp groups"
                 >
                   {copied ? <Check size={14} /> : <Share2 size={14} />}
-                  <span>{copied ? 'Opening WhatsApp...' : 'Share to WhatsApp'}</span>
+                  <span>{copied ? t.openingWhatsApp : t.shareToWhatsApp}</span>
                 </button>
               )}
             </div>
@@ -181,13 +193,13 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-sm">
               <div className="flex items-center gap-2 text-indigo-300 text-xs font-bold uppercase tracking-wider mb-2">
                 <Calendar size={14} />
-                <span>Expected Window</span>
+                <span>{t.expectedWindow}</span>
               </div>
               <p className="text-xl md:text-2xl font-black text-white tracking-tight">
-                {predictionData.prediction.windowFormatted}
+                {translateMonth(predictionData.prediction.windowFormatted, lang)}
               </p>
               <p className="text-xs text-slate-300 mt-1 font-medium">
-                Most likely: <span className="text-indigo-200 font-bold">{predictionData.prediction.predictedDateFormatted}</span>
+                {t.mostLikely} <span className="text-indigo-200 font-bold">{translateMonth(predictionData.prediction.predictedDateFormatted, lang)}</span>
               </p>
             </div>
 
@@ -195,13 +207,20 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-sm">
               <div className="flex items-center gap-2 text-blue-300 text-xs font-bold uppercase tracking-wider mb-2">
                 <Timer size={14} />
-                <span>Forecasted Duration</span>
+                <span>{t.forecastedDuration}</span>
               </div>
               <p className="text-xl md:text-2xl font-black text-white tracking-tight">
-                {predictionData.prediction.avgDurationText}
+                {isUrdu 
+                  ? predictionData.prediction.avgDurationText
+                      .replace(/(\d+)d/g, '$1 دن')
+                      .replace(/(\d+)h/g, '$1 گھنٹے')
+                      .replace(/hours/g, 'گھنٹے')
+                      .replace(/hour/g, 'گھنٹہ')
+                  : predictionData.prediction.avgDurationText
+                }
               </p>
               <p className="text-xs text-slate-300 mt-1 font-medium">
-                Typical range: <span className="text-blue-200 font-bold">55 – 65 hours</span>
+                {t.typicalRange} <span className="text-blue-200 font-bold">{isUrdu ? '55 – 65 گھنٹے' : '55 – 65 hours'}</span>
               </p>
             </div>
 
@@ -209,13 +228,18 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-sm">
               <div className="flex items-center gap-2 text-teal-300 text-xs font-bold uppercase tracking-wider mb-2">
                 <TrendingUp size={14} />
-                <span>Supply Cadence</span>
+                <span>{t.supplyCadence}</span>
               </div>
               <p className="text-xl md:text-2xl font-black text-white tracking-tight">
-                Every ~{predictionData.prediction.avgIntervalDays} Days
+                {isUrdu ? `ہر ~${predictionData.prediction.avgIntervalDays} دن بعد` : `Every ~${predictionData.prediction.avgIntervalDays} Days`}
               </p>
               <p className="text-xs text-slate-300 mt-1 font-medium">
-                Recent: <span className="text-teal-200 font-bold">{predictionData.recentIntervalsInDays.slice(-3).join('d, ')}d</span>
+                {t.recentLabel} <span className="text-teal-200 font-bold">
+                  {isUrdu 
+                    ? predictionData.recentIntervalsInDays.slice(-3).map(n => `${n} دن`).join('، ')
+                    : `${predictionData.recentIntervalsInDays.slice(-3).join('d, ')}d`
+                  }
+                </span>
               </p>
             </div>
 
@@ -223,16 +247,16 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-sm">
               <div className="flex items-center gap-2 text-amber-300 text-xs font-bold uppercase tracking-wider mb-2">
                 <Sparkles size={14} />
-                <span>Consistency Score</span>
+                <span>{t.consistencyScore}</span>
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-xl md:text-2xl font-black text-white tracking-tight">
                   {predictionData.prediction.reliabilityScore}%
                 </span>
-                <span className="text-xs text-emerald-400 font-bold">High Regularity</span>
+                <span className="text-xs text-emerald-400 font-bold">{t.highRegularity}</span>
               </div>
               <p className="text-xs text-slate-300 mt-1 font-medium">
-                Last recorded: {predictionData.lastSupply.formattedStart.split(',')[0]}
+                {t.lastRecordedLabel} {translateMonth(predictionData.lastSupply.formattedStart.split(',')[0], lang)}
               </p>
             </div>
           </div>
@@ -241,3 +265,4 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
     </div>
   )
 }
+

@@ -717,19 +717,19 @@ export default function ViewerDashboard() {
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 shadow-2xs">
                   <Sparkles size={12} className="text-blue-600 dark:text-blue-400" />
-                  Community Reviews &amp; Feedback
+                  {t.reviewsBadge}
                 </span>
                 {feedbackList.length > 0 && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                    <CheckCircle2 size={12} /> {feedbackList.length} Verified {feedbackList.length === 1 ? 'Review' : 'Reviews'}
+                    <CheckCircle2 size={12} /> {feedbackList.length} {feedbackList.length === 1 ? t.verifiedReviewSingle : t.verifiedReviewsCount}
                   </span>
                 )}
               </div>
               <h3 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                What Sector 7D/1 Residents Are Saying
+                {t.reviewsHeading}
               </h3>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
-                Ratings, reviews, and suggestions shared by verified residents of Asad Hanzalla Street &amp; Sector 7D/1 on monthly accounts and community services.
+                {t.reviewsSubheading}
               </p>
             </div>
 
@@ -743,7 +743,7 @@ export default function ViewerDashboard() {
                   </div>
                   <div className="border-l border-slate-200 dark:border-slate-700 pl-2 text-left">
                     <p className="text-xs font-black text-slate-800 dark:text-slate-200 leading-none">{avgRating} / 5.0</p>
-                    <p className="text-[9px] text-amber-600 dark:text-amber-400 font-bold leading-none mt-0.5">Top Rated</p>
+                    <p className="text-[9px] text-amber-600 dark:text-amber-400 font-bold leading-none mt-0.5">{t.topRated}</p>
                   </div>
                 </div>
               )}
@@ -754,7 +754,7 @@ export default function ViewerDashboard() {
                 className="inline-flex items-center gap-2 px-4 py-2 sm:py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-extrabold rounded-2xl shadow-sm shadow-primary/25 transition-all active:scale-95 whitespace-nowrap"
               >
                 <Star size={14} className="fill-white" />
-                <span>+ Rate &amp; Leave Review</span>
+                <span>{t.btnLeaveReview}</span>
               </button>
             </div>
           </div>
@@ -766,10 +766,10 @@ export default function ViewerDashboard() {
                 <Star size={24} className="fill-amber-400" />
               </div>
               <h4 className="text-base font-extrabold text-slate-800 dark:text-slate-100">
-                No Resident Reviews Yet
+                {t.noReviewsTitle}
               </h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-md mx-auto">
-                Be the first resident to rate this month&apos;s financial summary, water supply schedule, or community services. Tap &ldquo;+ Rate &amp; Leave Review&rdquo; above!
+                {t.noReviewsDesc}
               </p>
             </div>
           ) : (
@@ -791,7 +791,7 @@ export default function ViewerDashboard() {
                             {initials}
                             <div
                               className="absolute -bottom-1 -right-1 size-4 sm:size-5 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white dark:border-slate-800 shadow-xs"
-                              title="Verified Resident Profile"
+                              title={isUrdu ? "تصدیق شدہ رہائشی" : "Verified Resident Profile"}
                             >
                               <Check size={10} strokeWidth={3} />
                             </div>
@@ -803,7 +803,7 @@ export default function ViewerDashboard() {
                                 {f.name}
                               </p>
                               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/50 flex-shrink-0">
-                                Verified
+                                {t.verifiedResident}
                               </span>
                             </div>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1 truncate font-medium">
@@ -816,7 +816,7 @@ export default function ViewerDashboard() {
                         {/* Verified Shield Icon */}
                         <div
                           className="size-7 sm:size-8 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/60 flex items-center justify-center text-blue-600 dark:text-blue-400 flex-shrink-0"
-                          title="Verified Community Review"
+                          title={isUrdu ? "تصدیق شدہ جائزہ" : "Verified Community Review"}
                         >
                           <ShieldCheck size={16} />
                         </div>
@@ -834,23 +834,23 @@ export default function ViewerDashboard() {
                           ))}
                         </div>
                         <span className="text-xs font-semibold text-slate-400">
-                          {timeAgo(f.timestamp) || f.dateStr || 'Recently'}
+                          {timeAgo(f.timestamp) || translateMonth(f.dateStr, lang) || t.recently}
                         </span>
                       </div>
 
                       {/* Review Text / Quote */}
                       <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-normal mt-2">
-                        &ldquo;{f.comment || 'Accounts are clear and well managed. Complete financial transparency.'}&rdquo;
+                        &ldquo;{f.comment || t.defaultReviewComment}&rdquo;
                       </p>
                     </div>
 
                     {/* Card Bottom Meta */}
                     <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-[11px]">
                       <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-800/40">
-                        <CheckCircle2 size={11} /> Verified Review
+                        <CheckCircle2 size={11} /> {t.verifiedReviewBadge}
                       </span>
                       <span className="text-slate-400 font-semibold">
-                        {f.monthViewed || currentMonthKey}
+                        {translateMonth(f.monthViewed || currentMonthKey, lang)}
                       </span>
                     </div>
                   </div>
@@ -1093,8 +1093,8 @@ export default function ViewerDashboard() {
                   <Star size={18} className="fill-white" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">Resident Feedback &amp; Rating</h3>
-                  <p className="text-xs text-slate-500">Share your thoughts on community services &amp; accounts</p>
+                  <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">{t.feedbackModalTitle}</h3>
+                  <p className="text-xs text-slate-500">{t.feedbackModalSubtitle}</p>
                 </div>
               </div>
               <button
@@ -1112,10 +1112,10 @@ export default function ViewerDashboard() {
                 </div>
                 <div>
                   <h4 className="text-lg font-extrabold text-slate-900 dark:text-slate-100">
-                    Thank You for Your Feedback!
+                    {t.thankYouTitle}
                   </h4>
                   <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto leading-relaxed">
-                    Your rating and suggestions have been recorded in the Admin Panel for the management committee to review.
+                    {t.thankYouSubtitle}
                   </p>
                 </div>
                 <div className="pt-2">
@@ -1123,7 +1123,7 @@ export default function ViewerDashboard() {
                     onClick={() => setShowFeedbackModal(false)}
                     className="px-6 py-2.5 bg-primary text-white text-xs font-extrabold rounded-xl hover:bg-primary-hover shadow-sm transition-all"
                   >
-                    Done / Return to Dashboard
+                    {t.doneReturnBtn}
                   </button>
                 </div>
               </div>
@@ -1132,7 +1132,7 @@ export default function ViewerDashboard() {
                 {/* Interactive Star Rating */}
                 <div className="bg-amber-50/70 dark:bg-slate-900/60 p-4 rounded-2xl border border-amber-200/60 dark:border-slate-700 text-center space-y-2">
                   <label className="block text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                    Overall Satisfaction Rating *
+                    {t.overallSatisfaction}
                   </label>
                   
                   <div className="flex items-center justify-center gap-2 py-1">
@@ -1174,7 +1174,7 @@ export default function ViewerDashboard() {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                      Your Full Name *
+                      {t.yourFullName}
                     </label>
                     <div className="relative">
                       <User size={14} className="absolute left-3 top-3 text-slate-400" />
@@ -1192,7 +1192,7 @@ export default function ViewerDashboard() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                        Contact Phone
+                        {t.contactPhone}
                       </label>
                       <div className="relative">
                         <Phone size={14} className="absolute left-3 top-3 text-slate-400" />
@@ -1208,7 +1208,7 @@ export default function ViewerDashboard() {
 
                     <div>
                       <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                        House / Flat Address *
+                        {t.houseAddress}
                       </label>
                       <div className="relative">
                         <Home size={14} className="absolute left-3 top-3 text-slate-400" />
@@ -1227,11 +1227,11 @@ export default function ViewerDashboard() {
                   {/* Feedback / Comments textarea */}
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
-                      Comments, Suggestions, or Inquiries
+                      {t.commentsSuggestions}
                     </label>
                     <textarea
                       rows={3}
-                      placeholder="Share your thoughts on water schedule, sanitation, guards, or any questions regarding expenses..."
+                      placeholder={t.commentsPlaceholder}
                       value={feedbackComment}
                       onChange={(e) => setFeedbackComment(e.target.value)}
                       className="w-full p-3 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-primary leading-relaxed"
@@ -1239,8 +1239,8 @@ export default function ViewerDashboard() {
                   </div>
 
                   <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-                    <span>Reviewing statement: <strong>{currentMonthKey}</strong></span>
-                    <span>No WhatsApp join required</span>
+                    <span>{t.reviewingStatement} <strong>{translateMonth(currentMonthKey, lang)}</strong></span>
+                    <span>{isUrdu ? 'واٹس ایپ گروپ لازمی نہیں' : 'No WhatsApp join required'}</span>
                   </div>
                 </div>
 
@@ -1255,7 +1255,7 @@ export default function ViewerDashboard() {
                     ) : (
                       <Send size={14} />
                     )}
-                    Submit Feedback &amp; Rating
+                    {feedbackSubmitting ? t.submittingBtn : t.submitFeedbackBtn}
                   </button>
                 </div>
               </form>

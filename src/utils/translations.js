@@ -78,7 +78,69 @@ export const translations = {
     supervisorRole: "Project Supervisor",
     auditorRole: "Financial Auditor",
     btnCall: "Call",
-    btnChat: "WhatsApp"
+    btnChat: "WhatsApp",
+
+    // Water Supply Tracker
+    waterSupplyTracker: "Water Supply Tracker",
+    periodsRecorded: "Periods Recorded",
+    periodRecorded: "Period Recorded",
+    startDateAndTime: "Start Date & Time",
+    endDateAndTime: "End Date & Time",
+    supplyDuration: "Duration",
+    supplyDays: "Days",
+    supplyHours: "Hours",
+    supplyMinutes: "Minutes",
+    supplyPending: "Pending...",
+    nextWaterForecast: "Next Water Supply Forecast",
+    predictiveModel: "Predictive Model",
+    trainedOnPeriods: "Trained on {count} recorded supply periods across the last 4–5 months.",
+    expectedWindow: "Expected Window",
+    forecastedDuration: "Forecasted Duration",
+    supplyCadence: "Supply Cadence",
+    consistencyScore: "Consistency Score",
+    highRegularity: "High Regularity",
+    everyNDays: "Every ~{days} Days",
+    recentLabel: "Recent:",
+    lastRecordedLabel: "Last recorded:",
+    typicalRange: "Typical range:",
+    mostLikely: "Most likely:",
+    shareToWhatsApp: "Share to WhatsApp",
+    openingWhatsApp: "Opening WhatsApp...",
+    upcomingCycle: "Upcoming Cycle",
+    activeNow: "Supply Currently Active",
+    overdue: "Due Any Moment (Overdue)",
+    windowActive: "Expected Window Active",
+
+    // Community Reviews & Feedback
+    reviewsBadge: "Community Reviews & Feedback",
+    verifiedReviewsCount: "Verified Reviews",
+    verifiedReviewSingle: "Verified Review",
+    reviewsHeading: "What Sector 7D/1 Residents Are Saying",
+    reviewsSubheading: "Ratings, reviews, and suggestions shared by verified residents of Asad Hanzalla Street & Sector 7D/1 on monthly accounts and community services.",
+    topRated: "Top Rated",
+    btnLeaveReview: "+ Rate & Leave Review",
+    noReviewsTitle: "No Resident Reviews Yet",
+    noReviewsDesc: "Be the first resident to rate this month's financial summary, water supply schedule, or community services. Tap \"+ Rate & Leave Review\" above!",
+    verifiedResident: "Verified",
+    verifiedReviewBadge: "Verified Review",
+    recently: "Recently",
+    defaultReviewComment: "Accounts are clear and well managed. Complete financial transparency.",
+
+    // Feedback Modal
+    feedbackModalTitle: "Resident Feedback & Rating",
+    feedbackModalSubtitle: "Share your thoughts on community services & accounts",
+    overallSatisfaction: "Overall Satisfaction Rating *",
+    yourFullName: "Your Full Name *",
+    contactPhone: "Contact Phone",
+    houseAddress: "House / Flat Address *",
+    commentsSuggestions: "Comments, Suggestions, or Inquiries",
+    commentsPlaceholder: "Share your thoughts on water schedule, sanitation, guards, or any questions regarding expenses...",
+    submitFeedbackBtn: "Submit Review",
+    submittingBtn: "Submitting...",
+    thankYouTitle: "Thank You for Your Feedback!",
+    thankYouSubtitle: "Your rating and suggestions have been recorded in the Admin Panel for the management committee to review.",
+    doneReturnBtn: "Done / Return to Dashboard",
+    reviewingStatement: "Reviewing statement:"
   },
   ur: {
     // Navigation & General
@@ -159,7 +221,69 @@ export const translations = {
     supervisorRole: "پروجیکٹ سپروائزر",
     auditorRole: "مالیاتی آڈیٹر",
     btnCall: "کال کریں",
-    btnChat: "واٹس ایپ"
+    btnChat: "واٹس ایپ",
+
+    // Water Supply Tracker
+    waterSupplyTracker: "پانی کی فراہمی کا ٹریکر",
+    periodsRecorded: "ادوار درج ہیں",
+    periodRecorded: "دور درج ہے",
+    startDateAndTime: "شروع تاریخ و وقت",
+    endDateAndTime: "اختتام تاریخ و وقت",
+    supplyDuration: "دورانیہ",
+    supplyDays: "دن",
+    supplyHours: "گھنٹے",
+    supplyMinutes: "منٹ",
+    supplyPending: "زیر التواء...",
+    nextWaterForecast: "اگلی پانی کی فراہمی کی پیشگوئی",
+    predictiveModel: "پیش گوئی ماڈل",
+    trainedOnPeriods: "گزشتہ 4–5 ماہ کے دوران ریکارڈ شدہ {count} سپلائی ادوار پر مبنی۔",
+    expectedWindow: "متوقع تاریخیں",
+    forecastedDuration: "متوقع دورانیہ",
+    supplyCadence: "سپلائی کا تسلسل",
+    consistencyScore: "تسلسل کا اسکور",
+    highRegularity: "بہترین تسلسل",
+    everyNDays: "ہر ~{days} دن بعد",
+    recentLabel: "حالیہ:",
+    lastRecordedLabel: "آخری ریکارڈ:",
+    typicalRange: "عام دورانیہ:",
+    mostLikely: "زیادہ تر امکان:",
+    shareToWhatsApp: "واٹس ایپ پر شیئر کریں",
+    openingWhatsApp: "واٹس ایپ کھل رہا ہے...",
+    upcomingCycle: "اگلا متوقع دورانیہ",
+    activeNow: "پانی کی فراہمی جاری ہے",
+    overdue: "کسی بھی وقت متوقع (تاخیر)",
+    windowActive: "متوقع دورانیہ جاری ہے",
+
+    // Community Reviews & Feedback
+    reviewsBadge: "عوامی رائے اور تجاویز",
+    verifiedReviewsCount: "تصدیق شدہ جائزے",
+    verifiedReviewSingle: "تصدیق شدہ جائزہ",
+    reviewsHeading: "سیکٹر 7D/1 کے رہائشیوں کے تاثرات",
+    reviewsSubheading: "ماہانہ حسابات اور علاقائی خدمات پر اسد حنظلہ اسٹریٹ اور سیکٹر 7D/1 کے تصدیق شدہ رہائشیوں کی آراء، ریٹنگ اور تجاویز۔",
+    topRated: "بہترین ریٹنگ",
+    btnLeaveReview: "+ رائے اور ریٹنگ دیں",
+    noReviewsTitle: "ابھی تک کوئی رائے موصول نہیں ہوئی",
+    noReviewsDesc: "ماہانہ مالیاتی رپورٹ، پانی کی فراہمی یا علاقائی خدمات پر رائے دینے والے پہلے رہائشی بنیں۔ اوپر دیے گئے '+ رائے اور ریٹنگ دیں' پر کلک کریں!",
+    verifiedResident: "تصدیق شدہ",
+    verifiedReviewBadge: "تصدیق شدہ ریویو",
+    recently: "حال ہی میں",
+    defaultReviewComment: "حسابات بالکل واضح اور شفاف ہیں۔ بہترین انتظام۔",
+
+    // Feedback Modal
+    feedbackModalTitle: "رہائشی کی رائے اور ریٹنگ",
+    feedbackModalSubtitle: "علاقائی خدمات اور ماہانہ حسابات پر اپنی رائے دیں",
+    overallSatisfaction: "مجموعی اطمینان کی ریٹنگ *",
+    yourFullName: "آپ کا پورا نام *",
+    contactPhone: "فون / موبائل نمبر",
+    houseAddress: "مکان / فلیٹ کا پتہ *",
+    commentsSuggestions: "تجاویز، آراء یا سوالات",
+    commentsPlaceholder: "پانی کے شیڈول، صفائی، گارڈز یا اخراجات سے متعلق اپنے خیالات درج کریں...",
+    submitFeedbackBtn: "رائے جمع کروائیں",
+    submittingBtn: "رائے جمع ہو رہی ہے...",
+    thankYouTitle: "آپ کی قیمتی رائے کا شکریہ!",
+    thankYouSubtitle: "آپ کی ریٹنگ اور تجاویز انتظامی کمیٹی کے جائزے کے لیے محفوظ کر لی گئی ہیں۔",
+    doneReturnBtn: "مکمل / ڈیش بورڈ پر واپس جائیں",
+    reviewingStatement: "زیرِ جائزہ رپورٹ:"
   }
 };
 
@@ -222,5 +346,40 @@ export function translateMonth(monthStr, lang = 'en') {
     res = res.replace(new RegExp(enM.slice(0, 3), 'g'), urM);
   });
   return res;
+}
+
+export function translateWaterStatus(label, lang = 'en') {
+  if (lang !== 'ur' || !label) return label;
+  const map = {
+    'Upcoming Cycle': 'اگلا متوقع دورانیہ',
+    'Supply Currently Active': 'پانی کی فراہمی جاری ہے',
+    'Due Any Moment (Overdue)': 'کسی بھی وقت متوقع (تاخیر)',
+    'Expected Window Active': 'متوقع دورانیہ جاری ہے'
+  };
+  return map[label] || label;
+}
+
+export function formatDateTimeLocalized(dateStr, lang = 'en') {
+  if (!dateStr) return lang === 'ur' ? 'متعین نہیں' : 'Not Set';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  
+  if (lang === 'ur') {
+    const months = ['جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون', 'جولائی', 'اگست', 'ستمبر', 'اکتوبر', 'نومبر', 'دسمبر'];
+    const month = months[d.getMonth()];
+    const day = d.getDate();
+    const year = d.getFullYear();
+    let hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${day} ${month} ${year}، ${hours}:${minutes} ${ampm}`;
+  }
+  
+  return d.toLocaleString('en-US', { 
+    month: 'short', day: 'numeric', year: 'numeric', 
+    hour: 'numeric', minute: '2-digit', hour12: true 
+  });
 }
 
