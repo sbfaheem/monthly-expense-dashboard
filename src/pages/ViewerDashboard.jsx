@@ -721,12 +721,12 @@ export default function ViewerDashboard() {
               </div>
             </div>
 
-            {/* Card 4: Dashboard Application Technical Support & Queries */}
+            {/* Card 4: Dashboard Related Queries */}
             <div className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-2xl border border-primary/10 shadow-sm space-y-4">
               <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-3">
                 <h4 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm sm:text-base">
-                  <span className="material-symbols-outlined text-primary text-xl">terminal</span>
-                  {t.techSupportTitle || (isUrdu ? 'ڈیش بورڈ ایپ سے متعلق سوالات و مسائل' : 'Dashboard Application Queries / Issues')}
+                  <span className="material-symbols-outlined text-primary text-xl">help_outline</span>
+                  {t.techSupportTitle || (isUrdu ? 'ڈیش بورڈ سے متعلق سوالات' : 'Dashboard Related Queries')}
                 </h4>
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-slate-500">
                   {t.directContact || (isUrdu ? 'براہ راست رابطہ' : 'Direct Contact')}
@@ -741,14 +741,9 @@ export default function ViewerDashboard() {
                       B
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <p className="text-sm sm:text-base font-black text-slate-800 dark:text-slate-100 truncate">
-                          {isUrdu ? 'جناب سید بلال فہیم' : 'Mr. Syed Bilal Faheem'}
-                        </p>
-                        <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 px-2 py-0.5 rounded-full border border-blue-200/60">
-                          {t.developerRole || (isUrdu ? 'ٹیکنیکل لیڈ / ڈویلپر' : 'Technical Lead / Developer')}
-                        </span>
-                      </div>
+                      <p className="text-sm sm:text-base font-black text-slate-800 dark:text-slate-100 truncate">
+                        {isUrdu ? 'جناب سید بلال فہیم' : 'Mr. Syed Bilal Faheem'}
+                      </p>
                       <p className="text-xs text-slate-500 dark:text-slate-400 font-medium font-mono mt-0.5">
                         <a href="tel:03362607836" className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline">0336-2607836</a>
                       </p>
