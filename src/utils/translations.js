@@ -77,6 +77,9 @@ export const translations = {
     managementContacts: "Management Contacts",
     supervisorRole: "Project Supervisor",
     auditorRole: "Financial Auditor",
+    techSupportTitle: "Dashboard Application Queries / Issues",
+    developerRole: "Technical Lead / Developer",
+    directContact: "Direct Contact",
     btnCall: "Call",
     btnChat: "WhatsApp",
 
@@ -243,6 +246,9 @@ export const translations = {
     managementContacts: "رابطہ برائے انتظامیہ",
     supervisorRole: "پروجیکٹ سپروائزر",
     auditorRole: "مالیاتی آڈیٹر",
+    techSupportTitle: "ڈیش بورڈ ایپ سے متعلق سوالات و مسائل",
+    developerRole: "ٹیکنیکل لیڈ / ڈویلپر",
+    directContact: "براہ راست رابطہ",
     btnCall: "کال کریں",
     btnChat: "واٹس ایپ",
 
