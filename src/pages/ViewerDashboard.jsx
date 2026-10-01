@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
-import { loadData, calculateTotals, getLastDataMonth, logVisitor, resolveGroupName, submitFeedback } from '../utils/storage'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { loadData, calculateTotals, getLastDataMonth, logVisitor, resolveGroupName, submitFeedback, addWhatsAppContact } from '../utils/storage'
 import Header from '../components/Header'
 import SummaryCards from '../components/SummaryCards'
 import ExpenseTable from '../components/ExpenseTable'
@@ -47,6 +47,8 @@ export default function ViewerDashboard() {
   const [loading, setLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+
+  const lastLoggedRef = useRef({})
 
   // Resident Identity state & WhatsApp Group tracking
   const [resident, setResident] = useState(null)
@@ -141,7 +143,7 @@ export default function ViewerDashboard() {
       }
 
       if (matched) {
-        const finalGroup = resolvedGroup || matched.group || 'NTRG 2 Asad Hanzalla street'
+        const finalGroup = resolvedGroup || matched.group || 'Direct Resident (No WhatsApp Group)'
         const fullResident = {
           ...matched,
           group: finalGroup,
@@ -150,11 +152,16 @@ export default function ViewerDashboard() {
         }
         setResident(fullResident)
         localStorage.setItem('resident_identity', JSON.stringify(fullResident))
+        localStorage.setItem('resident_checked_in', 'true')
+        setShowCheckInModal(false)
       } else {
-        // Prompt check-in modal immediately if arriving without confirmed identity
-        setTimeout(() => {
-          setShowCheckInModal(true)
-        }, 400)
+        // Prompt check-in modal ONLY for first-time visitors who have never checked in
+        const alreadyCheckedIn = localStorage.getItem('resident_checked_in') === 'true' || !!localStorage.getItem('resident_identity')
+        if (!alreadyCheckedIn) {
+          setTimeout(() => {
+            setShowCheckInModal(true)
+          }, 400)
+        }
       }
     }).catch(err => {
       console.error('Failed to load data:', err)
@@ -174,13 +181,18 @@ export default function ViewerDashboard() {
     return (total / feedbackList.length).toFixed(1)
   }, [feedbackList])
 
-  // Log visit to Firestore ONLY when resident identity is confirmed
+  // Log visit to Firestore whenever resident is identified and views statement
   useEffect(() => {
     if (loading || !selectedMonth || !resident) return
 
-    const sessionKey = `visited_${currentMonthKey}_${resident?.phone || resident?.name || 'anon'}_${resident?.group || detectedGroup || 'general'}`
-    if (sessionStorage.getItem(sessionKey)) return
-    sessionStorage.setItem(sessionKey, 'true')
+    const now = Date.now()
+    const logKey = `${resident.phone || resident.name}_${currentMonthKey}`
+
+    // 30-second debounce per statement month to prevent spamming on rapid re-renders
+    if (lastLoggedRef.current[logKey] && (now - lastLoggedRef.current[logKey] < 30000)) {
+      return
+    }
+    lastLoggedRef.current[logKey] = now
 
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
     const logPayload = {
@@ -188,13 +200,13 @@ export default function ViewerDashboard() {
       phone: resident.phone || '',
       houseNo: resident.houseNo || resident.houseAddress || '',
       houseAddress: resident.houseAddress || resident.houseNo || '',
-      group: resident.group || detectedGroup || 'NTRG 2 Asad Hanzalla street',
+      group: resident.group || detectedGroup || 'Direct Resident (No WhatsApp Group)',
       tag: resident.tag || 'Resident',
       monthViewed: currentMonthKey,
       device: isMobile ? 'Mobile' : 'Desktop'
     }
 
-    logVisitor(logPayload)
+    logVisitor(logPayload).catch(err => console.warn('Visitor log failed:', err))
   }, [loading, currentMonthKey, resident, detectedGroup])
 
   // Filter contacts for check-in modal based on group & search query
@@ -218,16 +230,19 @@ export default function ViewerDashboard() {
       ...c,
       houseAddress: c.houseAddress || c.houseNo || '',
       houseNo: c.houseAddress || c.houseNo || '',
-      group: c.group || selectedModalGroup || detectedGroup || 'NTRG 2 Asad Hanzalla street'
+      group: c.group || selectedModalGroup || detectedGroup || 'Direct Resident (No WhatsApp Group)'
     }
-    const sessionKey = `visited_${currentMonthKey}_${fullContact.phone || fullContact.name || 'anon'}_${fullContact.group || detectedGroup || 'general'}`
-    sessionStorage.setItem(sessionKey, 'true')
 
     setResident(fullContact)
     localStorage.setItem('resident_identity', JSON.stringify(fullContact))
+    localStorage.setItem('resident_checked_in', 'true')
     setShowCheckInModal(false)
 
-    // Immediately log visit for newly identified resident with group and address
+    // Mark visit in ref and immediately log visit for newly identified resident with group and address
+    const now = Date.now()
+    const logKey = `${fullContact.phone || fullContact.name}_${currentMonthKey}`
+    lastLoggedRef.current[logKey] = now
+
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
     logVisitor({
       name: fullContact.name,
@@ -238,10 +253,10 @@ export default function ViewerDashboard() {
       tag: fullContact.tag || 'Resident',
       monthViewed: currentMonthKey,
       device: isMobile ? 'Mobile' : 'Desktop'
-    })
+    }).catch(err => console.warn('Visitor log failed:', err))
   }
 
-  const handleManualCheckIn = (e) => {
+  const handleManualCheckIn = async (e) => {
     e.preventDefault()
     if (!manualName.trim() || !manualPhone.trim()) return
     const customResident = {
@@ -250,8 +265,27 @@ export default function ViewerDashboard() {
       houseAddress: manualAddress.trim() || '',
       houseNo: manualAddress.trim() || '',
       tag: 'Resident',
-      group: selectedModalGroup || detectedGroup || 'NTRG 2 Asad Hanzalla street'
+      group: selectedModalGroup || detectedGroup || 'Direct Resident (No WhatsApp Group)'
     }
+
+    // Persist new resident to backend contacts database so record is permanently maintained for analytics
+    const cleanPhone = normalizePhone(customResident.phone)
+    const existing = (data.contacts || []).find(c => normalizePhone(c.phone) === cleanPhone)
+    if (!existing) {
+      try {
+        const freshData = await addWhatsAppContact({
+          name: customResident.name,
+          phone: customResident.phone,
+          houseNo: customResident.houseAddress,
+          tag: 'Resident',
+          group: customResident.group
+        })
+        if (freshData) setData(freshData)
+      } catch (err) {
+        console.warn('Could not save resident contact to backend:', err)
+      }
+    }
+
     handleSelectResident(customResident)
     setManualName('')
     setManualPhone('')
@@ -340,6 +374,7 @@ export default function ViewerDashboard() {
 
   const handleClearIdentity = () => {
     localStorage.removeItem('resident_identity')
+    localStorage.removeItem('resident_checked_in')
     setResident(null)
   }
 

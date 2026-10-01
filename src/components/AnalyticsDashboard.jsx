@@ -268,9 +268,16 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
         matchedContact = contacts.find(c => c.name?.toLowerCase().trim() === lowerName)
       }
 
-      // Robust group resolution - never leave as "Unspecified Group"
-      const rawGrp = log.group && log.group !== 'Unspecified Group' ? log.group : (matchedContact?.group || 'NTRG 2 Asad Hanzalla street')
-      const displayGroup = rawGrp.includes('7D') ? 'N.T.R.C Sector 7D/1' : 'NTRG 2 Asad Hanzalla street'
+      // Robust group resolution - distinguish 7D, Hanzalla, and No Group
+      const rawGrp = log.group && log.group !== 'Unspecified Group' ? log.group : (matchedContact?.group || '')
+      let displayGroup = 'Direct Resident (No WhatsApp Group)'
+      if (rawGrp.includes('7D')) {
+        displayGroup = 'N.T.R.C Sector 7D/1'
+      } else if (rawGrp.includes('Hanzalla') || rawGrp.includes('NTRG')) {
+        displayGroup = 'NTRG 2 Asad Hanzalla street'
+      } else if (rawGrp) {
+        displayGroup = rawGrp
+      }
 
       const displayPhone = log.phone || matchedContact?.phone || ''
       const displayAddress = log.houseAddress || log.houseNo || matchedContact?.houseNo || ''
@@ -803,6 +810,16 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
                 >
                   Sector 7D/1
                 </button>
+                <button
+                  onClick={() => setVisitGroupFilter('direct')}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    visitGroupFilter === 'direct'
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-purple-600'
+                  }`}
+                >
+                  No Group
+                </button>
               </div>
 
               {/* Device Filter */}
@@ -1064,7 +1081,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
                               ? 'Sector 7D/1'
                               : (v.displayGroup || '').includes('Hanzalla') || (v.displayGroup || '').includes('NTRG')
                               ? 'Asad Hanzalla'
-                              : v.displayGroup || 'Direct Link'}
+                              : 'No Group'}
                           </span>
                         </td>
 

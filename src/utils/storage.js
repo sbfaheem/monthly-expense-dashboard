@@ -20,6 +20,9 @@ export const resolveGroupName = (grpStr) => {
   if (s.includes('hanzalla') || s.includes('ntrg') || s.includes('asad')) {
     return 'NTRG 2 Asad Hanzalla street'
   }
+  if (s.includes('no group') || s.includes('direct') || s.includes('nogroup') || s.includes('none')) {
+    return 'Direct Resident (No WhatsApp Group)'
+  }
   return grpStr
 }
 
