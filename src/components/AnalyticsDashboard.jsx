@@ -162,6 +162,62 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
     }
   }
 
+  // ─── Deduplicate Rapid Duplicate Logs (within 5 mins) ────────
+  const handleDeduplicateLogs = async () => {
+    if (!visitorLogs.length) return
+    setIsRefreshing(true)
+    try {
+      const sorted = [...visitorLogs].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+      const idsToDelete = []
+
+      for (let i = 0; i < sorted.length; i++) {
+        const cur = sorted[i]
+        const curPhone = normalizePhone(cur.phone)
+        const curName = (cur.name || '').toLowerCase().trim()
+
+        for (let j = i + 1; j < sorted.length; j++) {
+          const next = sorted[j]
+          const nextPhone = normalizePhone(next.phone)
+          const nextName = (next.name || '').toLowerCase().trim()
+
+          // Break loop if timestamp difference exceeds 5 minutes
+          if ((next.timestamp || 0) - (cur.timestamp || 0) > 5 * 60 * 1000) break
+
+          const samePerson = (curPhone && nextPhone && curPhone === nextPhone) || (curName && nextName && curName === nextName)
+          const sameDevice = cur.device === next.device
+          const sameMonth = cur.monthViewed === next.monthViewed
+
+          if (samePerson && sameDevice && sameMonth && !idsToDelete.includes(next.id)) {
+            idsToDelete.push(next.id)
+          }
+        }
+      }
+
+      if (!idsToDelete.length) {
+        if (showNotif) showNotif('No rapid duplicate logs found.')
+        setIsRefreshing(false)
+        return
+      }
+
+      if (!window.confirm(`Found ${idsToDelete.length} duplicate visitor log entry(s) created within 5 minutes. Remove them now?`)) {
+        setIsRefreshing(false)
+        return
+      }
+
+      let freshData = data
+      for (const id of idsToDelete) {
+        freshData = await deleteVisitorLog(id)
+      }
+      setData(freshData)
+      if (showNotif) showNotif(`Removed ${idsToDelete.length} duplicate visitor log(s)!`)
+    } catch (err) {
+      console.error('Failed to deduplicate:', err)
+      if (showNotif) showNotif('Failed to remove duplicates', 'error')
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
   // ─── Mapped Contacts with Engagement Data ─────────────────────
   const mappedContacts = useMemo(() => {
     return contacts.map(contact => {
@@ -546,6 +602,18 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
             <Download size={14} />
             Export CSV
           </button>
+
+          {visitorLogs.length > 1 && (
+            <button
+              onClick={handleDeduplicateLogs}
+              disabled={isRefreshing}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-100 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-300 text-xs font-bold transition-all shadow-sm"
+              title="Clean rapid duplicate entries within 5 minutes"
+            >
+              <Sparkles size={14} />
+              Clean Duplicates
+            </button>
+          )}
 
           {visitorLogs.length > 0 && (
             <button

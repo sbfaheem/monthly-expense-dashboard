@@ -185,14 +185,27 @@ export default function ViewerDashboard() {
   useEffect(() => {
     if (loading || !selectedMonth || !resident) return
 
+    const residentKey = normalizePhone(resident.phone) || (resident.name || 'resident').toLowerCase().replace(/\s+/g, '_')
+    const sessionKey = `visit_logged_${residentKey}_${currentMonthKey}`
+    const timeKey = `last_visit_time_${residentKey}_${currentMonthKey}`
     const now = Date.now()
-    const logKey = `${resident.phone || resident.name}_${currentMonthKey}`
 
-    // 30-second debounce per statement month to prevent spamming on rapid re-renders
-    if (lastLoggedRef.current[logKey] && (now - lastLoggedRef.current[logKey] < 30000)) {
+    // 1. Session-level lock: Skip logging if already logged during this active browsing session for this statement month
+    if (sessionStorage.getItem(sessionKey)) {
       return
     }
-    lastLoggedRef.current[logKey] = now
+
+    // 2. Inactivity threshold (30 mins): Return visits after 30+ mins count as a new session
+    const lastVisit = Number(localStorage.getItem(timeKey)) || 0
+    if (lastVisit && (now - lastVisit < 30 * 60 * 1000)) {
+      sessionStorage.setItem(sessionKey, 'true')
+      return
+    }
+
+    // Set locks synchronously to prevent race conditions or double-fires
+    sessionStorage.setItem(sessionKey, 'true')
+    localStorage.setItem(timeKey, String(now))
+    lastLoggedRef.current[`${residentKey}_${currentMonthKey}`] = now
 
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
     const logPayload = {
@@ -233,27 +246,16 @@ export default function ViewerDashboard() {
       group: c.group || selectedModalGroup || detectedGroup || 'Direct Resident (No WhatsApp Group)'
     }
 
+    // Clear previous session lock so this specific resident check-in logs immediately once via useEffect
+    const residentKey = normalizePhone(fullContact.phone) || (fullContact.name || 'resident').toLowerCase().replace(/\s+/g, '_')
+    sessionStorage.removeItem(`visit_logged_${residentKey}_${currentMonthKey}`)
+    localStorage.removeItem(`last_visit_time_${residentKey}_${currentMonthKey}`)
+
     setResident(fullContact)
     localStorage.setItem('resident_identity', JSON.stringify(fullContact))
     localStorage.setItem('resident_checked_in', 'true')
     setShowCheckInModal(false)
-
-    // Mark visit in ref and immediately log visit for newly identified resident with group and address
-    const now = Date.now()
-    const logKey = `${fullContact.phone || fullContact.name}_${currentMonthKey}`
-    lastLoggedRef.current[logKey] = now
-
-    const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
-    logVisitor({
-      name: fullContact.name,
-      phone: fullContact.phone || '',
-      houseNo: fullContact.houseNo || '',
-      houseAddress: fullContact.houseAddress || fullContact.houseNo || '',
-      group: fullContact.group,
-      tag: fullContact.tag || 'Resident',
-      monthViewed: currentMonthKey,
-      device: isMobile ? 'Mobile' : 'Desktop'
-    }).catch(err => console.warn('Visitor log failed:', err))
+    // Visit is logged once by the useEffect when resident state updates
   }
 
   const handleManualCheckIn = async (e) => {

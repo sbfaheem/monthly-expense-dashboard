@@ -555,22 +555,38 @@ export const updateWhatsAppGroups = async (groups) => {
 
 // ─── Resident Visitor Analytics CRUD ─────────────────────────
 
+// In-memory guard to prevent concurrent duplicate writes across quick re-renders
+const recentLogsLock = new Map()
+
 export const logVisitor = async (visitorData = {}) => {
   try {
+    const name = visitorData.name || 'Anonymous Resident'
+    const phone = visitorData.phone || ''
+    const month = visitorData.monthViewed || ''
+    const device = visitorData.device || (typeof window !== 'undefined' && window.innerWidth < 768 ? 'Mobile' : 'Desktop')
+    const lockKey = `${phone || name}_${month}_${device}`
+    const now = Date.now()
+
+    // 1. In-memory check: block calls within 3 minutes for identical resident, month, and device
+    const lastLogged = recentLogsLock.get(lockKey)
+    if (lastLogged && (now - lastLogged < 3 * 60 * 1000)) {
+      return null
+    }
+    recentLogsLock.set(lockKey, now)
+
     const col = collection(db, 'visitor_logs')
-    const now = new Date()
     const docData = {
-      name: visitorData.name || 'Anonymous Resident',
-      phone: visitorData.phone || '',
+      name,
+      phone,
       houseNo: visitorData.houseNo || visitorData.houseAddress || '',
       houseAddress: visitorData.houseAddress || visitorData.houseNo || '',
       group: visitorData.group || '',
       tag: visitorData.tag || 'Resident',
-      device: visitorData.device || (window.innerWidth < 768 ? 'Mobile' : 'Desktop'),
-      monthViewed: visitorData.monthViewed || '',
+      device,
+      monthViewed: month,
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
-      timestamp: Date.now(),
-      dateStr: now.toLocaleString('en-US', {
+      timestamp: now,
+      dateStr: new Date(now).toLocaleString('en-US', {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
