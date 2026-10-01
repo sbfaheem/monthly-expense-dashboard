@@ -1,0 +1,51 @@
+name: Automated Database Backup Schedule
+
+on:
+  schedule:
+    # Schedule: Every Friday Night at 12:30 AM PKT (UTC+5)
+    # Thursday 19:30 UTC = Friday 00:30 AM PKT
+    # Friday 19:30 UTC = Saturday 00:30 AM PKT (Friday night)
+    - cron: '30 19 * * 4,5'
+  workflow_dispatch: # Allows manual one-click backup trigger from GitHub UI anytime
+
+jobs:
+  database-backup:
+    name: Backup Firestore Collections
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Project Dependencies
+        run: npm ci
+
+      - name: Execute Full Database Backup
+        run: node scripts/export_backup.js
+
+      - name: Store Backup as GitHub Encrypted Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-backup-${{ github.run_id }}
+          path: backups/backup_firestore_*.json
+          retention-days: 90
+
+      - name: Commit and Push Backup to Repository Archive
+        run: |
+          git config --local user.email "bot-backup@monthly-expense-dashboard.internal"
+          git config --local user.name "Database Backup Bot"
+          git add backups/
+          if git diff --staged --quiet; then
+            echo "No database changes to commit."
+          else
+            git commit -m "chore(backup): automated database backup [skip ci]"
+            git push
+          fi

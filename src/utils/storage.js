@@ -500,11 +500,11 @@ export const migrateSupabaseToFirebase = async (supRecords, supExpenses) => {
 export const addWhatsAppContact = async (contact) => {
   const col = collection(db, 'whatsapp_contacts')
   await addDoc(col, {
-    name: contact.name || '',
-    phone: contact.phone || '',
-    houseNo: contact.houseNo || '',
-    tag: contact.tag || 'Resident',
-    group: contact.group || 'NTRG 2 Asad Hanzalla street',
+    name: sanitizeInput(contact.name || '', 80),
+    phone: sanitizeInput(contact.phone || '', 25),
+    houseNo: sanitizeInput(contact.houseNo || '', 50),
+    tag: sanitizeInput(contact.tag || 'Resident', 30),
+    group: sanitizeInput(contact.group || 'NTRG 2 Asad Hanzalla street', 80),
     createdAt: Date.now()
   })
   return loadData()
@@ -560,9 +560,9 @@ const recentLogsLock = new Map()
 
 export const logVisitor = async (visitorData = {}) => {
   try {
-    const name = visitorData.name || 'Anonymous Resident'
-    const phone = visitorData.phone || ''
-    const month = visitorData.monthViewed || ''
+    const name = sanitizeInput(visitorData.name || 'Anonymous Resident', 80)
+    const phone = sanitizeInput(visitorData.phone || '', 25)
+    const month = sanitizeInput(visitorData.monthViewed || '', 30)
     const device = visitorData.device || (typeof window !== 'undefined' && window.innerWidth < 768 ? 'Mobile' : 'Desktop')
     const lockKey = `${phone || name}_${month}_${device}`
     const now = Date.now()
@@ -578,10 +578,10 @@ export const logVisitor = async (visitorData = {}) => {
     const docData = {
       name,
       phone,
-      houseNo: visitorData.houseNo || visitorData.houseAddress || '',
-      houseAddress: visitorData.houseAddress || visitorData.houseNo || '',
-      group: visitorData.group || '',
-      tag: visitorData.tag || 'Resident',
+      houseNo: sanitizeInput(visitorData.houseNo || visitorData.houseAddress || '', 50),
+      houseAddress: sanitizeInput(visitorData.houseAddress || visitorData.houseNo || '', 80),
+      group: sanitizeInput(visitorData.group || '', 80),
+      tag: sanitizeInput(visitorData.tag || 'Resident', 30),
       device,
       monthViewed: month,
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
@@ -647,12 +647,12 @@ export const submitFeedback = async (feedbackData = {}) => {
     const col = collection(db, 'resident_feedback')
     const now = new Date()
     const docData = {
-      name: feedbackData.name || 'Anonymous Resident',
-      phone: feedbackData.phone || '',
-      houseAddress: feedbackData.houseAddress || feedbackData.houseNo || '',
-      rating: Number(feedbackData.rating || 5),
-      comment: feedbackData.comment || '',
-      monthViewed: feedbackData.monthViewed || '',
+      name: sanitizeInput(feedbackData.name || 'Anonymous Resident', 80),
+      phone: sanitizeInput(feedbackData.phone || '', 25),
+      houseAddress: sanitizeInput(feedbackData.houseAddress || feedbackData.houseNo || '', 80),
+      rating: Math.min(5, Math.max(1, Number(feedbackData.rating || 5))),
+      comment: sanitizeInput(feedbackData.comment || '', 500),
+      monthViewed: sanitizeInput(feedbackData.monthViewed || '', 30),
       device: feedbackData.device || (window.innerWidth < 768 ? 'Mobile' : 'Desktop'),
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
       timestamp: Date.now(),
@@ -686,5 +686,47 @@ export const clearFeedback = async () => {
     return loadData()
   }
 }
+
+// ─── Input Sanitization Helper ───────────────────────────────
+export const sanitizeInput = (str, maxLen = 120) => {
+  if (typeof str !== 'string') return ''
+  return str
+    .replace(/[<>]/g, '') // Strip HTML brackets to prevent script injection
+    .trim()
+    .slice(0, maxLen)
+}
+
+// ─── Full Database Backup JSON Exporter ──────────────────────
+export const exportFullDatabaseBackupJSON = (data = {}) => {
+  const now = new Date()
+  const dateStr = now.toISOString().slice(0, 10)
+  const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '-')
+
+  const backupData = {
+    version: '2.4.0',
+    exportTimestamp: now.toISOString(),
+    exportDate: dateStr,
+    scheduledCron: 'Every Friday Night 12:30 AM PKT (UTC 19:30)',
+    totalCollections: 7,
+    collections: {
+      settings: data.settings || {},
+      monthly_records: data.monthlyRecords || [],
+      expenses: data.expenses || [],
+      water_supply: data.waterSupply || [],
+      whatsapp_contacts: data.contacts || [],
+      visitor_logs: data.visitorLogs || [],
+      resident_feedback: data.feedback || []
+    }
+  }
+
+  const jsonString = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2))
+  const downloadAnchor = document.createElement('a')
+  downloadAnchor.setAttribute('href', jsonString)
+  downloadAnchor.setAttribute('download', `firestore_full_backup_${dateStr}_${timeStr}.json`)
+  document.body.appendChild(downloadAnchor)
+  downloadAnchor.click()
+  document.body.removeChild(downloadAnchor)
+}
+
 
 

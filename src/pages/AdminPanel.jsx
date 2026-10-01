@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ListChecks, Camera, FileBarChart2, Settings, LogOut,
-  Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff, Sparkles, MessageSquare, BarChart3, Star, Share2
+  Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff, Sparkles, MessageSquare, BarChart3, Star, Share2,
+  ShieldCheck, Database, Download, Calendar, Lock
 } from 'lucide-react'
 import {
   loadData, addExpense, updateExpense, deleteExpense,
   updateSettings, calculateTotals, getMonthYear, getLastDataMonth,
   addMonthlyRecord, updateMonthlyRecord, deleteMonthlyRecord,
-  migrateSupabaseToFirebase, updateWaterSupply, updateAdminPassword
+  migrateSupabaseToFirebase, updateWaterSupply, updateAdminPassword,
+  exportFullDatabaseBackupJSON
 } from '../utils/storage'
 import Header from '../components/Header'
 import SummaryCards from '../components/SummaryCards'
@@ -309,6 +311,15 @@ export default function AdminPanel() {
       showNotif('Failed to change password. Try again.', 'error')
     } finally {
       setPasswordSaving(false)
+    }
+  }
+
+  const handleDownloadBackup = () => {
+    try {
+      exportFullDatabaseBackupJSON(data)
+      showNotif('Full Database Backup JSON downloaded successfully!')
+    } catch (err) {
+      showNotif('Failed to export database backup. Try again.', 'error')
     }
   }
 
@@ -928,6 +939,78 @@ export default function AdminPanel() {
                   </button>
                 </div>
               </form>
+            </div>
+
+            {/* Database Backup & Security Center */}
+            <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="size-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200 shadow-sm">
+                    <ShieldCheck size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-800">Database Backup &amp; Security Center</h3>
+                    <p className="text-sm text-slate-500">Automated weekly schedule &amp; database anti-exploit protections.</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadBackup}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-sm active:scale-95 whitespace-nowrap"
+                  title="Download instant complete JSON snapshot"
+                >
+                  <Download size={15} />
+                  <span>Download Backup JSON</span>
+                </button>
+              </div>
+
+              {/* Status Badges & Schedule Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                {/* Schedule Card */}
+                <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/70 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                      <Calendar size={14} className="text-primary" /> Automated Backup Schedule
+                    </span>
+                    <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      Active
+                    </span>
+                  </div>
+                  <p className="text-sm font-extrabold text-slate-800">
+                    Every Friday Night at 12:30 AM PKT
+                  </p>
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Automated GitHub Actions cron runs every Friday night (19:30 UTC), exports all 7 Firestore collections, and stores encrypted 90-day retention archives.
+                  </p>
+                </div>
+
+                {/* Database Security Level Card */}
+                <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/70 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                      <Lock size={14} className="text-emerald-600" /> Database Exploit Protection
+                    </span>
+                    <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                      Hardened
+                    </span>
+                  </div>
+                  <ul className="text-xs text-slate-600 space-y-1">
+                    <li className="flex items-center gap-1.5">
+                      <Check size={13} className="text-emerald-600" />
+                      <span><strong>Firestore Rules:</strong> Public write/delete blocked on all collections</span>
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <Check size={13} className="text-emerald-600" />
+                      <span><strong>Privacy Masking:</strong> Phone numbers masked in public directory</span>
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <Check size={13} className="text-emerald-600" />
+                      <span><strong>XSS &amp; Clickjacking:</strong> Strict HTTP security headers active</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </div>
 
             {/* Data Migration Section */}

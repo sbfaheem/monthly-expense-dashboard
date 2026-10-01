@@ -18,6 +18,14 @@ import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2
 // Helper to normalize phone numbers for robust matching (last 10 digits)
 const normalizePhone = (p) => (p || '').replace(/[^0-9]/g, '').slice(-10)
 
+// Security helper: Obfuscate/mask phone numbers in public viewer to prevent scrapers & exploit bots from harvesting contacts
+const maskPhone = (p) => {
+  if (!p) return ''
+  const digits = p.replace(/[^0-9]/g, '')
+  if (digits.length <= 6) return p
+  return `${digits.slice(0, 4)} •••• ${digits.slice(-3)}`
+}
+
 // Helper for relative timestamps
 const timeAgo = (timestamp) => {
   if (!timestamp) return 'Recently'
@@ -1091,7 +1099,7 @@ export default function ViewerDashboard() {
                               {c.name}
                             </p>
                             <p className="text-[10px] text-slate-500 font-mono">
-                              {c.phone} {c.houseNo ? `• ${c.houseNo}` : ''}
+                              {maskPhone(c.phone)} {c.houseNo ? `• ${c.houseNo}` : ''}
                             </p>
                           </div>
                           <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">

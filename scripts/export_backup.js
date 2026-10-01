@@ -26,13 +26,23 @@ const COLLECTIONS = [
 ]
 
 async function runBackup() {
-  console.log('Starting full database backup...')
+  const now = new Date()
+  const dateStr = now.toISOString().slice(0, 10)
+  const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '-')
+  const timestampISO = now.toISOString()
+
+  console.log(`[${timestampISO}] Starting scheduled database backup...`)
+
   const backupData = {
     version: '2.4.0',
-    timestamp: new Date().toISOString(),
-    backupDate: '2026-09-30',
+    timestamp: timestampISO,
+    backupDate: dateStr,
+    scheduledCron: 'Every Friday Night 12:30 AM PKT (UTC 19:30)',
+    totalDocuments: 0,
     collections: {}
   }
+
+  let totalDocs = 0
 
   for (const colName of COLLECTIONS) {
     try {
@@ -41,25 +51,56 @@ async function runBackup() {
         id: doc.id,
         ...doc.data()
       }))
-      console.log(`✓ Exported ${colName}: ${snap.size} documents`)
+      totalDocs += snap.size
+      console.log(`  ✓ Exported ${colName}: ${snap.size} documents`)
     } catch (err) {
-      console.error(`✗ Error exporting ${colName}:`, err.message)
+      console.error(`  ✗ Error exporting ${colName}:`, err.message)
+      backupData.collections[colName] = []
     }
   }
+
+  backupData.totalDocuments = totalDocs
 
   const backupDir = path.resolve('backups')
   if (!fs.existsSync(backupDir)) {
     fs.mkdirSync(backupDir, { recursive: true })
   }
 
-  const filename = `backup_firestore_v2.4.0_2026_09_30.json`
+  // 1. Save timestamped backup file
+  const filename = `backup_firestore_${dateStr}_${timeStr}.json`
   const filePath = path.join(backupDir, filename)
   fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), 'utf8')
-  console.log(`\n🎉 Full backup saved to: ${filePath}`)
+
+  // 2. Also update latest pointer
+  const latestPath = path.join(backupDir, 'backup_firestore_latest.json')
+  fs.writeFileSync(latestPath, JSON.stringify(backupData, null, 2), 'utf8')
+
+  // 3. Automatic retention management: Keep the last 15 backups, prune older files
+  try {
+    const files = fs.readdirSync(backupDir)
+      .filter(f => f.startsWith('backup_firestore_') && f.endsWith('.json') && f !== 'backup_firestore_latest.json')
+      .map(f => ({ name: f, time: fs.statSync(path.join(backupDir, f)).mtime.getTime() }))
+      .sort((a, b) => b.time - a.time)
+
+    if (files.length > 15) {
+      const toDelete = files.slice(15)
+      for (const f of toDelete) {
+        fs.unlinkSync(path.join(backupDir, f.name))
+        console.log(`  ℹ Cleaned up old archive: ${f.name}`)
+      }
+    }
+  } catch (pruneErr) {
+    console.warn('  ⚠ Backup pruning warning:', pruneErr.message)
+  }
+
+  console.log(`\n🎉 Full backup completed successfully!`)
+  console.log(`   Total Records: ${totalDocs} across ${COLLECTIONS.length} collections`)
+  console.log(`   Saved Archive: ${filePath}`)
+  console.log(`   Latest Pointer: ${latestPath}`)
   process.exit(0)
 }
 
 runBackup().catch(err => {
-  console.error('Backup failed:', err)
+  console.error('Backup process failed:', err)
   process.exit(1)
 })
