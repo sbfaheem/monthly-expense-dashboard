@@ -52,12 +52,12 @@ service cloud.firestore {
     // Hackers CANNOT delete, overwrite, or edit visitor logs.
     match /visitor_logs/{logId} {
       allow read: if true;
-      allow create: if request.resource.data.keys().hasAll(['name', 'device', 'timestamp'])
-                    && isValidString(request.resource.data.name, 1, 100)
-                    && isSafeText(request.resource.data.name)
-                    && request.resource.data.device in ['Mobile', 'Desktop']
-                    && request.resource.data.timestamp is number;
-      allow update, delete: if request.auth != null;
+      allow create, update: if request.resource.data.keys().hasAll(['name', 'device', 'timestamp'])
+                            && isValidString(request.resource.data.name, 1, 100)
+                            && isSafeText(request.resource.data.name)
+                            && request.resource.data.device in ['Mobile', 'Desktop']
+                            && request.resource.data.timestamp is number;
+      allow delete: if request.auth != null;
     }
 
     // ─── 4. Resident Feedback & Ratings ──────────────────────────

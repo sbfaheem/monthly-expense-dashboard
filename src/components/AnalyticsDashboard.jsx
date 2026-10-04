@@ -162,44 +162,46 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
     }
   }
 
-  // ─── Deduplicate Rapid Duplicate Logs (within 5 mins) ────────
+  // ─── Deduplicate Rapid & Same-Day Duplicate Logs ────────
   const handleDeduplicateLogs = async () => {
     if (!visitorLogs.length) return
     setIsRefreshing(true)
     try {
-      const sorted = [...visitorLogs].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+      const sorted = [...visitorLogs].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
       const idsToDelete = []
+      const seen = new Set()
 
-      for (let i = 0; i < sorted.length; i++) {
-        const cur = sorted[i]
-        const curPhone = normalizePhone(cur.phone)
-        const curName = (cur.name || '').toLowerCase().trim()
+      for (const log of sorted) {
+        const cleanPhone = normalizePhone(log.phone)
+        const cleanName = (log.name || '').toLowerCase().trim()
+        const residentKey = cleanPhone || cleanName || log.houseAddress || log.houseNo
+        if (!residentKey) continue
 
-        for (let j = i + 1; j < sorted.length; j++) {
-          const next = sorted[j]
-          const nextPhone = normalizePhone(next.phone)
-          const nextName = (next.name || '').toLowerCase().trim()
+        let dateKey = ''
+        if (log.timestamp) {
+          const d = new Date(log.timestamp)
+          dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        } else if (log.dateStr) {
+          dateKey = log.dateStr.split(',')[0].trim()
+        } else {
+          dateKey = 'unknown_date'
+        }
 
-          // Break loop if timestamp difference exceeds 5 minutes
-          if ((next.timestamp || 0) - (cur.timestamp || 0) > 5 * 60 * 1000) break
-
-          const samePerson = (curPhone && nextPhone && curPhone === nextPhone) || (curName && nextName && curName === nextName)
-          const sameDevice = cur.device === next.device
-          const sameMonth = cur.monthViewed === next.monthViewed
-
-          if (samePerson && sameDevice && sameMonth && !idsToDelete.includes(next.id)) {
-            idsToDelete.push(next.id)
-          }
+        const key = `${residentKey}_${dateKey}`
+        if (seen.has(key)) {
+          idsToDelete.push(log.id)
+        } else {
+          seen.add(key)
         }
       }
 
       if (!idsToDelete.length) {
-        if (showNotif) showNotif('No rapid duplicate logs found.')
+        if (showNotif) showNotif('No duplicate visitor logs found across the database.')
         setIsRefreshing(false)
         return
       }
 
-      if (!window.confirm(`Found ${idsToDelete.length} duplicate visitor log entry(s) created within 5 minutes. Remove them now?`)) {
+      if (!window.confirm(`Found ${idsToDelete.length} duplicate visitor log entry(s) from the same day. Remove them now?`)) {
         setIsRefreshing(false)
         return
       }
@@ -230,7 +232,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
       })
 
       const hasVisited = matchingLogs.length > 0
-      const visitCount = matchingLogs.length
+      const visitCount = matchingLogs.reduce((sum, l) => sum + (Number(l.visitCount) || 1), 0)
       const sortedLogs = [...matchingLogs].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
       const latestLog = sortedLogs[0] || null
 
@@ -276,13 +278,13 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
   }, [mappedContacts, filterTab, groupFilter, searchTerm])
 
   // ─── Analytics Summary KPI Computations ───────────────────────
-  const totalVisits = visitorLogs.length
+  const totalVisits = visitorLogs.reduce((acc, l) => acc + (Number(l.visitCount) || 1), 0)
   const visitedCount = mappedContacts.filter(c => c.hasVisited).length
   const unvisitedCount = contacts.length - visitedCount
   const engagementRate = contacts.length > 0 ? Math.round((visitedCount / contacts.length) * 100) : 0
 
-  const mobileVisits = visitorLogs.filter(l => l.device === 'Mobile').length
-  const desktopVisits = visitorLogs.filter(l => l.device === 'Desktop').length
+  const mobileVisits = visitorLogs.reduce((acc, l) => acc + (l.device === 'Mobile' ? (Number(l.visitCount) || 1) : 0), 0)
+  const desktopVisits = visitorLogs.reduce((acc, l) => acc + (l.device !== 'Mobile' ? (Number(l.visitCount) || 1) : 0), 0)
 
   const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000
   const activeLast24h = visitorLogs.filter(l => (l.timestamp || 0) >= oneDayAgo).length
@@ -290,18 +292,18 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
   // WhatsApp Group Breakdown Metrics
   const sector7D1Contacts = mappedContacts.filter(c => (c.group || '').includes('7D'))
   const sector7D1Visited = sector7D1Contacts.filter(c => c.hasVisited).length
-  const sector7D1Logs = visitorLogs.filter(l => (l.group || '').includes('7D')).length
+  const sector7D1Logs = visitorLogs.filter(l => (l.group || '').includes('7D')).reduce((acc, l) => acc + (Number(l.visitCount) || 1), 0)
 
   const hanzallaContacts = mappedContacts.filter(c => !(c.group || '').includes('7D'))
   const hanzallaVisited = hanzallaContacts.filter(c => c.hasVisited).length
-  const hanzallaLogs = visitorLogs.filter(l => !(l.group || '').includes('7D')).length
+  const hanzallaLogs = visitorLogs.filter(l => !(l.group || '').includes('7D')).reduce((acc, l) => acc + (Number(l.visitCount) || 1), 0)
 
   // Month frequency
   const monthCounts = useMemo(() => {
     const counts = {}
     visitorLogs.forEach(l => {
       if (l.monthViewed) {
-        counts[l.monthViewed] = (counts[l.monthViewed] || 0) + 1
+        counts[l.monthViewed] = (counts[l.monthViewed] || 0) + (Number(l.visitCount) || 1)
       }
     })
     return counts
@@ -311,9 +313,9 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
   const mostViewedMonth = mostViewedMonthEntry ? mostViewedMonthEntry[0] : 'None'
   const mostViewedMonthCount = mostViewedMonthEntry ? mostViewedMonthEntry[1] : 0
 
-  // ─── Enriched Visitor Logs (Total Visits) with WhatsApp & Resident Details ───
+  // ─── Enriched Visitor Logs (Consolidated 1 Entry per Resident per Day) ───
   const enrichedVisitorLogs = useMemo(() => {
-    return visitorLogs.map(log => {
+    const rawList = visitorLogs.map(log => {
       const cleanPhone = normalizePhone(log.phone)
       let matchedContact = null
       if (cleanPhone && cleanPhone.length >= 7) {
@@ -368,6 +370,53 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
         matchedContact
       }
     })
+
+    // Group by resident + calendar date so each resident gets exactly ONE consolidated row per day
+    const groupedMap = new Map()
+
+    for (const item of rawList) {
+      let dateKey = ''
+      if (item.timestamp) {
+        const d = new Date(item.timestamp)
+        dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      } else if (item.dateStr) {
+        dateKey = item.dateStr.split(',')[0].trim()
+      } else {
+        dateKey = 'unknown_date'
+      }
+
+      const residentKey = item.displayPhone
+        ? normalizePhone(item.displayPhone)
+        : (item.displayName || item.name || item.houseAddress || item.id || '').toLowerCase().trim()
+
+      const groupKey = `${residentKey}_${dateKey}`
+
+      if (!groupedMap.has(groupKey)) {
+        groupedMap.set(groupKey, {
+          ...item,
+          visitCount: Number(item.visitCount) || 1
+        })
+      } else {
+        const existing = groupedMap.get(groupKey)
+        const isNewer = (item.timestamp || 0) >= (existing.timestamp || 0)
+        const combinedCount = (existing.visitCount || 1) + (Number(item.visitCount) || 1)
+
+        groupedMap.set(groupKey, {
+          ...(isNewer ? item : existing),
+          visitCount: combinedCount,
+          timestamp: Math.max(existing.timestamp || 0, item.timestamp || 0),
+          dateStr: isNewer ? item.dateStr : existing.dateStr,
+          monthViewed: isNewer ? item.monthViewed : existing.monthViewed,
+          device: isNewer ? item.device : existing.device,
+          displayName: existing.displayName || item.displayName,
+          displayPhone: existing.displayPhone || item.displayPhone,
+          displayAddress: existing.displayAddress || item.displayAddress,
+          displayGroup: existing.displayGroup || item.displayGroup
+        })
+      }
+    }
+
+    return Array.from(groupedMap.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
   }, [visitorLogs, contacts])
 
   // ─── Filtered Total Visits ────────────────────────────────────
@@ -399,7 +448,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
 
   // ─── Actions for Total Visits Log ─────────────────────────────
   const exportVisitsCSV = () => {
-    const headers = ['Resident / Profile Name', 'WhatsApp Phone', 'House Address', 'WhatsApp Group', 'Statement Viewed', 'Device', 'Date & Time']
+    const headers = ['Resident / Profile Name', 'WhatsApp Phone', 'House Address', 'WhatsApp Group', 'Statement Viewed', 'Device', 'Daily Visits Count', 'Latest Visited At']
     const rows = enrichedVisitorLogs.map(v => [
       `"${v.displayName || ''}"`,
       `"${v.displayPhone || ''}"`,
@@ -407,6 +456,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
       `"${v.displayGroup || ''}"`,
       `"${v.monthViewed || ''}"`,
       `"${v.device || ''}"`,
+      v.visitCount || 1,
       `"${v.dateStr || ''}"`
     ])
 
@@ -542,7 +592,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
           <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
             analyticsView === 'tracking' ? 'bg-primary/10 text-primary' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
           }`}>
-            {visitorLogs.length}
+            {enrichedVisitorLogs.length}
           </span>
         </button>
 
@@ -1178,10 +1228,20 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
 
                         {/* Visited At */}
                         <td className="p-4 text-slate-500">
-                          <p className="font-bold text-slate-700 dark:text-slate-300">
-                            {timeAgo(v.timestamp)}
-                          </p>
-                          <p className="text-[10px] text-slate-400">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-bold text-slate-700 dark:text-slate-300">
+                              {timeAgo(v.timestamp)}
+                            </p>
+                            {v.visitCount > 1 && (
+                              <span 
+                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800"
+                                title={`Visited ${v.visitCount} times on this date`}
+                              >
+                                {v.visitCount} visits
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-0.5">
                             {v.dateStr}
                           </p>
                         </td>

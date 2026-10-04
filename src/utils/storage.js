@@ -1,5 +1,5 @@
 import { db } from './firebase'
-import { collection, doc, getDoc, getDocs, query, orderBy, limit, setDoc, addDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, query, orderBy, limit, setDoc, addDoc, updateDoc, deleteDoc, writeBatch, increment } from 'firebase/firestore'
 import { calculateMonthlyFinances, calculateMultiMonthContinuity, getMonthSortKey } from './finance'
 export { calculateMonthlyFinances, calculateMultiMonthContinuity, getMonthSortKey }
 
@@ -564,17 +564,41 @@ export const logVisitor = async (visitorData = {}) => {
     const phone = sanitizeInput(visitorData.phone || '', 25)
     const month = sanitizeInput(visitorData.monthViewed || '', 30)
     const device = visitorData.device || (typeof window !== 'undefined' && window.innerWidth < 768 ? 'Mobile' : 'Desktop')
-    const lockKey = `${phone || name}_${month}_${device}`
     const now = Date.now()
 
-    // 1. In-memory check: block calls within 3 minutes for identical resident, month, and device
-    const lastLogged = recentLogsLock.get(lockKey)
-    if (lastLogged && (now - lastLogged < 3 * 60 * 1000)) {
+    // Normalize phone or clean name for stable resident key
+    const cleanPhone = phone ? phone.replace(/[^0-9]/g, '').slice(-10) : ''
+    const cleanName = (name || 'resident').toLowerCase().replace(/[^a-z0-9]/g, '_')
+    const residentKey = cleanPhone || cleanName
+
+    // Stable calendar date key (local date: YYYY-MM-DD)
+    const nowDate = new Date(now)
+    const year = nowDate.getFullYear()
+    const m = String(nowDate.getMonth() + 1).padStart(2, '0')
+    const d = String(nowDate.getDate()).padStart(2, '0')
+    const dateKey = `${year}-${m}-${d}`
+
+    // 1. In-memory check: debounce identical visits within 15 seconds to prevent component re-render spam
+    const debounceKey = `${residentKey}_${month}`
+    const lastLogged = recentLogsLock.get(debounceKey)
+    if (lastLogged && (now - lastLogged < 15000)) {
       return null
     }
-    recentLogsLock.set(lockKey, now)
+    recentLogsLock.set(debounceKey, now)
 
-    const col = collection(db, 'visitor_logs')
+    // Single Document ID per resident per calendar day: 'visit_<residentKey>_<YYYY-MM-DD>'
+    const docId = `visit_${residentKey}_${dateKey}`
+    const docRef = doc(db, 'visitor_logs', docId)
+
+    const dateStr = nowDate.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    })
+
     const docData = {
       name,
       phone,
@@ -586,17 +610,15 @@ export const logVisitor = async (visitorData = {}) => {
       monthViewed: month,
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
       timestamp: now,
-      dateStr: new Date(now).toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      })
+      dateStr,
+      visitDate: dateKey,
+      lastVisitedAt: now,
+      visitCount: increment(1)
     }
-    await addDoc(col, docData)
-    return docData
+
+    // setDoc with merge:true creates on first visit of day, and updates 'timestamp', 'dateStr', 'monthViewed', 'device', 'visitCount' for multiple visits on the same day!
+    await setDoc(docRef, docData, { merge: true })
+    return { id: docId, ...docData }
   } catch (err) {
     console.warn("Could not log visitor event to Firestore:", err)
     return null

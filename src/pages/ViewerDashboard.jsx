@@ -194,26 +194,13 @@ export default function ViewerDashboard() {
     if (loading || !selectedMonth || !resident) return
 
     const residentKey = normalizePhone(resident.phone) || (resident.name || 'resident').toLowerCase().replace(/\s+/g, '_')
-    const sessionKey = `visit_logged_${residentKey}_${currentMonthKey}`
-    const timeKey = `last_visit_time_${residentKey}_${currentMonthKey}`
     const now = Date.now()
 
-    // 1. Session-level lock: Skip logging if already logged during this active browsing session for this statement month
-    if (sessionStorage.getItem(sessionKey)) {
+    // Debounce within 30 seconds for active viewing session to avoid redundant updates
+    if (lastLoggedRef.current[residentKey] && (now - lastLoggedRef.current[residentKey] < 30000)) {
       return
     }
-
-    // 2. Inactivity threshold (30 mins): Return visits after 30+ mins count as a new session
-    const lastVisit = Number(localStorage.getItem(timeKey)) || 0
-    if (lastVisit && (now - lastVisit < 30 * 60 * 1000)) {
-      sessionStorage.setItem(sessionKey, 'true')
-      return
-    }
-
-    // Set locks synchronously to prevent race conditions or double-fires
-    sessionStorage.setItem(sessionKey, 'true')
-    localStorage.setItem(timeKey, String(now))
-    lastLoggedRef.current[`${residentKey}_${currentMonthKey}`] = now
+    lastLoggedRef.current[residentKey] = now
 
     const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)
     const logPayload = {
