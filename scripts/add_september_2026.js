@@ -61,7 +61,7 @@ const SEPTEMBER_EXPENSES = [
     description: 'Additional sanitation compensation'
   },
   {
-    name: 'New Blub',
+    name: 'New Bulb',
     amount: 2200,
     category: 'Maintenance',
     date: '2026-09-15',
@@ -69,7 +69,7 @@ const SEPTEMBER_EXPENSES = [
     description: 'New street light bulbs purchased'
   },
   {
-    name: 'Blub Repair',
+    name: 'Bulb Repair',
     amount: 6500,
     category: 'Maintenance',
     date: '2026-09-18',

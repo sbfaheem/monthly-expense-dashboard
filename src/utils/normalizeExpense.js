@@ -6,9 +6,12 @@
 
 export const ITEM_MAP = {
   // Bulb / Lighting
+  "new blub": "New Bulb",
+  "new bulb": "New Bulb",
   "blub repair": "Bulb Repair",
   "bulb repair": "Bulb Repair",
-  "bulb": "Bulb Repair",
+  "blub": "Bulb",
+  "bulb": "Bulb",
   
   // Uniforms
   "uniform": "Uniforms",
@@ -91,7 +94,8 @@ export const CATEGORY_MAPPINGS = {
   'Electrical & Infrastructure': [
     'Electrician - Extra',
     'Electrical Accessories',
-    'Bulb Repair'
+    'Bulb Repair',
+    'New Bulb'
   ],
   'Supplies & Hardware': [
     'Uniforms',
