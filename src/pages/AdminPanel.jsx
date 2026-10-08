@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ListChecks, Camera, FileBarChart2, Settings, LogOut,
   Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff, Sparkles, MessageSquare, BarChart3, Star, Share2,
-  ShieldCheck, Database, Download, Calendar, Lock
+  ShieldCheck, Database, Download, Calendar, Lock, Menu, X
 } from 'lucide-react'
 import {
   loadData, addExpense, updateExpense, deleteExpense,
@@ -65,6 +65,7 @@ export default function AdminPanel() {
   const [showNewPass, setShowNewPass] = useState(false)
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [showWhatsAppSnapshotModal, setShowWhatsAppSnapshotModal] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => { setTempCctv(null) }, [selectedMonth, selectedYear])
 
@@ -346,7 +347,7 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background-light">
+    <div className="flex flex-col lg:flex-row h-screen overflow-hidden bg-background-light">
       
       {notification && (
         <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg text-white font-bold transition-all ${notification.type === 'error' ? 'bg-red-500' : 'bg-primary'}`}>
@@ -354,8 +355,156 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* Sidebar */}
-      <aside className="w-64 bg-white dark:bg-slate-900 border-r border-primary/10 flex flex-col">
+      {/* Mobile Top App Bar (sticky, visible only on screens < lg) */}
+      <header className="lg:hidden sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-primary/10 px-3.5 py-2.5 flex items-center justify-between shadow-xs shrink-0">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="p-2 -ml-1 text-slate-700 dark:text-slate-200 hover:text-primary hover:bg-primary/5 rounded-xl transition-colors"
+            aria-label="Open Navigation Menu"
+          >
+            <Menu size={22} />
+          </button>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-primary text-[20px]">shield_person</span>
+              <span className="font-extrabold text-base text-slate-900 dark:text-slate-100">Admin Panel</span>
+            </div>
+            <p className="text-[10px] font-bold text-primary uppercase tracking-wider">
+              {navItems.find(i => i.id === activeTab)?.label || 'Dashboard'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <a
+            href="/view"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:text-primary transition-colors"
+            title="Switch to Viewer Mode"
+          >
+            <Eye size={14} />
+            <span className="hidden sm:inline">Viewer</span>
+          </a>
+          <button
+            onClick={handleLogout}
+            className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+            title="Logout"
+            aria-label="Logout"
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile Quick-Switch Tab Strip (horizontal swipeable pills) */}
+      <div className="lg:hidden bg-slate-50 dark:bg-slate-900/90 border-b border-primary/10 px-2 py-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          {navItems.map(item => {
+            const isActive = activeTab === item.id
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id)
+                  setMobileMenuOpen(false)
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
+                  isActive
+                    ? 'bg-primary text-white shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700 hover:text-primary'
+                }`}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Mobile Slide-Out Drawer & Backdrop */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          {/* Drawer Panel */}
+          <div className="relative w-72 max-w-[82vw] bg-white dark:bg-slate-900 h-full flex flex-col shadow-2xl z-10">
+            {/* Drawer Header */}
+            <div className="p-4 sm:p-5 border-b border-primary/10 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="size-9 rounded-xl bg-primary text-white flex items-center justify-center shadow-xs">
+                  <span className="material-symbols-outlined text-[20px]">shield_person</span>
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">Admin Panel</h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Sector 7D/1 Portal</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                aria-label="Close Navigation Menu"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Drawer Navigation List */}
+            <nav className="p-3 flex-1 overflow-y-auto space-y-1">
+              {navItems.map(item => {
+                const isActive = activeTab === item.id
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveTab(item.id)
+                      setMobileMenuOpen(false)
+                    }}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-bold text-sm transition-all ${
+                      isActive
+                        ? 'bg-primary text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-primary/5 hover:text-primary'
+                    }`}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </button>
+                )
+              })}
+            </nav>
+
+            {/* Drawer Footer */}
+            <div className="p-4 border-t border-primary/10 space-y-2 bg-slate-50/50 dark:bg-slate-850">
+              <a
+                href="/view"
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-colors border border-slate-200/80 dark:border-slate-700"
+              >
+                <Eye size={18} />
+                <span>Viewer Mode</span>
+              </a>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+              >
+                <LogOut size={18} />
+                <span>Logout</span>
+              </button>
+              <div className="pt-2 text-center text-[10px] text-slate-400 font-medium">
+                Sector 7D/1 • {APP_VERSION} ({APP_RELEASE_DATE})
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop Sidebar (visible on screens >= lg) */}
+      <aside className="hidden lg:flex w-64 bg-white dark:bg-slate-900 border-r border-primary/10 flex-col shrink-0">
         <div className="p-6 border-b border-primary/10">
           <h2 className="text-2xl font-extrabold text-primary flex items-center gap-2">
             <span className="material-symbols-outlined">shield_person</span> Admin
@@ -387,7 +536,7 @@ export default function AdminPanel() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto w-full p-4 lg:p-8 space-y-8">
+      <main className="flex-1 overflow-y-auto w-full p-3 sm:p-5 lg:p-8 space-y-5 sm:space-y-6 lg:space-y-8 min-w-0">
         {/* Render the Header component matching viewer dashboard */}
         <Header
           selectedMonth={selectedMonth}
@@ -464,145 +613,149 @@ export default function AdminPanel() {
 
         {activeTab === 'records' && (
           <div className="space-y-6">
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-primary/10">
-               <h3 className="text-lg font-bold text-slate-800 mb-4">{editingRecordId ? 'Edit Summary' : 'Add New Month'}</h3>
+            <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-primary/10">
+               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">{editingRecordId ? 'Edit Summary' : 'Add New Month'}</h3>
                <form onSubmit={editingRecordId ? handleEditRecordSave : handleAddMonthlyRecord} className="space-y-4">
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                    <div>
                      <label className="block text-sm font-bold text-slate-500 mb-1">Month (e.g. March 2026)</label>
-                     <input className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none" name="month" value={recordForm.month} onChange={handleRecordFormChange} required />
+                     <input className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-primary outline-none" name="month" value={recordForm.month} onChange={handleRecordFormChange} required />
                    </div>
                    <div>
                      <label className="block text-sm font-bold text-slate-500 mb-1">Opening Balance</label>
-                     <input type="number" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none" name="openingBalance" value={recordForm.openingBalance} onChange={handleRecordFormChange} required />
+                     <input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-primary outline-none" name="openingBalance" value={recordForm.openingBalance} onChange={handleRecordFormChange} required />
                    </div>
                    <div>
                      <label className="block text-sm font-bold text-slate-500 mb-1">Monthly Collection</label>
-                     <input type="number" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none" name="monthlyCollection" value={recordForm.monthlyCollection} onChange={handleRecordFormChange} required />
+                     <input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-primary outline-none" name="monthlyCollection" value={recordForm.monthlyCollection} onChange={handleRecordFormChange} required />
                    </div>
-                   <div className="flex items-center gap-2 mt-6">
+                   <div className="flex items-center gap-2 mt-2 sm:mt-6">
                       <input type="checkbox" name="isManualSaving" checked={recordForm.isManualSaving} onChange={handleRecordFormChange} className="w-5 h-5 text-primary rounded" />
-                      <label className="font-bold text-slate-700">Manual Monthly Saving?</label>
+                      <label className="font-bold text-slate-700 dark:text-slate-300">Manual Monthly Saving?</label>
                    </div>
                    {recordForm.isManualSaving && (
                      <div className="md:col-span-2">
                        <label className="block text-sm font-bold text-slate-500 mb-1">Manual Saving Amount</label>
-                       <input type="number" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg" name="manualSaving" value={recordForm.manualSaving} onChange={handleRecordFormChange} required />
+                       <input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm" name="manualSaving" value={recordForm.manualSaving} onChange={handleRecordFormChange} required />
                      </div>
                    )}
                    <div className="md:col-span-2">
                      <label className="block text-sm font-bold text-slate-500 mb-1">Month Note (Urdu / Optional)</label>
-                     <textarea className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none text-right font-urdu" dir="rtl" name="note" value={recordForm.note || ''} onChange={handleRecordFormChange} rows={2} placeholder="ادائیگی سے متعلق نوٹ یہاں لکھیں۔۔۔" />
+                     <textarea className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-primary outline-none text-right font-urdu" dir="rtl" name="note" value={recordForm.note || ''} onChange={handleRecordFormChange} rows={2} placeholder="ادائیگی سے متعلق نوٹ یہاں لکھیں۔۔۔" />
                    </div>
                  </div>
-                 <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-100">
-                    <button type="submit" className="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:bg-primary/90 flex items-center gap-2">
+                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                    <button type="submit" className="bg-primary text-white px-6 py-2.5 rounded-xl font-bold hover:bg-primary/90 flex items-center justify-center gap-2 w-full sm:w-auto">
                       {editingRecordId ? <><Check size={16}/> Save</> : <><Plus size={16}/> Add</>}
                     </button>
-                    {editingRecordId && <button type="button" onClick={() => setEditingRecordId(null)} className="px-6 py-2 bg-slate-100 rounded-lg font-bold text-slate-600">Cancel</button>}
+                    {editingRecordId && <button type="button" onClick={() => setEditingRecordId(null)} className="px-6 py-2.5 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold text-slate-600 dark:text-slate-300 w-full sm:w-auto text-center">Cancel</button>}
                  </div>
                </form>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-primary/10 overflow-hidden">
-               <table className="w-full text-left">
-                  <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-bold">
-                    <tr><th className="p-4">Month</th><th className="p-4">Opening</th><th className="p-4">Collection</th><th className="p-4">Sav</th><th className="p-4">Total</th><th className="p-4 text-center">Act</th></tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                     {data.monthlyRecords.map(rec => {
-                        const recTotals = calculateTotals(data.expenses, data.settings, data.monthlyRecords, rec.month)
-                        return (
-                          <tr key={rec.id} className="hover:bg-slate-50">
-                            <td className="p-4 font-bold">{rec.month}</td>
-                            <td className="p-4 text-slate-600">{rec.openingBalance.toLocaleString()}</td>
-                            <td className="p-4 text-slate-600">{rec.monthlyCollection.toLocaleString()}</td>
-                            <td className="p-4 text-green-600 font-bold">{recTotals.saving.toLocaleString()}</td>
-                            <td className="p-4 text-primary font-bold">{recTotals.totalSaving.toLocaleString()}</td>
-                            <td className="p-4 flex justify-center gap-2">
-                               <button className="p-2 bg-blue-50 text-blue-600 rounded" onClick={() => handleEditRecordStart(rec)}><Pencil size={14}/></button>
-                               <button className="p-2 bg-red-50 text-red-600 rounded" onClick={() => handleDeleteRecord(rec.id)}><Trash2 size={14}/></button>
-                            </td>
-                          </tr>
-                        )
-                     })}
-                  </tbody>
-               </table>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-primary/10 overflow-hidden">
+               <div className="overflow-x-auto">
+                 <table className="w-full text-left min-w-[560px]">
+                    <thead className="bg-slate-50 dark:bg-slate-750 text-slate-500 text-xs uppercase font-bold">
+                      <tr><th className="p-4">Month</th><th className="p-4">Opening</th><th className="p-4">Collection</th><th className="p-4">Sav</th><th className="p-4">Total</th><th className="p-4 text-center">Act</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                       {data.monthlyRecords.map(rec => {
+                          const recTotals = calculateTotals(data.expenses, data.settings, data.monthlyRecords, rec.month)
+                          return (
+                            <tr key={rec.id} className="hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors">
+                              <td className="p-4 font-bold text-slate-800 dark:text-slate-200">{rec.month}</td>
+                              <td className="p-4 text-slate-600 dark:text-slate-300">{rec.openingBalance.toLocaleString()}</td>
+                              <td className="p-4 text-slate-600 dark:text-slate-300">{rec.monthlyCollection.toLocaleString()}</td>
+                              <td className="p-4 text-green-600 font-bold">{recTotals.saving.toLocaleString()}</td>
+                              <td className="p-4 text-primary font-bold">{recTotals.totalSaving.toLocaleString()}</td>
+                              <td className="p-4 flex justify-center gap-2">
+                                 <button className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100" onClick={() => handleEditRecordStart(rec)}><Pencil size={14}/></button>
+                                 <button className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100" onClick={() => handleDeleteRecord(rec.id)}><Trash2 size={14}/></button>
+                              </td>
+                            </tr>
+                          )
+                       })}
+                    </tbody>
+                 </table>
+               </div>
             </div>
           </div>
         )}
 
         {activeTab === 'expenses' && (
           <div className="space-y-6">
-             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-primary/10">
-               <h3 className="text-lg font-bold text-slate-800 mb-4">{editingId ? 'Edit Expense' : 'Add New Expense'}</h3>
+             <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-primary/10">
+               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">{editingId ? 'Edit Expense' : 'Add New Expense'}</h3>
                <form onSubmit={editingId ? handleEditSave : handleAddExpense} className="space-y-4">
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                    <div>
                      <label className="block text-sm font-bold text-slate-500 mb-1">Date</label>
-                     <input type="date" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary" name="date" value={form.date} onChange={handleFormChange} required />
+                     <input type="date" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm outline-none focus:ring-2 focus:ring-primary" name="date" value={form.date} onChange={handleFormChange} required />
                    </div>
                    <div>
                      <label className="block text-sm font-bold text-slate-500 mb-1">Category</label>
-                     <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none" name="category" value={form.category} onChange={handleFormChange}>
+                     <select className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm outline-none" name="category" value={form.category} onChange={handleFormChange}>
                        {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                      </select>
                    </div>
                    <div>
                      <label className="block text-sm font-bold text-slate-500 mb-1">Name</label>
-                     <input className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary" name="name" value={form.name} onChange={handleFormChange} required />
+                     <input className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm outline-none focus:ring-2 focus:ring-primary" name="name" value={form.name} onChange={handleFormChange} required />
                    </div>
                    <div>
                      <label className="block text-sm font-bold text-slate-500 mb-1">Amount</label>
-                     <input type="number" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-primary" name="amount" value={form.amount} onChange={handleFormChange} required />
+                     <input type="number" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm outline-none focus:ring-2 focus:ring-primary" name="amount" value={form.amount} onChange={handleFormChange} required />
                    </div>
                    <div className="md:col-span-2">
                      <label className="block text-sm font-bold text-slate-500 mb-1">Description</label>
-                     <textarea className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none" name="description" value={form.description} onChange={handleFormChange} rows={2} />
+                     <textarea className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm outline-none" name="description" value={form.description} onChange={handleFormChange} rows={2} />
                    </div>
                  </div>
-                 <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-100">
-                    <button type="submit" className="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:bg-primary/90 flex items-center gap-2">
+                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                    <button type="submit" className="bg-primary text-white px-6 py-2.5 rounded-xl font-bold hover:bg-primary/90 flex items-center justify-center gap-2 w-full sm:w-auto">
                       {editingId ? <><Check size={16}/> Save</> : <><Plus size={16}/> Add</>}
                     </button>
-                    {editingId && <button type="button" onClick={() => { setEditingId(null); setForm(emptyForm) }} className="px-6 py-2 bg-slate-100 rounded-lg font-bold text-slate-600">Cancel</button>}
+                    {editingId && <button type="button" onClick={() => { setEditingId(null); setForm(emptyForm) }} className="px-6 py-2.5 bg-slate-100 dark:bg-slate-700 rounded-xl font-bold text-slate-600 dark:text-slate-300 w-full sm:w-auto text-center">Cancel</button>}
                  </div>
                </form>
             </div>
             
-            <div className="bg-white rounded-2xl shadow-sm border border-primary/10 overflow-hidden">
-               <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                  <h4 className="font-bold text-slate-700">All Expenses in {currentMonthKey}</h4>
-                  <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-1 rounded">{monthlyExpenses.length} Found</span>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-primary/10 overflow-hidden">
+               <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-750 flex justify-between items-center">
+                  <h4 className="font-bold text-slate-700 dark:text-slate-200 text-sm sm:text-base">All Expenses in {currentMonthKey}</h4>
+                  <span className="text-xs font-bold bg-primary/10 text-primary px-2.5 py-1 rounded-full">{monthlyExpenses.length} Found</span>
                </div>
-               <table className="w-full text-left">
-                  <thead className="text-xs uppercase font-bold text-slate-400 border-b border-primary/10">
-                    <tr><th className="p-4">Date</th><th className="p-4">Category</th><th className="p-4">Name</th><th className="p-4">Amount</th><th className="p-4 text-center">Act</th></tr>
-                  </thead>
-                  <tbody className="divide-y divide-primary/5">
-                     {monthlyExpenses.map(exp => (
-                        <tr key={exp.id} className="hover:bg-slate-50 transition-colors">
-                           <td className="p-4 text-sm font-bold text-slate-600">{exp.date}</td>
-                           <td className="p-4"><span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded font-bold">{exp.category}</span></td>
-                           <td className="p-4 text-sm font-medium">{exp.name}</td>
-                           <td className="p-4 text-sm font-bold text-red-500">{Number(exp.amount).toLocaleString()}</td>
-                           <td className="p-4 flex justify-center gap-2">
-                               <button className="p-2 bg-blue-50 text-blue-600 rounded" onClick={() => handleEditStart(exp)}><Pencil size={14}/></button>
-                               <button className="p-2 bg-red-50 text-red-600 rounded" onClick={() => handleDelete(exp.id)}><Trash2 size={14}/></button>
-                            </td>
-                        </tr>
-                     ))}
-                  </tbody>
-               </table>
+               <div className="overflow-x-auto">
+                 <table className="w-full text-left min-w-[540px]">
+                    <thead className="text-xs uppercase font-bold text-slate-400 border-b border-primary/10">
+                      <tr><th className="p-4">Date</th><th className="p-4">Category</th><th className="p-4">Name</th><th className="p-4">Amount</th><th className="p-4 text-center">Act</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-primary/5">
+                       {monthlyExpenses.map(exp => (
+                          <tr key={exp.id} className="hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors">
+                             <td className="p-4 text-sm font-bold text-slate-600 dark:text-slate-300">{exp.date}</td>
+                             <td className="p-4"><span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded font-bold">{exp.category}</span></td>
+                             <td className="p-4 text-sm font-medium text-slate-800 dark:text-slate-200">{exp.name}</td>
+                             <td className="p-4 text-sm font-bold text-red-500">{Number(exp.amount).toLocaleString()}</td>
+                             <td className="p-4 flex justify-center gap-2">
+                                 <button className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100" onClick={() => handleEditStart(exp)}><Pencil size={14}/></button>
+                                 <button className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100" onClick={() => handleDelete(exp.id)}><Trash2 size={14}/></button>
+                              </td>
+                          </tr>
+                       ))}
+                    </tbody>
+                 </table>
+               </div>
             </div>
           </div>
         )}
 
         {activeTab === 'capital' && (
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-primary/10 space-y-6">
-            <h3 className="text-lg font-bold text-slate-800">Capital Expenditure (CCTV)</h3>
-            <div className="flex bg-slate-50 p-4 rounded-xl border border-slate-200 justify-between items-center">
-               <span className="font-bold text-slate-700">Current Saved Config</span>
+          <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-primary/10 space-y-6">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Capital Expenditure (CCTV)</h3>
+            <div className="flex flex-col sm:flex-row bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 justify-between sm:items-center gap-2">
+               <span className="font-bold text-slate-700 dark:text-slate-300">Current Saved Config</span>
                <span className="text-xl font-extrabold text-primary">{Number(totals.record.cctvExpense).toLocaleString()} {data.settings.currency}</span>
             </div>
             
@@ -620,13 +773,13 @@ export default function AdminPanel() {
                      }}
                      className="w-5 h-5 text-primary rounded"
                   />
-                  <label className="font-bold text-slate-700">Show Capital in Viewer for this month?</label>
+                  <label className="font-bold text-slate-700 dark:text-slate-300">Show Capital in Viewer for this month?</label>
               </div>
               <div>
                  <label className="block text-sm font-bold text-slate-500 mb-1">Set Active Capital Amount</label>
-                 <div className="flex gap-2">
-                    <input type="number" disabled={totals.record.isNoData} value={tempCctv !== null ? tempCctv : totals.record.cctvExpense} onChange={(e) => setTempCctv(e.target.value)} className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-lg outline-none" />
-                    <button disabled={totals.record.isNoData} onClick={async () => { if(totals.record.isNoData) return; const val = tempCctv !== null ? tempCctv : totals.record.cctvExpense; const newData = await updateMonthlyRecord({ ...totals.record, cctvExpense: Number(val) }); setData(newData); showNotif('Updated Capital'); setTempCctv(null); }} className="bg-primary text-white px-6 py-2 rounded-lg font-bold"><Save size={16}/></button>
+                 <div className="flex flex-col sm:flex-row gap-2">
+                    <input type="number" disabled={totals.record.isNoData} value={tempCctv !== null ? tempCctv : totals.record.cctvExpense} onChange={(e) => setTempCctv(e.target.value)} className="flex-1 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm outline-none" />
+                    <button disabled={totals.record.isNoData} onClick={async () => { if(totals.record.isNoData) return; const val = tempCctv !== null ? tempCctv : totals.record.cctvExpense; const newData = await updateMonthlyRecord({ ...totals.record, cctvExpense: Number(val) }); setData(newData); showNotif('Updated Capital'); setTempCctv(null); }} className="bg-primary text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 w-full sm:w-auto"><Save size={16}/> Save</button>
                  </div>
               </div>
             </div>
@@ -636,7 +789,7 @@ export default function AdminPanel() {
 
         {activeTab === 'reports' && (
           <div className="space-y-6">
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-primary/10">
+            <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-primary/10">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-primary/10 pb-6 mb-6">
                  <div>
                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -644,24 +797,24 @@ export default function AdminPanel() {
                    </h3>
                    <p className="text-sm text-slate-500 font-medium mt-1">Generated statement for {currentMonthKey}</p>
                  </div>
-                 <div className="flex gap-2 sm:gap-3 flex-wrap">
+                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
                    <button
                      onClick={() => setShowWhatsAppSnapshotModal(true)}
-                     className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold transition-all shadow-sm shadow-emerald-600/20 active:scale-95 text-xs sm:text-sm"
+                     className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm shadow-emerald-600/20 active:scale-95 text-xs sm:text-sm w-full sm:w-auto"
                    >
                      <Share2 size={16} /> Download WhatsApp Summary
                    </button>
-                   <button onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)} className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl font-bold transition-colors text-xs sm:text-sm">
+                   <button onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)} className="flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 px-4 py-2.5 rounded-xl font-bold transition-colors text-xs sm:text-sm w-full sm:w-auto">
                      <span className="material-symbols-outlined text-[20px]">download</span> Export CSV
                    </button>
-                   <button onClick={printReport} className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-xl font-bold transition-colors shadow-sm shadow-primary/30 text-xs sm:text-sm">
+                   <button onClick={printReport} className="flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2.5 rounded-xl font-bold transition-colors shadow-sm shadow-primary/30 text-xs sm:text-sm w-full sm:w-auto">
                      <span className="material-symbols-outlined text-[20px]">print</span> Print Report
                    </button>
                  </div>
               </div>
 
               {/* Pre-Report Summary Block */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-8">
                 <div className="bg-primary/5 p-4 rounded-xl border border-primary/10">
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">Total Expenses</span>
                   <strong className="text-xl text-slate-800 dark:text-slate-100">{Number(totals.totalExpense).toLocaleString()} {data.settings.currency}</strong>
@@ -692,7 +845,7 @@ export default function AdminPanel() {
 
         {/* Water Supply Tracker Tab */}
         {activeTab === 'water' && (
-           <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm space-y-6">
+           <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 lg:p-8 rounded-2xl border border-primary/10 shadow-sm space-y-6">
              <div>
                <h3 className="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2">
                  <Droplet size={24} className="text-blue-500"/> Water Supply Tracking
@@ -868,24 +1021,24 @@ export default function AdminPanel() {
         {activeTab === 'settings' && (
           <div className="space-y-6">
             {/* Change Password Section */}
-            <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm space-y-5">
+            <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 lg:p-8 rounded-2xl border border-primary/10 shadow-sm space-y-5">
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
                   <KeyRound size={20} className="text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800">Change Admin Password</h3>
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Change Admin Password</h3>
                   <p className="text-sm text-slate-500">Update your admin panel login password securely.</p>
                 </div>
               </div>
               <form onSubmit={handleChangePassword} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-bold text-slate-500 mb-1">Current Password</label>
                     <div className="relative">
                       <input
                         type={showCurrentPass ? 'text' : 'password'}
-                        className="w-full p-3 pr-10 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                        className="w-full p-3 pr-10 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-primary outline-none"
                         value={passwordForm.current}
                         onChange={e => setPasswordForm(f => ({ ...f, current: e.target.value }))}
                         placeholder="Current password"
@@ -901,7 +1054,7 @@ export default function AdminPanel() {
                     <div className="relative">
                       <input
                         type={showNewPass ? 'text' : 'password'}
-                        className="w-full p-3 pr-10 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                        className="w-full p-3 pr-10 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-primary outline-none"
                         value={passwordForm.newPass}
                         onChange={e => setPasswordForm(f => ({ ...f, newPass: e.target.value }))}
                         placeholder="Min. 6 characters"
@@ -913,11 +1066,11 @@ export default function AdminPanel() {
                       </button>
                     </div>
                   </div>
-                  <div>
+                  <div className="sm:col-span-2 lg:col-span-1">
                     <label className="block text-sm font-bold text-slate-500 mb-1">Confirm New Password</label>
                     <input
                       type="password"
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                      className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-base sm:text-sm focus:ring-2 focus:ring-primary outline-none"
                       value={passwordForm.confirm}
                       onChange={e => setPasswordForm(f => ({ ...f, confirm: e.target.value }))}
                       placeholder="Re-enter new password"
@@ -929,7 +1082,7 @@ export default function AdminPanel() {
                   <button
                     type="submit"
                     disabled={passwordSaving}
-                    className="bg-primary text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50 transition-all"
+                    className="bg-primary text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-primary/90 disabled:opacity-50 transition-all w-full sm:w-auto"
                   >
                     {passwordSaving ? (
                       <><div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving...</>
@@ -942,14 +1095,14 @@ export default function AdminPanel() {
             </div>
 
             {/* Database Backup & Security Center */}
-            <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm space-y-6">
+            <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 lg:p-8 rounded-2xl border border-primary/10 shadow-sm space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="size-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200 shadow-sm">
+                  <div className="size-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center border border-emerald-200 dark:border-emerald-800 shadow-sm shrink-0">
                     <ShieldCheck size={24} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-slate-800">Database Backup &amp; Security Center</h3>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Database Backup &amp; Security Center</h3>
                     <p className="text-sm text-slate-500">Automated weekly schedule &amp; database anti-exploit protections.</p>
                   </div>
                 </div>
@@ -957,7 +1110,7 @@ export default function AdminPanel() {
                 <button
                   type="button"
                   onClick={handleDownloadBackup}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-sm active:scale-95 whitespace-nowrap"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-sm active:scale-95 whitespace-nowrap w-full sm:w-auto"
                   title="Download instant complete JSON snapshot"
                 >
                   <Download size={15} />
@@ -968,16 +1121,16 @@ export default function AdminPanel() {
               {/* Status Badges & Schedule Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
                 {/* Schedule Card */}
-                <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/70 space-y-2">
+                <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/50 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                       <Calendar size={14} className="text-primary" /> Automated Backup Schedule
                     </span>
-                    <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                       Active
                     </span>
                   </div>
-                  <p className="text-sm font-extrabold text-slate-800">
+                  <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200">
                     Every Friday Night at 12:30 AM PKT
                   </p>
                   <p className="text-xs text-slate-500 leading-relaxed">
@@ -986,16 +1139,16 @@ export default function AdminPanel() {
                 </div>
 
                 {/* Database Security Level Card */}
-                <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/70 space-y-2">
+                <div className="p-4 rounded-xl border border-slate-200/80 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/50 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                       <Lock size={14} className="text-emerald-600" /> Database Exploit Protection
                     </span>
-                    <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                    <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                       Hardened
                     </span>
                   </div>
-                  <ul className="text-xs text-slate-600 space-y-1">
+                  <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
                     <li className="flex items-center gap-1.5">
                       <Check size={13} className="text-emerald-600" />
                       <span><strong>Firestore Rules:</strong> Public write/delete blocked on all collections</span>
@@ -1014,18 +1167,18 @@ export default function AdminPanel() {
             </div>
 
             {/* Data Migration Section */}
-            <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm space-y-6">
+            <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 lg:p-8 rounded-2xl border border-primary/10 shadow-sm space-y-6">
               <div className="flex items-center gap-3">
-                <div className="size-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                <div className="size-10 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
                   <span className="material-symbols-outlined text-slate-500">database</span>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800">System &amp; Migration Utilities</h3>
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">System &amp; Migration Utilities</h3>
                   <p className="text-sm text-slate-500">Manage database settings or import legacy data.</p>
                 </div>
               </div>
-              <div className="border-t border-slate-100 pt-6">
-                <h4 className="text-md font-bold text-slate-700 mb-3">Data Import from Supabase</h4>
+              <div className="border-t border-slate-100 dark:border-slate-700 pt-6">
+                <h4 className="text-md font-bold text-slate-700 dark:text-slate-200 mb-3">Data Import from Supabase</h4>
                 <p className="text-sm text-slate-500 mb-4">
                   Retrieve historical collections and expenses from January 2026 to May 2026 that reside in Supabase, and copy them directly to Firebase Firestore.
                 </p>
@@ -1039,7 +1192,7 @@ export default function AdminPanel() {
                 <button 
                   onClick={handleMigrateData} 
                   disabled={migrating}
-                  className="bg-primary text-white px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50 transition-all"
+                  className="bg-primary text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-primary/90 disabled:opacity-50 transition-all w-full sm:w-auto"
                 >
                   {migrating ? (
                     <>
