@@ -309,7 +309,8 @@ export default function AdminPanel() {
       setPasswordForm({ current: '', newPass: '', confirm: '' })
       showNotif('Password changed successfully!')
     } catch (err) {
-      showNotif('Failed to change password. Try again.', 'error')
+      console.error('Failed to change password:', err)
+      showNotif(err.message || 'Failed to change password. Try again.', 'error')
     } finally {
       setPasswordSaving(false)
     }
