@@ -8,12 +8,16 @@ import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import MonthlyVarianceBanner from '../components/MonthlyVarianceBanner'
 import DynamicAlertBanner from '../components/DynamicAlertBanner'
 import WhatsAppSnapshotModal from '../components/WhatsAppSnapshotModal'
+import CollectionProgress from '../components/CollectionProgress'
+import BankDetailsModal from '../components/BankDetailsModal'
+import ServiceDirectoryCard from '../components/ServiceDirectoryCard'
+import { FEATURE_FLAGS } from '../config/features'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useLanguage } from '../context/LanguageContext'
 import { translateMonth } from '../utils/translations'
 import { exportToCSV, printReport } from '../utils/export'
 import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
-import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2, Calendar } from 'lucide-react'
+import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2, Calendar, Landmark } from 'lucide-react'
 
 // Helper to normalize phone numbers for robust matching (last 10 digits)
 const normalizePhone = (p) => (p || '').replace(/[^0-9]/g, '').slice(-10)
@@ -79,6 +83,7 @@ export default function ViewerDashboard() {
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false)
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [showWhatsAppSnapshotModal, setShowWhatsAppSnapshotModal] = useState(false)
+  const [showBankDetailsModal, setShowBankDetailsModal] = useState(false)
 
   useEffect(() => {
     loadData().then(freshData => {
@@ -405,6 +410,17 @@ export default function ViewerDashboard() {
           
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <LanguageSwitcher />
+            {FEATURE_FLAGS.SHOW_BANK_DETAILS_MODAL && (
+              <button
+                type="button"
+                onClick={() => setShowBankDetailsModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-sm transition-all active:scale-95 flex-shrink-0 whitespace-nowrap"
+                title={t.payDuesBtn || 'Pay Dues / Bank Details'}
+              >
+                <Landmark size={15} />
+                <span>{t.payDuesBtn || 'Pay Dues / Bank Details'}</span>
+              </button>
+            )}
             <div className="hidden md:flex items-center gap-2 bg-slate-100 dark:bg-primary/10 px-3 py-1.5 rounded-full flex-shrink-0">
               <span className="material-symbols-outlined text-sm text-primary">visibility</span>
               <span className="text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
@@ -543,6 +559,7 @@ export default function ViewerDashboard() {
           onMonthChange={setSelectedMonth}
           onYearChange={setSelectedYear}
           isAdmin={false}
+          onOpenBankDetails={() => setShowBankDetailsModal(true)}
         />
 
         {/* What Changed This Month? Headline Variance Banner */}
@@ -580,6 +597,17 @@ export default function ViewerDashboard() {
           isNoData={totals?.record?.isNoData ?? false}
         />
 
+        {/* Dues Collection Progress (Community Nizam v2) */}
+        {FEATURE_FLAGS.SHOW_COLLECTION_PROGRESS && (
+          <CollectionProgress
+            currentCollection={totals?.record?.monthlyCollection || 282250}
+            targetCollection={320000}
+            paidUnits={78}
+            totalUnits={92}
+            currency={data?.settings?.currency || 'PKR'}
+          />
+        )}
+
         {/* Contextual Dynamic Resident Alert Banner (Deficit vs Surplus) */}
         <DynamicAlertBanner
           netCashFlow={totals?.netCashFlow ?? 0}
@@ -600,6 +628,11 @@ export default function ViewerDashboard() {
               totals={totals}
               isAdmin={false}
             />
+
+            {/* Verified Community Services Directory (Community Nizam v2) */}
+            {FEATURE_FLAGS.SHOW_SERVICE_DIRECTORY && (
+              <ServiceDirectoryCard />
+            )}
           </div>
 
           {/* Sidebar Content */}
@@ -1374,6 +1407,13 @@ export default function ViewerDashboard() {
         allExpenses={data.expenses || []}
         currency={data.settings?.currency || 'PKR'}
       />
+      {/* Community Collection Bank & Raast Details Modal */}
+      {FEATURE_FLAGS.SHOW_BANK_DETAILS_MODAL && (
+        <BankDetailsModal
+          isOpen={showBankDetailsModal}
+          onClose={() => setShowBankDetailsModal(false)}
+        />
+      )}
     </div>
   )
 }

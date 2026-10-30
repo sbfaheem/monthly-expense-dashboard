@@ -165,7 +165,29 @@ export const translations = {
     addressPlaceholder: "e.g. R-100 Sector 7D/1 or A-4 Sector 7D/1",
     saveProfileBtn: "Save Profile & View Dashboard",
     statementLabel: "Statement:",
-    closeBtn: "Close ✕"
+    closeBtn: "Close ✕",
+
+    // Community Nizam v2 Operational Modules
+    collectionProgress: "Dues Collection Progress",
+    collectionTarget: "Target Collection",
+    unitsCollected: "Units Cleared",
+    unpaidUnitsAlert: "Pending Payments",
+    payDuesBtn: "Pay Dues / Bank Details",
+    bankDetailsTitle: "Community Collection Bank Account",
+    bankName: "Bank Name",
+    accountTitle: "Account Title",
+    accountNumber: "Account Number / IBAN",
+    raastId: "Raast ID",
+    copySuccess: "Copied!",
+    serviceDirectoryTitle: "Verified Community Services",
+    availableServicesDesc: "Authorized maintenance providers & utility suppliers for our area",
+    guardGate: "Security Gate Post",
+    officialElectrician: "Society Electrician",
+    tankerVendor: "Water Tanker Provider",
+    onDuty: "On Duty",
+    available: "Available",
+    callNow: "Call",
+    chatWa: "WhatsApp"
   },
   ur: {
     // Navigation & General
@@ -333,7 +355,29 @@ export const translations = {
     addressPlaceholder: "مثلاً: R-100 سیکٹر 7D/1 یا A-4",
     saveProfileBtn: "پروفائل محفوظ کریں اور ڈیش بورڈ دیکھیں",
     statementLabel: "رپورٹ برائے:",
-    closeBtn: "بند کریں ✕"
+    closeBtn: "بند کریں ✕",
+
+    // Community Nizam v2 Operational Modules
+    collectionProgress: "ماہانہ فیس کلیکشن کی صورتحال",
+    collectionTarget: "ہدف وصولی",
+    unitsCollected: "ادا شدہ مکانات",
+    unpaidUnitsAlert: "بقایا جات / غیر ادا شدہ",
+    payDuesBtn: "بینک تفصیلات و ادائیگی",
+    bankDetailsTitle: "سوسائٹی بینک اکاؤنٹ کی تفصیلات",
+    bankName: "بینک کا نام",
+    accountTitle: "اکاؤنٹ ٹائٹل",
+    accountNumber: "اکاؤنٹ نمبر / IBAN",
+    raastId: "راست آئی ڈی (Raast ID)",
+    copySuccess: "کاپی ہو گیا!",
+    serviceDirectoryTitle: "تصدیق شدہ سروس فراہم کنندگان",
+    availableServicesDesc: "علاقے کے مجاز الیکٹریشن، عملہ اور ٹینکر سروس کے تصدیق شدہ رابطے",
+    guardGate: "مین سیکیورٹی گیٹ",
+    officialElectrician: "سوسائٹی الیکٹریشن",
+    tankerVendor: "واٹر ٹینکر سروس",
+    onDuty: "ڈیوٹی پر موجود",
+    available: "دستیاب",
+    callNow: "کال کریں",
+    chatWa: "واٹس ایپ"
   }
 };
 

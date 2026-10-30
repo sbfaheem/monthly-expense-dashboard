@@ -1,11 +1,12 @@
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, Landmark } from 'lucide-react'
+import { FEATURE_FLAGS } from '../config/features'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { useLanguage } from '../context/LanguageContext'
 import { URDU_MONTHS } from '../utils/translations'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
-const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAdmin, title }) => {
+const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAdmin, title, onOpenBankDetails }) => {
   const { lang, t, isRtl } = useLanguage()
   const currentDate = new Date()
   const isEndOfMonth = () => {
@@ -59,8 +60,19 @@ const Header = ({ selectedMonth, selectedYear, onMonthChange, onYearChange, isAd
 
       <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto no-scrollbar py-1 max-w-full flex-nowrap shrink-0">
         {/* Language Switcher adjacent to Month Selector */}
-        <div className="shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <LanguageSwitcher />
+          {FEATURE_FLAGS.SHOW_BANK_DETAILS_MODAL && onOpenBankDetails && (
+            <button
+              type="button"
+              onClick={onOpenBankDetails}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-sm transition-all active:scale-95 whitespace-nowrap"
+              title={t.payDuesBtn || 'Pay Dues / Bank Details'}
+            >
+              <Landmark size={14} />
+              <span>{t.payDuesBtn || 'Pay Dues / Bank Details'}</span>
+            </button>
+          )}
         </div>
 
         {/* Month/Year Dropdowns */}
