@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, useAnimation, useReducedMotion } from 'framer-motion'
 import { useLanguage } from '../context/LanguageContext'
 import Card3D from './Card3D'
@@ -22,12 +22,10 @@ export const SummaryCards = ({
   // Views & Card state
   const [is3DDeckView, setIs3DDeckView] = useState(true)
   const [activeCardIndex, setActiveCardIndex] = useState(0)
-  const [isBouncing, setIsBouncing] = useState(false)
   const [isAutoPlay, setIsAutoPlay] = useState(false)
   const [showRipple, setShowRipple] = useState(false)
 
-  // Framer Motion Controllers for coordinated physics
-  const ballControls = useAnimation()
+  // Framer Motion Deck Controller
   const deckControls = useAnimation()
 
   const isUrdu = lang === 'ur'
@@ -137,69 +135,40 @@ export const SummaryCards = ({
     }
   ]
 
-  // ================= 3D BALL BOUNCE PHYSICS ENGINE =================
-  const triggerBallBounce = async () => {
-    if (isBouncing || shouldReduceMotion) return
-    setIsBouncing(true)
+  // ================= 3D CARD TRANSITION ON BALL TAP =================
+  const advanceCard = (e) => {
+    if (e) {
+      e.preventDefault?.()
+      e.stopPropagation?.()
+    }
 
-    // Phase 1: Ball leaps upwards off the active card
-    await ballControls.start({
-      y: -28,
-      scaleX: 0.9,
-      scaleY: 1.15,
-      transition: { duration: 0.22, ease: "easeOut" }
-    })
-
-    // Phase 2: Ball lands back down and squashes elastically on the card surface
+    // Trigger visual impact ripple
     setShowRipple(true)
-    // Advance card index in sequence on impact
+    setTimeout(() => setShowRipple(false), 380)
+
+    // Dynamic deck spring reaction
+    if (!shouldReduceMotion) {
+      deckControls.start({
+        rotateX: [16, 21, 16],
+        y: [0, 8, 0],
+        transition: { duration: 0.35, ease: 'easeOut' }
+      })
+    }
+
+    // Immediately advance to next Summary Card
     setActiveCardIndex((prev) => (prev + 1) % cards.length)
-
-    await Promise.all([
-      ballControls.start({
-        y: 0,
-        scaleX: 1.25,
-        scaleY: 0.75,
-        transition: { duration: 0.12, ease: "easeIn" }
-      }),
-      // Deck absorbs the shockwave with a spring dip
-      deckControls.start({
-        rotateX: 19,
-        y: 6,
-        transition: { duration: 0.08 }
-      })
-    ])
-
-    setShowRipple(false)
-
-    // Phase 3: Ball and deck spring back to rest state
-    await Promise.all([
-      ballControls.start({
-        y: 0,
-        scaleX: 1,
-        scaleY: 1,
-        transition: { type: "spring", stiffness: 350, damping: 18 }
-      }),
-      deckControls.start({
-        rotateX: 16,
-        y: 0,
-        transition: { type: "spring", stiffness: 320, damping: 20 }
-      })
-    ])
-
-    setIsBouncing(false)
   }
 
-  // Auto-play ball bounce loop
+  // Auto-play loop to advance cards
   useEffect(() => {
     let timer
-    if (isAutoPlay && is3DDeckView && !isBouncing) {
-      timer = setTimeout(() => {
-        triggerBallBounce()
-      }, 2100)
+    if (isAutoPlay && is3DDeckView) {
+      timer = setInterval(() => {
+        advanceCard()
+      }, 2500)
     }
-    return () => clearTimeout(timer)
-  }, [isAutoPlay, is3DDeckView, isBouncing, activeCardIndex])
+    return () => clearInterval(timer)
+  }, [isAutoPlay, is3DDeckView])
 
   const handlePanEnd = (e, info) => {
     if (info.offset.y < -35) {
@@ -377,12 +346,13 @@ export const SummaryCards = ({
                             {card.value}
                           </div>
 
-                          {/* Tap Ball placed directly above the + Active text */}
+                          {/* Continuously Bouncing Ball placed directly above the + Active text */}
                           {isSelected && (
                             <div
                               style={{ transform: shouldReduceMotion ? 'none' : 'translateZ(30px)' }}
-                              className="relative flex flex-col items-center flex-shrink-0 z-30 -mt-1"
-                              onClick={(e) => e.stopPropagation()}
+                              className="relative flex flex-col items-center flex-shrink-0 z-30 -mt-1 cursor-pointer select-none"
+                              onClick={advanceCard}
+                              title={isUrdu ? "کارڈ تبدیل کرنے کے لیے چھوئیں" : "Tap ball to change summary card"}
                             >
                               {/* Dynamic Impact Ripple Wave */}
                               {showRipple && (
@@ -396,19 +366,32 @@ export const SummaryCards = ({
 
                               {/* Tap Tooltip Pill */}
                               <motion.span 
-                                animate={shouldReduceMotion ? {} : { y: [-2, 2, -2] }} 
+                                animate={shouldReduceMotion ? {} : { y: [-1, 1, -1] }} 
                                 transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                                 className="mb-0.5 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-slate-900/85 text-white shadow-xs pointer-events-none select-none backdrop-blur-xs whitespace-nowrap"
                               >
                                 {isUrdu ? "چھوئیں 🎾" : "Tap Ball! 🎾"}
                               </motion.span>
 
-                              {/* The Glass Orb */}
+                              {/* Continuously Bouncing Glass Ball */}
                               <motion.button
                                 type="button"
-                                aria-label="Bounce ball on cards"
-                                onClick={triggerBallBounce}
-                                animate={ballControls}
+                                aria-label="Tap ball to change summary card"
+                                onClick={advanceCard}
+                                animate={
+                                  shouldReduceMotion
+                                    ? {}
+                                    : {
+                                        y: [0, -14, 0],
+                                        scaleX: [1.14, 0.94, 1.14],
+                                        scaleY: [0.86, 1.10, 0.86],
+                                      }
+                                }
+                                transition={{
+                                  duration: 0.72,
+                                  repeat: Infinity,
+                                  ease: 'easeInOut',
+                                }}
                                 whileHover={{ scale: 1.12 }}
                                 whileTap={{ scale: 0.9 }}
                                 className="relative h-11 w-11 sm:h-12 sm:w-12 rounded-full border border-white/90 bg-gradient-to-tr from-white/35 via-emerald-200/55 to-white/95 shadow-xl backdrop-blur-md cursor-pointer focus:outline-hidden"
@@ -420,6 +403,22 @@ export const SummaryCards = ({
                                 <span className="absolute top-1 left-1.5 h-3.5 w-5 rounded-full bg-white/80 blur-2xs transform -rotate-25 pointer-events-none" />
                                 <span className="absolute bottom-1 right-1.5 h-2.5 w-2.5 rounded-full bg-emerald-400/60 blur-xs pointer-events-none" />
                               </motion.button>
+
+                              {/* Dynamic Shadow expanding/contracting with the bounce */}
+                              {!shouldReduceMotion && (
+                                <motion.div
+                                  animate={{
+                                    scaleX: [1.1, 0.6, 1.1],
+                                    opacity: [0.4, 0.12, 0.4],
+                                  }}
+                                  transition={{
+                                    duration: 0.72,
+                                    repeat: Infinity,
+                                    ease: 'easeInOut',
+                                  }}
+                                  className="w-7 h-1.5 rounded-full bg-emerald-950/30 dark:bg-black/40 blur-[1.5px] mt-0.5 pointer-events-none"
+                                />
+                              )}
                             </div>
                           )}
                         </div>

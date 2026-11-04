@@ -99,6 +99,14 @@ export const ThreeDStackDeck = ({
     }
   ]
 
+  const advanceCard = (e) => {
+    if (e) {
+      e.preventDefault?.()
+      e.stopPropagation?.()
+    }
+    setActiveCardIndex((prev) => (prev + 1) % cardItems.length)
+  }
+
   return (
     <div className="w-full my-4">
       {/* 3D Mode Switcher Header */}
@@ -200,25 +208,36 @@ export const ThreeDStackDeck = ({
                         {card.value}
                       </div>
 
-                      {/* Interactive Tap Ball placed directly above + Active */}
+                      {/* Continuously Bouncing Ball placed directly above + Active */}
                       {isSelected && !shouldReduceMotion && (
                         <div
                           style={{ transform: 'translateZ(30px)' }}
-                          className="relative flex flex-col items-center flex-shrink-0 z-30 -mt-1"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setActiveCardIndex((prev) => (prev + 1) % cardItems.length)
-                          }}
+                          className="relative flex flex-col items-center flex-shrink-0 z-30 -mt-1 cursor-pointer select-none"
+                          onClick={advanceCard}
+                          title={isUrdu ? "کارڈ تبدیل کرنے کے لیے چھوئیں" : "Tap ball to change summary card"}
                         >
                           <motion.span 
-                            animate={{ y: [-2, 2, -2] }} 
+                            animate={{ y: [-1, 1, -1] }} 
                             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                             className="mb-0.5 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-slate-900/85 text-white shadow-xs pointer-events-none select-none backdrop-blur-xs whitespace-nowrap"
                           >
                             {isUrdu ? "چھوئیں 🎾" : "Tap Ball! 🎾"}
                           </motion.span>
 
-                          <motion.div
+                          <motion.button
+                            type="button"
+                            aria-label="Tap ball to change summary card"
+                            onClick={advanceCard}
+                            animate={{
+                              y: [0, -14, 0],
+                              scaleX: [1.14, 0.94, 1.14],
+                              scaleY: [0.86, 1.10, 0.86],
+                            }}
+                            transition={{
+                              duration: 0.72,
+                              repeat: Infinity,
+                              ease: 'easeInOut',
+                            }}
                             whileHover={{ scale: 1.12 }}
                             whileTap={{ scale: 0.9 }}
                             className="relative h-11 w-11 sm:h-12 sm:w-12 rounded-full border border-white/90 bg-gradient-to-tr from-white/35 via-emerald-200/55 to-white/95 shadow-xl backdrop-blur-md cursor-pointer"
@@ -228,7 +247,20 @@ export const ThreeDStackDeck = ({
                           >
                             <span className="absolute top-1 left-1.5 h-3.5 w-5 rounded-full bg-white/80 blur-2xs transform -rotate-25 pointer-events-none" />
                             <span className="absolute bottom-1 right-1.5 h-2.5 w-2.5 rounded-full bg-emerald-400/60 blur-xs pointer-events-none" />
-                          </motion.div>
+                          </motion.button>
+
+                          <motion.div
+                            animate={{
+                              scaleX: [1.1, 0.6, 1.1],
+                              opacity: [0.4, 0.12, 0.4],
+                            }}
+                            transition={{
+                              duration: 0.72,
+                              repeat: Infinity,
+                              ease: 'easeInOut',
+                            }}
+                            className="w-7 h-1.5 rounded-full bg-emerald-950/30 dark:bg-black/40 blur-[1.5px] mt-0.5 pointer-events-none"
+                          />
                         </div>
                       )}
                     </div>
