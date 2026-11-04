@@ -30,18 +30,24 @@ export const ThreeDStackDeck = ({
   const actualOverdrawn = typeof isOverdrawn === 'boolean' ? isOverdrawn : actualClosing < 0
   const isSurplus = actualNetCashFlow >= 0
 
+  // Standardized 5-Card Sequence:
+  // 1. Opening Balance
+  // 2. Monthly Collection
+  // 3. Total Expense
+  // 4. Net Surplus / Net Deficit
+  // 5. Closing Reserve Fund / Closing Balance
   const cardItems = [
     {
-      id: 'closing',
-      label: !actualOverdrawn ? (t?.closingBalance || 'Closing Balance') : `${t?.closingBalance || 'Closing Balance'} (${t?.overdrawn || 'Overdrawn'})`,
-      value: fmt(Math.abs(actualClosing)),
-      sub: isNoData ? '0%' : (!actualOverdrawn ? (isUrdu ? 'محفوظ ریزرو فنڈ' : 'Accumulated Reserve') : (isUrdu ? 'خسارہ / بقایا جات' : 'Overdrawn / Deficit')),
-      icon: 'account_balance_wallet',
-      gradient: actualOverdrawn ? 'from-rose-500/10 via-rose-50/50 to-white dark:from-rose-950/40 dark:to-slate-800' : 'from-emerald-500/10 via-emerald-50/50 to-white dark:from-emerald-950/40 dark:to-slate-800',
-      border: actualOverdrawn ? 'border-rose-400 dark:border-rose-700' : 'border-emerald-400 dark:border-emerald-700',
-      badgeColor: actualOverdrawn ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white',
-      textColor: actualOverdrawn ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400',
-      glowColor: actualOverdrawn ? 'rgba(244, 63, 94, 0.25)' : 'rgba(16, 185, 129, 0.25)',
+      id: 'opening',
+      label: t?.openingBalance || 'Opening Balance',
+      value: (Number(openingBalance) < 0 ? '-' : '') + fmt(Math.abs(openingBalance)),
+      sub: isNoData ? '0%' : (isUrdu ? 'گزشتہ اختتامی فنڈ' : 'Previous closing balance'),
+      icon: 'account_balance',
+      gradient: 'from-slate-500/10 via-slate-50/50 to-white dark:from-slate-900 dark:to-slate-800',
+      border: 'border-slate-300 dark:border-slate-700',
+      badgeColor: 'bg-slate-700 text-white',
+      textColor: 'text-slate-800 dark:text-slate-200',
+      glowColor: 'rgba(100, 116, 139, 0.20)',
     },
     {
       id: 'collection',
@@ -61,11 +67,11 @@ export const ThreeDStackDeck = ({
       value: fmt(totalExpense),
       sub: isNoData ? '0%' : (isUrdu ? 'کل آپریشنل اخراجات' : 'Total operational spend'),
       icon: 'shopping_cart',
-      gradient: 'from-blue-500/10 via-blue-50/50 to-white dark:from-blue-950/40 dark:to-slate-800',
-      border: 'border-blue-400 dark:border-blue-700',
-      badgeColor: 'bg-primary text-white',
-      textColor: 'text-blue-700 dark:text-blue-400',
-      glowColor: 'rgba(37, 99, 235, 0.22)',
+      gradient: 'from-emerald-500/10 via-emerald-50/50 to-white dark:from-emerald-950/40 dark:to-slate-800',
+      border: 'border-emerald-500 dark:border-emerald-700',
+      badgeColor: 'bg-emerald-600 text-white',
+      textColor: 'text-emerald-700 dark:text-emerald-400',
+      glowColor: 'rgba(16, 185, 129, 0.22)',
     },
     {
       id: 'cashflow',
@@ -80,16 +86,16 @@ export const ThreeDStackDeck = ({
       glowColor: isSurplus ? 'rgba(20, 184, 166, 0.22)' : 'rgba(244, 63, 94, 0.25)',
     },
     {
-      id: 'opening',
-      label: t?.openingBalance || 'Opening Balance',
-      value: fmt(openingBalance),
-      sub: isNoData ? '0%' : (isUrdu ? 'گزشتہ اختتامی فنڈ' : 'Previous closing balance'),
-      icon: 'account_balance',
-      gradient: 'from-slate-500/10 via-slate-50/50 to-white dark:from-slate-900 dark:to-slate-800',
-      border: 'border-slate-300 dark:border-slate-700',
-      badgeColor: 'bg-slate-700 text-white',
-      textColor: 'text-slate-800 dark:text-slate-200',
-      glowColor: 'rgba(100, 116, 139, 0.20)',
+      id: 'closing',
+      label: !actualOverdrawn ? (t?.closingBalance || 'Closing Balance') : (isUrdu ? 'اختتامی فنڈ (خسارہ)' : 'Closing Reserve Fund (Overdrawn)'),
+      value: fmt(Math.abs(actualClosing)),
+      sub: isNoData ? '0%' : (!actualOverdrawn ? (isUrdu ? 'محفوظ ریزرو فنڈ' : 'Accumulated Reserve') : (isUrdu ? 'خسارہ / بقایا جات' : 'Overdrawn / Deficit')),
+      icon: 'account_balance_wallet',
+      gradient: actualOverdrawn ? 'from-rose-500/10 via-rose-50/50 to-white dark:from-rose-950/40 dark:to-slate-800' : 'from-emerald-500/10 via-emerald-50/50 to-white dark:from-emerald-950/40 dark:to-slate-800',
+      border: actualOverdrawn ? 'border-rose-400 dark:border-rose-700' : 'border-emerald-400 dark:border-emerald-700',
+      badgeColor: actualOverdrawn ? 'bg-rose-500 text-white' : 'bg-emerald-500 text-white',
+      textColor: actualOverdrawn ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400',
+      glowColor: actualOverdrawn ? 'rgba(244, 63, 94, 0.25)' : 'rgba(16, 185, 129, 0.25)',
     }
   ]
 
@@ -152,10 +158,12 @@ export const ThreeDStackDeck = ({
             className="relative w-full max-w-sm mx-auto h-[290px]"
           >
             {cardItems.map((card, idx) => {
-              const isSelected = activeCardIndex === idx
-              const offsetZ = isSelected ? 80 : idx * -25
-              const offsetY = isSelected ? -20 : idx * 36
-              const scale = isSelected ? 1.03 : 1 - idx * 0.035
+              const relIndex = (idx - activeCardIndex + cardItems.length) % cardItems.length
+              const isSelected = relIndex === 0
+              const offsetZ = isSelected ? 80 : -relIndex * 25
+              const offsetY = isSelected ? -20 : relIndex * 36
+              const scale = isSelected ? 1.03 : 1 - relIndex * 0.035
+              const cardZIndex = 30 - relIndex
 
               return (
                 <motion.div
@@ -181,7 +189,7 @@ export const ThreeDStackDeck = ({
                     top: 0,
                     left: 0,
                     right: 0,
-                    zIndex: isSelected ? 50 : 20 - idx,
+                    zIndex: cardZIndex,
                   }}
                   className="cursor-grab active:cursor-grabbing"
                 >
