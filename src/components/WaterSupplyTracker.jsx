@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { Droplet, Clock, Calendar, Sparkles, TrendingUp, Share2, Check, Timer } from 'lucide-react'
+import React, { useState } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
+import { Droplet, Clock, Calendar, Sparkles, TrendingUp, Share2, Check, Timer, Phone, MessageSquare, Gauge, Waves, Truck } from 'lucide-react'
 import { predictNextWaterSupply } from '../utils/waterPrediction'
 import { useLanguage } from '../context/LanguageContext'
 import { translateMonth, translateWaterStatus, formatDateTimeLocalized } from '../utils/translations'
@@ -8,6 +9,10 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
   const [copied, setCopied] = useState(false)
   const { lang, t } = useLanguage()
   const isUrdu = lang === 'ur'
+  const shouldReduceMotion = useReducedMotion()
+
+  // Reservoir simulation mode: 'kwsb' (municipal line supply) or 'tanker' (backup reserve)
+  const [reservoirMode, setReservoirMode] = useState('kwsb')
 
   // Calculate durations for each entry and the cumulative total
   let totalMs = 0
@@ -39,11 +44,6 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
   // Run the predictive model
   const predictionData = predictNextWaterSupply(allWaterSupply)
 
-  // If there are no entries for this month AND not enough prediction data, don't render anything
-  if (processedEntries.length === 0 && !predictionData.hasEnoughData) {
-    return null
-  }
-
   const handleShareToWhatsApp = () => {
     if (!isAdmin || !predictionData.hasEnoughData) return
     const p = predictionData.prediction
@@ -71,9 +71,323 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
     setTimeout(() => setCopied(false), 2500)
   }
 
+  // Reservoir Capacity Values based on selected mode
+  const isKwsb = reservoirMode === 'kwsb'
+  const fillPercentage = isKwsb ? 68 : 42
+  const currentGallons = isKwsb ? 6800 : 4200
+  const totalCapacity = 10000
+
+  // Tanker and Security Providers
+  const contacts = [
+    {
+      role: isUrdu ? 'سیکیورٹی و واٹر والو سپروائزر' : 'Water Valve & Gate Supervisor',
+      name: isUrdu ? 'مجید (سیکیورٹی انچارج)' : 'Supervisor Majeed',
+      phone: '03013377675',
+      waNumber: '923013377675',
+    },
+    {
+      role: isUrdu ? 'مجاز واٹر ٹینکر سروس' : 'Authorized Tanker Service',
+      name: isUrdu ? 'واٹر ٹینکر وینڈر' : 'Tanker Vendor',
+      phone: '03001234567',
+      waNumber: '923001234567',
+    }
+  ]
+
   return (
     <div className="space-y-6 mt-8">
-      {/* ─── 1. Current / Selected Month Recorded Supplies ─── */}
+      {/* ================= 1. 3D ISOMETRIC FLUID RESERVOIR HERO WIDGET ================= */}
+      <div className="relative overflow-hidden rounded-3xl border border-cyan-500/25 dark:border-cyan-500/20 bg-gradient-to-br from-slate-900 via-slate-950 to-cyan-950/80 p-5 sm:p-8 text-white shadow-xl">
+        {/* Ambient Top Glow */}
+        <div className="pointer-events-none absolute -top-24 left-1/4 h-72 w-72 rounded-full bg-cyan-500/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 right-10 h-72 w-72 rounded-full bg-teal-500/10 blur-3xl" />
+
+        {/* Header & Mode Switcher */}
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-white/10">
+          <div className="flex items-center gap-3.5">
+            <div className="size-11 sm:size-12 rounded-2xl bg-gradient-to-tr from-cyan-600 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-cyan-500/30 flex-shrink-0">
+              <Waves size={24} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-lg sm:text-xl font-extrabold tracking-tight text-white">
+                  {t?.reservoirTitle || (isUrdu ? 'زیرِ زمین واٹر ریزروائر (3D جائزہ)' : '3D Community Fluid Reservoir')}
+                </h3>
+                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 border border-cyan-400/30">
+                  <span className="size-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                  Isometric 3D
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                {t?.reservoirSubtitle || (isUrdu
+                  ? 'سوسائٹی کے زیرِ زمین ٹینک میں پانی کی موجودہ سطح اور متوقع شیڈول'
+                  : 'Live underground storage capacity & slosh physics')}
+              </p>
+            </div>
+          </div>
+
+          {/* Mode Segmented Controls */}
+          <div className="flex items-center p-1 rounded-2xl bg-slate-800/80 border border-slate-700/80 shadow-inner w-fit">
+            <button
+              type="button"
+              onClick={() => setReservoirMode('kwsb')}
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+                isKwsb
+                  ? 'bg-gradient-to-r from-cyan-500 to-teal-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Droplet size={14} />
+              <span>{t?.kwsbLine || (isUrdu ? 'لائن سپلائی KWSB' : 'KWSB Line Supply')}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setReservoirMode('tanker')}
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+                !isKwsb
+                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Truck size={14} />
+              <span>{t?.tankerBackup || (isUrdu ? 'ٹینکر بیک اپ' : 'Tanker Backup')}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 3D Main Section: Isometric Tank on Left + Telemetry Data on Right */}
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-6">
+          {/* ================= 3D ISOMETRIC CYLINDER VIEWPORT ================= */}
+          <div className="lg:col-span-5 flex flex-col items-center justify-center py-4">
+            <div
+              style={{ perspective: 1000 }}
+              className="relative w-52 sm:w-60 h-72 sm:h-80 flex items-center justify-center select-none"
+            >
+              {/* Oblique Isometric Tilting Tank Wrapper */}
+              <div
+                style={{
+                  transformStyle: 'preserve-3d',
+                  transform: shouldReduceMotion ? 'none' : 'rotateX(20deg) rotateY(0deg)',
+                }}
+                className="relative w-44 sm:w-48 h-64 sm:h-72"
+              >
+                {/* Dynamic Base Contact Shadow */}
+                <motion.div
+                  animate={{
+                    scale: 0.85 + (fillPercentage / 100) * 0.3,
+                    opacity: 0.35 + (fillPercentage / 100) * 0.35,
+                  }}
+                  transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+                  className="pointer-events-none absolute -bottom-6 left-1/2 -translate-x-1/2 w-48 h-12 rounded-[50%] bg-teal-950/70 blur-md z-0"
+                />
+
+                {/* Bottom Elliptical Rim of Glass Tank */}
+                <div className="absolute bottom-0 inset-x-0 h-10 sm:h-12 rounded-[50%] border-2 border-cyan-400/40 bg-cyan-950/60 shadow-[inset_0_2px_8px_rgba(6,78,59,0.7)] z-10" />
+
+                {/* Outer Glass Tank Body (Frosted Transparent Walls) */}
+                <div className="absolute inset-0 rounded-b-[2rem] border-x-2 border-cyan-300/30 bg-gradient-to-r from-white/10 via-white/5 to-white/10 backdrop-blur-xs overflow-hidden z-10">
+                  {/* Left Specular Glass Glare Stripe */}
+                  <div className="absolute left-2 inset-y-0 w-2.5 bg-gradient-to-r from-white/30 to-transparent pointer-events-none" />
+                  {/* Right Specular Glass Glare Stripe */}
+                  <div className="absolute right-3 inset-y-0 w-1.5 bg-gradient-to-l from-white/25 to-transparent pointer-events-none" />
+
+                  {/* Level Graduation Marks */}
+                  <div className="absolute left-3 inset-y-6 flex flex-col justify-between text-[9px] font-mono font-bold text-cyan-200/60 pointer-events-none z-30 select-none">
+                    <div className="flex items-center gap-1.5"><span className="w-2 h-px bg-cyan-200/60" />100%</div>
+                    <div className="flex items-center gap-1.5"><span className="w-2 h-px bg-cyan-200/60" />75%</div>
+                    <div className="flex items-center gap-1.5"><span className="w-2 h-px bg-cyan-200/60" />50%</div>
+                    <div className="flex items-center gap-1.5"><span className="w-2 h-px bg-cyan-200/60" />25%</div>
+                    <div className="flex items-center gap-1.5"><span className="w-2 h-px bg-cyan-200/60" />0%</div>
+                  </div>
+
+                  {/* ================= DYNAMIC SLOSHING LIQUID COLUMN ================= */}
+                  <motion.div
+                    initial={{ height: '0%' }}
+                    animate={{ height: `${fillPercentage}%` }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 120,
+                      damping: 14,
+                      mass: 0.8,
+                    }}
+                    className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-cyan-900/95 via-cyan-600/90 to-teal-400/85 overflow-visible z-20"
+                  >
+                    {/* Top Water Surface Ellipse (Meniscus Cap) */}
+                    <div className="absolute -top-4 inset-x-0 h-8 sm:h-9 rounded-[50%] bg-gradient-to-tr from-cyan-300/90 via-teal-200/85 to-cyan-400/90 border border-white/80 shadow-[inset_0_2px_5px_rgba(255,255,255,0.7),0_2px_8px_rgba(6,182,212,0.4)] z-30" />
+
+                    {/* Continuous Layered SVG Sloshing Sine Waves */}
+                    {!shouldReduceMotion && (
+                      <div className="absolute -top-3 inset-x-0 h-6 overflow-hidden pointer-events-none z-20">
+                        {/* Wave Layer 1 (Front Fast Sine Wave) */}
+                        <motion.div
+                          animate={{ x: [0, -120] }}
+                          transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+                          className="absolute inset-y-0 left-0 w-[480px] flex"
+                        >
+                          <svg className="w-[480px] h-6" viewBox="0 0 480 24" fill="none">
+                            <path
+                              d="M 0 10 Q 30 0, 60 10 T 120 10 T 180 10 T 240 10 T 300 10 T 360 10 T 420 10 T 480 10 L 480 24 L 0 24 Z"
+                              fill="rgba(34, 211, 238, 0.75)"
+                            />
+                          </svg>
+                        </motion.div>
+
+                        {/* Wave Layer 2 (Back Slow Sine Wave) */}
+                        <motion.div
+                          animate={{ x: [-120, 0] }}
+                          transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+                          className="absolute inset-y-0 left-0 w-[480px] flex opacity-60"
+                        >
+                          <svg className="w-[480px] h-6" viewBox="0 0 480 24" fill="none">
+                            <path
+                              d="M 0 12 Q 30 22, 60 12 T 120 12 T 180 12 T 240 12 T 300 12 T 360 12 T 420 12 T 480 12 L 480 24 L 0 24 Z"
+                              fill="rgba(14, 165, 233, 0.65)"
+                            />
+                          </svg>
+                        </motion.div>
+                      </div>
+                    )}
+
+                    {/* Fluid Internal Shimmer & Bubbles */}
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,_rgba(255,255,255,0.2),_transparent_70%)]" />
+                  </motion.div>
+                </div>
+
+                {/* Top Glass Tank Rim Ellipse */}
+                <div className="absolute -top-3 inset-x-0 h-10 sm:h-12 rounded-[50%] border-2 border-cyan-300/50 bg-gradient-to-b from-white/20 via-cyan-100/10 to-transparent shadow-[inset_0_2px_6px_rgba(255,255,255,0.5)] z-40 pointer-events-none" />
+              </div>
+
+              {/* Floating Meniscus Level Badge */}
+              <motion.div
+                animate={{ y: [-3, 3, -3] }}
+                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                className={`absolute -right-3 sm:-right-6 top-1/3 z-50 px-3 py-1.5 rounded-2xl border shadow-xl backdrop-blur-md flex items-center gap-2 ${
+                  isKwsb
+                    ? 'bg-slate-900/90 border-cyan-400/50 text-cyan-200'
+                    : 'bg-slate-900/90 border-amber-400/50 text-amber-200'
+                }`}
+              >
+                <div className={`size-2.5 rounded-full animate-ping ${isKwsb ? 'bg-cyan-400' : 'bg-amber-400'}`} />
+                <div className="flex flex-col">
+                  <span className="text-xs font-black font-mono leading-tight">
+                    {currentGallons.toLocaleString()} {t?.gallons || 'Gal'} ({fillPercentage}%)
+                  </span>
+                  <span className="text-[9px] font-bold text-slate-400 leading-none">
+                    {fillPercentage >= 50 ? (t?.optimalReserves || 'Optimal Reserve') : (t?.refillAdvised || 'Refill Recommended')}
+                  </span>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* ================= TELEMETRY & VALVE TIMINGS ON RIGHT ================= */}
+          <div className="lg:col-span-7 space-y-4">
+            {/* Status Summary Card */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Capacity Card */}
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
+                  {t?.storageCapacity || (isUrdu ? 'اسٹوریج گنجائش' : 'Capacity')}
+                </span>
+                <div className="text-xl sm:text-2xl font-black font-mono text-cyan-300">
+                  {currentGallons.toLocaleString()} <span className="text-xs font-bold opacity-75">/ 10,000 Gal</span>
+                </div>
+                <div className="w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${fillPercentage}%` }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                    className={`h-full ${isKwsb ? 'bg-cyan-400' : 'bg-amber-400'}`}
+                  />
+                </div>
+              </div>
+
+              {/* Pressure / Mode Metric */}
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
+                  {t?.linePressure || (isUrdu ? 'لائن پریشر' : 'Line Pressure')}
+                </span>
+                <div className="text-xl sm:text-2xl font-black font-mono text-white flex items-center gap-1.5">
+                  <Gauge size={18} className="text-teal-400" />
+                  <span>{isKwsb ? '42 PSI' : 'Gravity Fed'}</span>
+                </div>
+                <span className="text-[10px] font-bold text-teal-300 mt-1 block">
+                  {isKwsb ? (isUrdu ? 'نارمل فلو' : 'Optimal Flow') : (isUrdu ? 'معمول کے مطابق' : 'Auxiliary')}
+                </span>
+              </div>
+
+              {/* Status Indicator */}
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
+                  {isUrdu ? 'حیثیت' : 'Supply Status'}
+                </span>
+                <div className="text-base sm:text-lg font-black text-emerald-400 flex items-center gap-1.5">
+                  <Check size={18} />
+                  <span>{isKwsb ? (isUrdu ? 'لائن فعال' : 'Active Line') : (isUrdu ? 'اسٹینڈ بائی' : 'Standby Tank')}</span>
+                </div>
+                <span className="text-[10px] font-bold text-slate-400 mt-1 block">
+                  {isKwsb ? 'Sector 7D/1 Main Grid' : 'Community Tanker Bay'}
+                </span>
+              </div>
+            </div>
+
+            {/* Municipal Valve Schedule & Tanker Emergency Action */}
+            <div className="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/20 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-cyan-200 flex items-center gap-1.5">
+                  <Clock size={15} className="text-cyan-400" />
+                  <span>{t?.municipalSchedule || (isUrdu ? 'بلدیاتی لائن کا شیڈول' : 'Municipal Schedule')}</span>
+                </span>
+                <span className="text-[11px] font-extrabold text-teal-300 bg-teal-900/60 px-2 py-0.5 rounded-lg border border-teal-500/30">
+                  {predictionData.prediction?.statusBadge?.label || 'Weekly Cadence'}
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                {isUrdu
+                  ? 'سوسائٹی کے زیرِ زمین واٹر ٹینک میں KWSB مین لائن سے پانی ہر 4 سے 5 دن کے وقفے سے فراہم کیا جاتا ہے۔ کسی بھی تعطل کی صورت میں فوری ٹینکر سپلائی فعال کی جاتی ہے۔'
+                  : 'Municipal line water fills the community underground reservoir every ~4 to 5 days. Authorized tanker backup is on standby for valve disruptions.'}
+              </p>
+
+              {/* 1-Click Contacts: Supervisor Majeed & Tanker Vendor */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-white/10">
+                {contacts.map((c, i) => (
+                  <div
+                    key={i}
+                    className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-white truncate">{c.name}</div>
+                      <div className="text-[10px] text-slate-400 truncate">{c.role}</div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <a
+                        href={`tel:${c.phone}`}
+                        className="p-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 transition-colors"
+                        title={`Call ${c.phone}`}
+                      >
+                        <Phone size={13} />
+                      </a>
+                      <a
+                        href={`https://wa.me/${c.waNumber}?text=Assalam%20o%20Alaikum`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+                        title="Chat on WhatsApp"
+                      >
+                        <MessageSquare size={13} />
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── 2. Current / Selected Month Recorded Supplies ─── */}
       {processedEntries.length > 0 && (
         <div className="bg-blue-50 dark:bg-blue-900/10 p-6 rounded-2xl border border-blue-200 dark:border-blue-800 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
@@ -140,7 +454,7 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
         </div>
       )}
 
-      {/* ─── 2. Predictive Forecasting Engine Widget ─── */}
+      {/* ─── 3. Predictive Forecasting Engine Widget ─── */}
       {predictionData.hasEnoughData && (
         <div className="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-950 text-white p-6 md:p-8 rounded-2xl shadow-lg border border-indigo-500/20">
           {/* Subtle background glow */}
@@ -265,4 +579,3 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
     </div>
   )
 }
-

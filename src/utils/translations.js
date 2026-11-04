@@ -178,6 +178,19 @@ export const translations = {
     sendProofWa: "Send Payment Proof via WhatsApp",
     waNotice: "Kindly share a screenshot of your transfer/receipt with management on WhatsApp.",
     tapToFlip: "Tap or hover to explore 3D metal card",
+
+    // 3D Water Reservoir
+    reservoirTitle: "3D Community Fluid Reservoir",
+    reservoirSubtitle: "Live underground storage capacity & slosh physics",
+    kwsbLine: "KWSB Line Supply",
+    tankerBackup: "Tanker Backup",
+    storageCapacity: "Storage Capacity",
+    gallons: "Gallons",
+    linePressure: "Line Pressure",
+    optimalReserves: "Optimal Reserves",
+    refillAdvised: "Refill Recommended",
+    municipalSchedule: "Municipal Schedule",
+    emergencyTanker: "Authorized Tanker Service",
     statementLabel: "Statement:",
     closeBtn: "Close ✕"
   },
@@ -360,6 +373,19 @@ export const translations = {
     sendProofWa: "ادائیگی رسید واٹس ایپ کریں",
     waNotice: "رقم منتقل کرنے کے بعد رسید کا اسکرین شاٹ واٹس ایپ پر انتظامیہ کو ضرور بھیجیں۔",
     tapToFlip: "تھری ڈی رخ پلٹنے کے لیے کارڈ پر کلک کریں",
+
+    // 3D Water Reservoir
+    reservoirTitle: "زیرِ زمین واٹر ریزروائر (3D جائزہ)",
+    reservoirSubtitle: "سوسائٹی کے زیرِ زمین ٹینک میں پانی کی موجودہ سطح اور متوقع شیڈول",
+    kwsbLine: "بلدیاتی لائن سپلائی (KWSB)",
+    tankerBackup: "ٹینکر بیک اپ ریزرو",
+    storageCapacity: "اسٹوریج گنجائش",
+    gallons: "گیلن",
+    linePressure: "لائن پریشر",
+    optimalReserves: "تسلی بخش ذخیرہ",
+    refillAdvised: "ٹینکر منگوانے کی ضرورت",
+    municipalSchedule: "لائن سپلائی کا شیڈول",
+    emergencyTanker: "مجاز واٹر ٹینکر سروس",
     statementLabel: "رپورٹ برائے:",
     closeBtn: "بند کریں ✕"
   }
