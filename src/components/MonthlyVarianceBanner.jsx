@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Sparkles, Info } from 'lucide-react'
 import { computeMonthlyVariance } from '../utils/variance'
 import { useLanguage } from '../context/LanguageContext'
@@ -8,6 +9,7 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
   const { lang, t } = useLanguage()
   const isUrdu = lang === 'ur'
   const displayCurrency = isUrdu ? 'روپے' : currency
+  const shouldReduceMotion = useReducedMotion()
 
   const variance = useMemo(() => {
     return computeMonthlyVariance(selectedMonth, allExpenses, currency)
@@ -19,7 +21,11 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
 
   if (!variance.hasPriorData) {
     return (
-      <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/90 dark:from-slate-850 dark:to-slate-800 border border-blue-100 dark:border-slate-700 rounded-3xl p-5 sm:p-6 shadow-sm flex items-center gap-4">
+      <motion.div
+        initial={shouldReduceMotion ? false : { opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-blue-50/90 to-indigo-50/90 dark:from-slate-850 dark:to-slate-800 border border-blue-100 dark:border-slate-700 rounded-3xl p-5 sm:p-6 shadow-sm flex items-center gap-4"
+      >
         <div className="size-11 sm:size-12 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
           <Info size={22} />
         </div>
@@ -31,7 +37,7 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
             {isUrdu ? 'یہ ابتدائی ریکارڈ ہے۔ اگلے مہینوں کا تقابلی جائزہ خودکار طور پر ظاہر ہوگا۔' : 'This is the starting ledger cycle. Month-over-month variance analytics will compare subsequent months automatically.'}
           </p>
         </div>
-      </div>
+      </motion.div>
     )
   }
 
@@ -39,24 +45,36 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
   const isNeutral = variance.totalDiff === 0
 
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-700 p-5 sm:p-7 shadow-lg shadow-slate-200/50 dark:shadow-none space-y-5">
+    <motion.div
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', damping: 24, stiffness: 220 }}
+      className="relative overflow-hidden rounded-3xl backdrop-blur-xl bg-white/90 dark:bg-slate-850/90 border border-slate-200/90 dark:border-slate-700 p-5 sm:p-7 shadow-lg shadow-slate-200/50 dark:shadow-none space-y-5"
+    >
       {/* Decorative subtle background gradient blob */}
       <div className="absolute -top-12 -right-12 size-56 rounded-full bg-gradient-to-br from-primary/10 to-indigo-500/10 blur-2xl pointer-events-none" />
 
       {/* Banner Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10 border-b border-slate-100 dark:border-slate-800 pb-4">
         <div className="flex items-center gap-3">
-          <div className="size-11 sm:size-12 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white flex items-center justify-center shadow-md shadow-primary/30 flex-shrink-0">
+          <motion.div
+            whileHover={shouldReduceMotion ? {} : { rotate: 12, scale: 1.08 }}
+            transition={{ type: 'spring', damping: 15, stiffness: 280 }}
+            className="size-11 sm:size-12 rounded-2xl bg-gradient-to-tr from-primary to-blue-600 text-white flex items-center justify-center shadow-md shadow-primary/30 flex-shrink-0"
+          >
             <Sparkles size={22} />
-          </div>
+          </motion.div>
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
               <h3 className="text-base sm:text-xl md:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
                 {isUrdu ? 'اس ماہ کیا تبدیل ہوا؟' : 'What Changed This Month?'}
               </h3>
-              <span className="text-xs sm:text-sm font-extrabold px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 shadow-2xs">
+              <motion.span
+                whileHover={shouldReduceMotion ? {} : { scale: 1.04 }}
+                className="text-xs sm:text-sm font-extrabold px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 shadow-2xs"
+              >
                 {isUrdu ? `بمقابلہ ${translateMonth(variance.priorMonth, 'ur')}` : `vs. ${variance.priorMonth}`}
-              </span>
+              </motion.span>
             </div>
             <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
               {isUrdu ? 'ماہانہ اخراجات کے فرق اور اہم عوامل کا خودکار جائزہ' : 'Automated month-over-month expense variance analysis & top drivers'}
@@ -64,10 +82,13 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
           </div>
         </div>
 
-        {/* Total Net Expense Change Badge */}
+        {/* Total Net Expense Change Floating Badge */}
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          <div
-            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl border-2 flex items-center gap-2 text-xs sm:text-sm md:text-base font-black shadow-xs ${
+          <motion.div
+            whileHover={shouldReduceMotion ? {} : { scale: 1.03, y: -2 }}
+            whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
+            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+            className={`px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl border-2 flex items-center gap-2 text-xs sm:text-sm md:text-base font-black shadow-xs cursor-default ${
               isNeutral
                 ? 'bg-slate-50 dark:bg-slate-800 text-slate-700 border-slate-200'
                 : isTotalIncrease
@@ -84,7 +105,7 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
               {isTotalIncrease ? (isUrdu ? 'کل اضافہ' : 'Total Increase') : (isUrdu ? 'کل بچت / کمی' : 'Total Reduction')}: {isTotalIncrease ? '+' : '-'}{displayCurrency} {fmt(variance.totalDiff)}
               {variance.totalPct ? ` (${isTotalIncrease ? '+' : ''}${variance.totalPct}%)` : ''}
             </span>
-          </div>
+          </motion.div>
         </div>
       </div>
 
@@ -107,8 +128,10 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
           ) : (
             <div className="space-y-2.5">
               {variance.increases.map((item, idx) => (
-                <div
+                <motion.div
                   key={idx}
+                  whileHover={shouldReduceMotion ? {} : { x: isUrdu ? -4 : 4 }}
+                  transition={{ type: 'spring', damping: 20, stiffness: 300 }}
                   className="flex items-center justify-between p-3 sm:p-4 rounded-2xl bg-white dark:bg-slate-800 border border-rose-100 dark:border-slate-700 shadow-xs"
                 >
                   <div className="min-w-0 pr-3">
@@ -133,7 +156,7 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
                       </span>
                     )}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           )}
@@ -152,12 +175,14 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
           </div>
 
           {variance.reductions.length === 0 ? (
-            <p className="text-sm font-bold text-slate-400 py-3 text-center italic">{isUrdu ? 'کوئی بچت / کمی ریکارڈ نہیں ہوئی۔' : 'No expense reductions recorded.'}</p>
+            <p className="text-sm font-bold text-slate-400 py-3 text-center italic">{isUrdu ? 'کوئی کمی درج نہیں ہوئی۔' : 'No expense reductions recorded.'}</p>
           ) : (
             <div className="space-y-2.5">
               {variance.reductions.map((item, idx) => (
-                <div
+                <motion.div
                   key={idx}
+                  whileHover={shouldReduceMotion ? {} : { x: isUrdu ? -4 : 4 }}
+                  transition={{ type: 'spring', damping: 20, stiffness: 300 }}
                   className="flex items-center justify-between p-3 sm:p-4 rounded-2xl bg-white dark:bg-slate-800 border border-emerald-100 dark:border-slate-700 shadow-xs"
                 >
                   <div className="min-w-0 pr-3">
@@ -165,9 +190,9 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
                       {isUrdu ? translateItemName(item.name, 'ur') : item.name}
                     </p>
                     <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1 truncate">
-                      {item.isEliminated 
-                        ? (isUrdu ? `مکمل ہوا (${displayCurrency} ${fmt(item.prev)} بچت)` : `Completed (${currency} ${fmt(item.prev)} saved)`) 
-                        : (isUrdu ? `${displayCurrency} ${fmt(item.prev)} سے کم ہوا` : `Reduced from ${currency} ${fmt(item.prev)}`)}
+                      {isUrdu 
+                        ? `گزشتہ ماہ (${translateMonth(variance.priorMonth.split(' ')[0], 'ur')}) میں ${displayCurrency} ${fmt(item.prev)} تھا` 
+                        : `Was ${currency} ${fmt(item.prev)} in ${variance.priorMonth.split(' ')[0]}`}
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">
@@ -175,17 +200,17 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
                       -{displayCurrency} {fmt(item.diff)}
                     </span>
                     {item.pct && (
-                      <span className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400/90 block mt-0.5">
-                        {item.pct}%
+                      <span className="text-xs sm:text-sm font-black text-emerald-500 dark:text-emerald-400/90 block mt-0.5">
+                        -{item.pct}%
                       </span>
                     )}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

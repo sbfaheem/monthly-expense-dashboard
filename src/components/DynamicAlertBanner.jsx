@@ -1,3 +1,5 @@
+import React from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { AlertTriangle, Sparkles } from 'lucide-react'
 
 export default function DynamicAlertBanner({
@@ -6,6 +8,7 @@ export default function DynamicAlertBanner({
   customNote = '',
   isNoData = false
 }) {
+  const shouldReduceMotion = useReducedMotion()
   if (isNoData) return null
 
   const isDeficit = Number(netCashFlow) < 0
@@ -20,17 +23,23 @@ export default function DynamicAlertBanner({
     : `Operating surplus of ${currency} ${absFormatted} retained in community reserves.`
 
   return (
-    <div
-      className={`rounded-3xl p-5 sm:p-7 border-2 transition-all duration-300 shadow-md ${
+    <motion.div
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', damping: 24, stiffness: 220 }}
+      whileHover={shouldReduceMotion ? {} : { scale: 1.008 }}
+      className={`rounded-3xl p-5 sm:p-7 border-2 backdrop-blur-xl transition-all duration-300 shadow-lg will-change-transform ${
         isDeficit
-          ? 'bg-amber-50/95 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700/70 shadow-amber-500/10'
-          : 'bg-emerald-50/95 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700/70 shadow-emerald-500/10'
+          ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-300/80 dark:border-amber-700/70 shadow-amber-500/10'
+          : 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-300/80 dark:border-emerald-700/70 shadow-emerald-500/10'
       }`}
     >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
         {/* Left Side: Icon & English Notice */}
         <div className="flex items-start sm:items-center gap-4 flex-1">
-          <div
+          <motion.div
+            whileHover={shouldReduceMotion ? {} : { rotate: isDeficit ? -8 : 8, scale: 1.08 }}
+            transition={{ type: 'spring', damping: 16, stiffness: 300 }}
             className={`size-12 sm:size-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md ${
               isDeficit
                 ? 'bg-amber-500 text-white shadow-amber-500/30'
@@ -38,18 +47,19 @@ export default function DynamicAlertBanner({
             }`}
           >
             {isDeficit ? <AlertTriangle size={26} className="stroke-[2.5]" /> : <Sparkles size={26} />}
-          </div>
+          </motion.div>
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <span
-                className={`text-xs sm:text-sm font-black uppercase tracking-wider px-3 py-1 rounded-full border-2 ${
+              <motion.span
+                whileHover={shouldReduceMotion ? {} : { scale: 1.05 }}
+                className={`text-xs sm:text-sm font-black uppercase tracking-wider px-3 py-1 rounded-full border-2 shadow-2xs ${
                   isDeficit
                     ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700'
                     : 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700'
                 }`}
               >
                 {isDeficit ? '⚠️ Cash Flow Alert' : '✅ Treasury Status'}
-              </span>
+              </motion.span>
               <span className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100">
                 {isDeficit ? 'Deficit Notice' : 'Surplus Transferred'}
               </span>
@@ -85,6 +95,6 @@ export default function DynamicAlertBanner({
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
