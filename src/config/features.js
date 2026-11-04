@@ -1,0 +1,7 @@
+export const FEATURE_FLAGS = {
+  SHOW_COLLECTION_PROGRESS: true,
+  SHOW_BANK_DETAILS_MODAL: true,
+  SHOW_SERVICE_DIRECTORY: true,
+};
+
+export default FEATURE_FLAGS;

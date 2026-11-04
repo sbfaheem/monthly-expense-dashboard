@@ -8,12 +8,14 @@ import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import MonthlyVarianceBanner from '../components/MonthlyVarianceBanner'
 import DynamicAlertBanner from '../components/DynamicAlertBanner'
 import WhatsAppSnapshotModal from '../components/WhatsAppSnapshotModal'
+import BankDetailsModal from '../components/BankDetailsModal'
+import { FEATURE_FLAGS } from '../config/features'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useLanguage } from '../context/LanguageContext'
 import { translateMonth } from '../utils/translations'
 import { exportToCSV, printReport } from '../utils/export'
 import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
-import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2, Calendar } from 'lucide-react'
+import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2, Calendar, Landmark } from 'lucide-react'
 
 // Helper to normalize phone numbers for robust matching (last 10 digits)
 const normalizePhone = (p) => (p || '').replace(/[^0-9]/g, '').slice(-10)
@@ -79,6 +81,7 @@ export default function ViewerDashboard() {
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false)
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [showWhatsAppSnapshotModal, setShowWhatsAppSnapshotModal] = useState(false)
+  const [showBankDetailsModal, setShowBankDetailsModal] = useState(false)
 
   useEffect(() => {
     loadData().then(freshData => {
@@ -412,6 +415,18 @@ export default function ViewerDashboard() {
               </span>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              {/* Bank & Raast Details Button */}
+              {FEATURE_FLAGS.SHOW_BANK_DETAILS_MODAL && (
+                <button
+                  type="button"
+                  onClick={() => setShowBankDetailsModal(true)}
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs sm:text-sm font-black shadow-sm transition-all active:scale-95 flex-shrink-0 whitespace-nowrap"
+                  title={isUrdu ? 'سوسائٹی بینک اکاؤنٹ و راست تفصیلات' : 'Community Bank Account & Raast Details'}
+                >
+                  <Landmark size={16} />
+                  <span>{t.payDuesBtn || (isUrdu ? 'بینک تفصیلات و ادائیگی' : 'Pay Dues / Bank Details')}</span>
+                </button>
+              )}
               <button
                 onClick={() => setShowWhatsAppSnapshotModal(true)}
                 className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-black shadow-sm transition-all active:scale-95 flex-shrink-0 whitespace-nowrap"
@@ -550,7 +565,9 @@ export default function ViewerDashboard() {
           selectedMonth={currentMonthKey}
           allExpenses={data.expenses || []}
           currency={data.settings?.currency || 'PKR'}
-        />
+      />
+
+      
 
         {/* Water Supply Tracker */}
         <WaterSupplyTracker 
@@ -1373,6 +1390,12 @@ export default function ViewerDashboard() {
         totals={totals}
         allExpenses={data.expenses || []}
         currency={data.settings?.currency || 'PKR'}
+      />
+
+      {/* 3D Metal Bank & Raast Passbook Details Modal */}
+      <BankDetailsModal
+        isOpen={showBankDetailsModal}
+        onClose={() => setShowBankDetailsModal(false)}
       />
     </div>
   )

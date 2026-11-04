@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ListChecks, Camera, FileBarChart2, Settings, LogOut,
   Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff, Sparkles, MessageSquare, BarChart3, Star, Share2,
-  ShieldCheck, Database, Download, Calendar, Lock, Menu, X
+  ShieldCheck, Database, Download, Calendar, Lock, Menu, X, Landmark
 } from 'lucide-react'
 import {
   loadData, addExpense, updateExpense, deleteExpense,
@@ -20,6 +20,7 @@ import WaterSupplyTracker from '../components/WaterSupplyTracker'
 import MonthlyVarianceBanner from '../components/MonthlyVarianceBanner'
 import DynamicAlertBanner from '../components/DynamicAlertBanner'
 import WhatsAppSnapshotModal from '../components/WhatsAppSnapshotModal'
+import BankDetailsModal from '../components/BankDetailsModal'
 import WhatsAppBroadcastHub from '../components/WhatsAppBroadcastHub'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
 import { exportToCSV, printReport } from '../utils/export'
@@ -65,6 +66,7 @@ export default function AdminPanel() {
   const [showNewPass, setShowNewPass] = useState(false)
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [showWhatsAppSnapshotModal, setShowWhatsAppSnapshotModal] = useState(false)
+  const [showBankDetailsModal, setShowBankDetailsModal] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => { setTempCctv(null) }, [selectedMonth, selectedYear])
@@ -800,7 +802,14 @@ export default function AdminPanel() {
                  </div>
                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-wrap w-full sm:w-auto">
                    <button
-                     onClick={() => setShowWhatsAppSnapshotModal(true)}
+                      onClick={() => setShowBankDetailsModal(true)}
+                      className="flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm active:scale-95 text-xs sm:text-sm w-full sm:w-auto"
+                      title="Bank Account and Raast Details"
+                    >
+                      <Landmark size={16} /> Bank and Raast Details
+                    </button>
+                    <button
+                      onClick={() => setShowWhatsAppSnapshotModal(true)}
                      className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm shadow-emerald-600/20 active:scale-95 text-xs sm:text-sm w-full sm:w-auto"
                    >
                      <Share2 size={16} /> Download WhatsApp Summary
@@ -1221,6 +1230,12 @@ export default function AdminPanel() {
         totals={totals}
         allExpenses={data.expenses || []}
         currency={data.settings?.currency || 'PKR'}
+      />
+
+      {/* 3D Metal Bank & Raast Passbook Details Modal */}
+      <BankDetailsModal
+        isOpen={showBankDetailsModal}
+        onClose={() => setShowBankDetailsModal(false)}
       />
     </div>
   )
