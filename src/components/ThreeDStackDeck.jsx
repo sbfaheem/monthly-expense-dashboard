@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { useLanguage } from '../context/LanguageContext'
 import { Card3D } from './Card3D'
+import RollingOdometer from './RollingOdometer'
 
 export const ThreeDStackDeck = ({
   openingBalance = 0,
@@ -215,8 +216,8 @@ export const ThreeDStackDeck = ({
 
                     <div className="my-2 flex items-center justify-between gap-2 min-h-[52px]">
                       <div className={`text-2xl sm:text-3xl font-black font-mono tracking-tight ${card.textColor}`}>
-                        <span className="text-base font-semibold mr-1.5 opacity-80">{displayCurrency}</span>
-                        {card.value}
+                        <RollingOdometer value={card.value} prefix={displayCurrency} />
+
                       </div>
 
                       {/* Continuously Bouncing Ball placed directly above + Active */}
@@ -325,7 +326,7 @@ export const ThreeDStackDeck = ({
               </div>
 
               <div className={`text-2xl font-black font-mono tracking-tight select-all ${card.textColor}`}>
-                {displayCurrency} {card.value}
+                <RollingOdometer value={card.value} prefix={displayCurrency} />
               </div>
 
               <div className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">

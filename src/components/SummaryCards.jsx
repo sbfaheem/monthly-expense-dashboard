@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { motion, useAnimation, useReducedMotion } from 'framer-motion'
 import { useLanguage } from '../context/LanguageContext'
 import Card3D from './Card3D'
+import RollingOdometer from './RollingOdometer'
 
 export const SummaryCards = ({
   openingBalance = 0,
@@ -354,8 +355,8 @@ export const SummaryCards = ({
                         {/* Middle Row: Value on the left, Interactive Tap Ball on the right */}
                         <div className="my-1.5 flex items-center justify-between gap-2 min-h-[52px]">
                           <div className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${card.valueColor}`}>
-                            <span className="text-sm font-semibold mr-1.5 opacity-75">{displayCurrency}</span>
-                            {card.value}
+                            <RollingOdometer value={card.value} prefix={displayCurrency} />
+
                           </div>
 
                           {/* Continuously Bouncing Ball placed directly above the + Active text */}
@@ -488,7 +489,7 @@ export const SummaryCards = ({
               </div>
 
               <div className={`text-2xl font-bold tracking-tight select-all ${card.valueColor}`}>
-                {displayCurrency} {card.value}
+                <RollingOdometer value={card.value} prefix={displayCurrency} />
               </div>
 
               <div className={`mt-2 text-xs font-semibold flex items-center gap-1 ${card.noteColor}`}>
