@@ -1,7 +1,6 @@
-import React, { useState } from 'react'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import React, { useState, useEffect } from 'react'
+import { motion, useAnimation, useReducedMotion } from 'framer-motion'
 import { useLanguage } from '../context/LanguageContext'
-import Card3D from './Card3D'
 
 export const SummaryCards = ({
   openingBalance = 0,
@@ -18,8 +17,17 @@ export const SummaryCards = ({
 }) => {
   const { lang, t, isRtl } = useLanguage ? useLanguage() : { lang: 'en', t: {}, isRtl: false }
   const shouldReduceMotion = useReducedMotion()
-  const [is3DDeckView, setIs3DDeckView] = useState(false) // Defaults to Classic Grid
+  
+  // Views & Card state
+  const [is3DDeckView, setIs3DDeckView] = useState(false) // Defaults to razor-sharp Classic Grid
   const [activeCardIndex, setActiveCardIndex] = useState(0)
+  const [isBouncing, setIsBouncing] = useState(false)
+  const [isAutoPlay, setIsAutoPlay] = useState(false)
+  const [showRipple, setShowRipple] = useState(false)
+
+  // Framer Motion Controllers for coordinated physics in 3D mode
+  const ballControls = useAnimation()
+  const deckControls = useAnimation()
 
   const isUrdu = lang === 'ur'
   const displayCurrency = isUrdu ? 'روپے' : currency
@@ -122,6 +130,70 @@ export const SummaryCards = ({
     },
   ]
 
+  // ================= 3D BALL BOUNCE PHYSICS ENGINE =================
+  const triggerBallBounce = async () => {
+    if (isBouncing || shouldReduceMotion) return
+    setIsBouncing(true)
+
+    // Phase 1: Ball arcs down toward the card surface
+    await ballControls.start({
+      y: 95,
+      x: isRtl ? 35 : -35,
+      scaleX: 0.9,
+      scaleY: 1.18,
+      transition: { duration: 0.32, ease: [0.45, 0, 0.75, 1] }
+    })
+
+    // Phase 2: Impact moment on card!
+    setShowRipple(true)
+    setActiveCardIndex((prev) => (prev + 1) % cards.length)
+
+    await Promise.all([
+      ballControls.start({
+        y: 104,
+        scaleX: 1.35,
+        scaleY: 0.65,
+        transition: { duration: 0.08 }
+      }),
+      deckControls.start({
+        rotateX: 22,
+        y: 12,
+        transition: { duration: 0.08 }
+      })
+    ])
+
+    setShowRipple(false)
+
+    // Phase 3: Ball rebounds back up into the air & card snaps back
+    await Promise.all([
+      ballControls.start({
+        y: [104, 20, 38, 0],
+        x: [isRtl ? 35 : -35, isRtl ? 15 : -15, isRtl ? 5 : -5, 0],
+        scaleX: [1.35, 0.95, 1.04, 1],
+        scaleY: [0.65, 1.15, 0.96, 1],
+        transition: { duration: 0.52, ease: "easeOut" }
+      }),
+      deckControls.start({
+        rotateX: 16,
+        y: 0,
+        transition: { type: "spring", stiffness: 320, damping: 20 }
+      })
+    ])
+
+    setIsBouncing(false)
+  }
+
+  // Auto-play ball bounce loop
+  useEffect(() => {
+    let timer
+    if (isAutoPlay && is3DDeckView && !isBouncing) {
+      timer = setTimeout(() => {
+        triggerBallBounce()
+      }, 2100)
+    }
+    return () => clearTimeout(timer)
+  }, [isAutoPlay, is3DDeckView, isBouncing, activeCardIndex])
+
   const handlePanEnd = (e, info) => {
     if (info.offset.y < -35) {
       setActiveCardIndex((prev) => (prev + 1) % cards.length)
@@ -132,8 +204,8 @@ export const SummaryCards = ({
 
   return (
     <div className="w-full my-4">
-      {/* 3D Mode Header & Dual Segmented View Switcher */}
-      <div className="flex items-center justify-between mb-3 px-1">
+      {/* View Header & Dual Segmented Switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3 px-1">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             {isUrdu ? 'مالیاتی جائزہ (خلاصہ)' : 'Financial Summary'}
@@ -145,33 +217,50 @@ export const SummaryCards = ({
           )}
         </div>
 
-        {/* Dual Choice Segmented Pill Switcher */}
-        <div className="inline-flex items-center p-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs">
-          <button
-            type="button"
-            onClick={() => setIs3DDeckView(false)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all duration-200 ${
-              !is3DDeckView
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
-            }`}
-          >
-            <span>▦</span>
-            <span>{isUrdu ? 'کلاسک گرڈ' : 'Classic Grid'}</span>
-          </button>
+        {/* View Switcher and Auto-Bounce Controls */}
+        <div className="flex items-center gap-2">
+          {is3DDeckView && (
+            <button
+              type="button"
+              onClick={() => setIsAutoPlay(!isAutoPlay)}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition border ${
+                isAutoPlay
+                  ? 'bg-emerald-500 text-white border-emerald-600 shadow-sm animate-pulse'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <span>{isAutoPlay ? '⏸ Pause' : '▶ Auto Bounce'}</span>
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={() => setIs3DDeckView(true)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all duration-200 ${
-              is3DDeckView
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
-            }`}
-          >
-            <span>🎴</span>
-            <span>{isUrdu ? 'تھری ڈی ڈیک' : '3D Deck'}</span>
-          </button>
+          {/* Dual Choice Segmented Pill Switcher */}
+          <div className="inline-flex items-center p-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => { setIs3DDeckView(false); setIsAutoPlay(false); }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all duration-200 ${
+                !is3DDeckView
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
+              }`}
+            >
+              <span>▦</span>
+              <span>{isUrdu ? 'کلاسک گرڈ' : 'Classic Grid'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIs3DDeckView(true)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all duration-200 ${
+                is3DDeckView
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
+              }`}
+            >
+              <span>🎴</span>
+              <span>{isUrdu ? 'تھری ڈی ڈیک' : '3D Deck'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -198,24 +287,38 @@ export const SummaryCards = ({
 
           <div 
             style={{ perspective: 1200 }}
-            className="relative w-full py-4 px-2 overflow-visible min-h-[360px] sm:min-h-[400px] flex items-center justify-center [touch-action:pan-y]"
+            className="relative w-full py-4 px-2 overflow-visible min-h-[370px] sm:min-h-[410px] flex items-center justify-center [touch-action:pan-y]"
           >
-            {/* Floating Glass Orb */}
-            <motion.div
-              animate={shouldReduceMotion ? {} : {
-                y: [-8, 12, -8],
-                x: [-6, 8, -6],
-                scale: [1, 1.05, 1],
-              }}
-              transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
-              className="pointer-events-none absolute -top-1 right-2 sm:right-8 z-40 h-14 w-14 sm:h-16 sm:w-16 rounded-full border border-white/80 bg-gradient-to-tr from-white/30 via-emerald-200/40 to-white/80 shadow-2xl backdrop-blur-md"
-              style={{
-                boxShadow: "0 15px 35px -5px rgba(16, 185, 129, 0.35), inset 0 2px 6px rgba(255,255,255,0.9)",
-              }}
-            />
+            {/* Interactive Bouncing Glass Ball */}
+            <div className="absolute -top-3 right-4 sm:right-16 z-50 flex flex-col items-center">
+              <motion.span 
+                animate={{ y: [-2, 2, -2] }} 
+                transition={{ duration: 2, repeat: Infinity }}
+                className="mb-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-900/80 text-white shadow-sm pointer-events-none select-none backdrop-blur-xs"
+              >
+                {isUrdu ? "چھوئیں 🎾" : "Tap Ball! 🎾"}
+              </motion.span>
+
+              <motion.button
+                type="button"
+                aria-label="Bounce ball on cards"
+                onClick={triggerBallBounce}
+                animate={ballControls}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.92 }}
+                className="relative h-14 w-14 sm:h-16 sm:w-16 rounded-full border border-white/80 bg-gradient-to-tr from-white/30 via-emerald-200/50 to-white/90 shadow-2xl backdrop-blur-md cursor-pointer focus:outline-hidden"
+                style={{
+                  boxShadow: "0 15px 35px -5px rgba(16, 185, 129, 0.45), inset 0 2px 6px rgba(255,255,255,0.9)",
+                }}
+              >
+                <span className="absolute top-1.5 left-2 h-4 w-7 rounded-full bg-white/70 blur-2xs transform -rotate-25 pointer-events-none" />
+                <span className="absolute bottom-1 right-2 h-3 w-3 rounded-full bg-emerald-400/50 blur-xs pointer-events-none" />
+              </motion.button>
+            </div>
 
             {/* Isometric Angled Deck Container */}
             <motion.div
+              animate={deckControls}
               style={{
                 transformStyle: "preserve-3d",
                 rotateX: 16,
@@ -224,6 +327,15 @@ export const SummaryCards = ({
               }}
               className="relative w-full max-w-sm sm:max-w-md mx-auto h-[260px]"
             >
+              {showRipple && (
+                <motion.div
+                  initial={{ opacity: 0.8, scale: 0.2 }}
+                  animate={{ opacity: 0, scale: 1.6 }}
+                  transition={{ duration: 0.45, ease: "easeOut" }}
+                  className="pointer-events-none absolute top-4 right-10 z-50 h-24 w-24 rounded-full border-2 border-emerald-400 bg-emerald-400/20"
+                />
+              )}
+
               {cards.map((card, idx) => {
                 const relIndex = (idx - activeCardIndex + cards.length) % cards.length
                 const isSelected = relIndex === 0
@@ -315,21 +427,24 @@ export const SummaryCards = ({
           </div>
         </div>
       ) : (
-        /* ================= CLASSIC RESPONSIVE GRID ================= */
+        /* ================= 100% CRISP 2D CLASSIC GRID (ZERO GPU BLUR) ================= */
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {cards.map((card) => (
-            <Card3D
+            <div
               key={card.id}
-              maxTilt={8}
-              depthZ={12}
-              glareMaxOpacity={0.2}
-              className={`p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between ${card.cardClass}`}
+              className={`p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between ${card.cardClass}`}
+              style={{
+                transform: 'none',
+                WebkitFontSmoothing: 'antialiased',
+                MozOsxFontSmoothing: 'grayscale',
+                textRendering: 'optimizeLegibility',
+              }}
             >
               <div className="flex items-center justify-between mb-3">
-                <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+                <span className="text-slate-600 dark:text-slate-300 text-sm font-medium">
                   {card.label}
                 </span>
-                <span className={`material-symbols-outlined ${card.iconColor}`}>
+                <span className={`material-symbols-outlined text-xl ${card.iconColor}`}>
                   {card.icon}
                 </span>
               </div>
@@ -342,7 +457,7 @@ export const SummaryCards = ({
                 <span className="material-symbols-outlined text-xs">{card.noteIcon}</span>
                 <span>{card.note}</span>
               </div>
-            </Card3D>
+            </div>
           ))}
         </div>
       )}
