@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   Droplet, Clock, Calendar, Sparkles, TrendingUp, Share2, Check, Timer,
-  Phone, MessageSquare, Gauge, Waves, Truck, ArrowUpRight, Plus,
-  AlertTriangle, ShieldCheck, Activity, CheckCircle2, ChevronRight, X
+  Gauge, Waves, Truck, ArrowUpRight, Plus, AlertTriangle, ShieldCheck,
+  Activity, CheckCircle2, ChevronRight, X, Play, Pause, RotateCcw,
+  Home, Zap, Layers, AlertCircle
 } from 'lucide-react'
 import { predictNextWaterSupply } from '../utils/waterPrediction'
 import { useLanguage } from '../context/LanguageContext'
@@ -15,52 +16,110 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
   const isUrdu = lang === 'ur'
   const shouldReduceMotion = useReducedMotion()
 
-  // Sizing & Mode State for 120 Sq. Yd Domestic Home
-  const [tankCapacity, setTankCapacity] = useState(2000) // 2000 Gal (Standard 8x8x6 ft) or 1500 Gal (Compact 8x6x6 ft)
-  const [reservoirMode, setReservoirMode] = useState('kwsb') // 'kwsb' | 'tanker'
+  // ─── 1. Dual Reservoir Architecture State (120 Sq. Yd Home) ───
+  // Underground Tank (UGT): 2,000 Gal (Standard) or 1,500 Gal (Compact)
+  const [ugtCap, setUgtCap] = useState(2000)
+  // Overhead Roof Tank (OHT): 600 Gal (Standard) or 750 Gal (Large)
+  const [ohtCap, setOhtCap] = useState(600)
+  // Mode: 'kwsb' (municipal line supply) or 'tanker' (backup reserve)
+  const [reservoirMode, setReservoirMode] = useState('kwsb')
+
+  // ─── 2. Sequential 13-Day Lifecycle & Interactive Simulation Slider ───
+  // Total capacity = ugtCap + ohtCap (Default: 2000 + 600 = 2600 Gal)
+  const totalCapacity = ugtCap + ohtCap
+  // Lifespan is exactly 13.0 days after supply cut off
+  // Daily burn rate = Total Capacity / 13 (2600 / 13 = 200 Gal/Day)
+  const dailyBurnRate = Math.round(totalCapacity / 13)
+
+  // Simulation day slider: Day 0 (Supply Just Ended / 100% Full) to Day 13 (Empty)
+  const [currentDay, setCurrentDay] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const playTimerRef = useRef(null)
+
+  // Auto-play simulation loop (smoothly advances through 13 days)
+  useEffect(() => {
+    if (isPlaying) {
+      playTimerRef.current = setInterval(() => {
+        setCurrentDay((prev) => {
+          if (prev >= 13) {
+            setIsPlaying(false)
+            return 13
+          }
+          return Math.min(13, parseFloat((prev + 0.5).toFixed(1)))
+        })
+      }, 700)
+    } else {
+      clearInterval(playTimerRef.current)
+    }
+    return () => clearInterval(playTimerRef.current)
+  }, [isPlaying])
+
+  // Sequential Depletion Calculation:
+  // Total water burned = (currentDay / 13) * totalCapacity
+  const totalBurned = Math.min(totalCapacity, (currentDay / 13) * totalCapacity)
+
+  // Sequential Rule:
+  // Phase 1 (Day 0 to ~3): OHT drains first down to 0 while UGT stays 100% full.
+  // Phase 2 (Day 3 to 13): Once OHT is 0, UGT drains progressively from 100% down to 0%.
+  let ohtRemaining = 0
+  let ugtRemaining = 0
+
+  if (totalBurned <= ohtCap) {
+    ohtRemaining = Math.round(ohtCap - totalBurned)
+    ugtRemaining = ugtCap
+  } else {
+    ohtRemaining = 0
+    ugtRemaining = Math.max(0, Math.round(ugtCap - (totalBurned - ohtCap)))
+  }
+
+  const totalRemaining = ohtRemaining + ugtRemaining
+  const ohtPercent = Math.min(100, Math.max(0, Math.round((ohtRemaining / ohtCap) * 100)))
+  const ugtPercent = Math.min(100, Math.max(0, Math.round((ugtRemaining / ugtCap) * 100)))
+  const totalPercent = Math.min(100, Math.max(0, Math.round((totalRemaining / totalCapacity) * 100)))
+
+  const daysOfWaterLeft = dailyBurnRate > 0 ? (totalRemaining / dailyBurnRate).toFixed(1) : '0.0'
+  const headroomGallons = totalCapacity - totalRemaining
+
+  // Drain phase classification
+  const isPhase1 = totalBurned <= ohtCap && currentDay < 13 && totalRemaining > 0
+  const isPhase2 = totalBurned > ohtCap && currentDay < 13 && totalRemaining > 0
+  const isDry = totalRemaining <= 0 || currentDay >= 13
+
+  // Deficit gap math
+  const municipalCycleDays = 16.7
+  const maxAutonomyDays = 13.0
+  const deficitDays = (municipalCycleDays - maxAutonomyDays).toFixed(1) // 3.7 days
+  const rationRate = Math.round(totalCapacity / municipalCycleDays) // ~155 Gal/Day for 2,600 Gal
+
+  // ─── 3. Overhead Pumping Transfer Log State ───
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [transferBatchLogged, setTransferBatchLogged] = useState(false)
-
-  // Overhead Pumping Transfer Log State
   const [transferLogs, setTransferLogs] = useState([
     {
       id: 1,
       title: isUrdu ? 'صبح کی شفٹ پمپنگ' : 'Morning Pump Cycle',
       amount: 100,
-      target: isUrdu ? '500 گیلن چھت کا ٹینک' : '500-Gal Overhead Roof Tank',
+      target: isUrdu ? `${ohtCap} گیلن چھت کا ٹینک` : `${ohtCap}-Gal Roof Tank`,
       time: isUrdu ? 'آج، 07:30 AM' : 'Today, 7:30 AM',
-      operator: isUrdu ? 'آٹومیٹک موٹر' : 'Automatic Motor',
+      operator: isUrdu ? '0.5 HP موٹر' : '0.5 HP Electric Motor',
     },
     {
       id: 2,
       title: isUrdu ? 'شام کی سپلائی ٹرانسفر' : 'Evening Top-Up',
       amount: 100,
-      target: isUrdu ? '500 گیلن چھت کا ٹینک' : '500-Gal Overhead Roof Tank',
+      target: isUrdu ? `${ohtCap} گیلن چھت کا ٹینک` : `${ohtCap}-Gal Roof Tank`,
       time: isUrdu ? 'گزشتہ کل، 06:15 PM' : 'Yesterday, 6:15 PM',
       operator: isUrdu ? 'دستی سوئچ' : 'Manual Switch',
     },
     {
       id: 3,
-      title: isUrdu ? 'ہفتہ وار مکمل فلنگ' : 'Weekend Full Batch',
+      title: isUrdu ? 'ہفتہ وار مکمل فلنگ' : 'Full Batch Filling',
       amount: 250,
-      target: isUrdu ? '500 گیلن چھت کا ٹینک' : '500-Gal Overhead Roof Tank',
+      target: isUrdu ? `${ohtCap} گیلن چھت کا ٹینک` : `${ohtCap}-Gal Roof Tank`,
       time: isUrdu ? '02 نومبر، 08:00 AM' : 'Nov 2, 8:00 AM',
-      operator: isUrdu ? 'آٹومیٹک موٹر' : 'Automatic Motor',
+      operator: isUrdu ? '0.5 HP موٹر' : '0.5 HP Electric Motor',
     }
   ])
-
-  // Calculation of domestic underground capacity & burn rates
-  const isKwsb = reservoirMode === 'kwsb'
-  const fillPercentage = isKwsb ? 68 : 42
-  const currentVolume = Math.round(tankCapacity * (fillPercentage / 100))
-  const headroomGallons = tankCapacity - currentVolume
-
-  // Daily Quota & Burn Rate calculation
-  const burnRate = tankCapacity === 2000 ? 105 : 80
-  const quotaCeiling = tankCapacity === 2000 ? 115 : 90
-  const isWithinBudget = burnRate <= quotaCeiling
-  const daysOfWaterLeft = (currentVolume / burnRate).toFixed(1)
-  const isLowReserves = fillPercentage < 25
 
   // Calculate durations for recorded municipal supply periods
   let totalMs = 0
@@ -98,18 +157,19 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
     const last = predictionData.lastSupply
 
     const msg = [
-      `💧 *DOMESTIC WATER RESERVOIR & FORECAST*`,
+      `💧 *DUAL-TANK WATER SYSTEM UPDATE*`,
       `🏠 *120 Sq. Yard Household • Sector 7D/1*`,
       ``,
-      `🛢️ *Underground Tank:* ${currentVolume.toLocaleString()} / ${tankCapacity.toLocaleString()} Gal (${fillPercentage}%)`,
-      `⏳ *Autonomy Remaining:* ~${daysOfWaterLeft} Days of Water Left (@ ${burnRate} Gal/Day)`,
+      `🛢️ *Combined Reserves:* ${totalRemaining.toLocaleString()} / ${totalCapacity.toLocaleString()} Gal (${totalPercent}%)`,
+      `  • Roof Tank (OHT): ${ohtRemaining.toLocaleString()} / ${ohtCap.toLocaleString()} Gal (${ohtPercent}%)`,
+      `  • Underground (UGT): ${ugtRemaining.toLocaleString()} / ${ugtCap.toLocaleString()} Gal (${ugtPercent}%)`,
+      `⏳ *Autonomy Remaining:* ~${daysOfWaterLeft} Days (@ ${dailyBurnRate} Gal/Day)`,
+      `⚠️ *Cadence Deficit Gap:* ~${deficitDays} Days (Ration to ${rationRate} Gal/Day for 16.7d cycle)`,
       ``,
       `✅ *Last Known Municipal Supply:* ${last.formattedStart} to ${last.formattedEnd}`,
       `🔮 *Next Predicted Arrival:* *${p.windowFormatted}*`,
       `🎯 *Most Probable Start:* ${p.predictedDateFormatted}`,
       `⏱️ *Expected Inflow Duration:* ${p.avgDurationText} at 42 PSI`,
-      `🔄 *Supply Cadence:* Every ~${p.avgIntervalDays} days`,
-      `⭐ *Reliability Score:* ${p.reliabilityScore}%`,
       ``,
       `🌐 *Live Expense & Water Dashboard:*`,
       `https://monthly-expense-dashboard.vercel.app/view`
@@ -129,7 +189,7 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
       id: Date.now(),
       title: isUrdu ? 'صبح کا ٹرانسفر بیج' : 'Overhead Tank Transfer',
       amount: 100,
-      target: isUrdu ? '500 گیلن چھت کا ٹینک' : '500-Gal Roof Tank',
+      target: isUrdu ? `${ohtCap} گیلن چھت کا ٹینک` : `${ohtCap}-Gal Roof Tank`,
       time: isUrdu ? 'ابھی، تازہ ترین' : 'Just now',
       operator: isUrdu ? 'رہائشی لاگ' : 'Resident Log',
     }
@@ -141,85 +201,97 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
     }, 1800)
   }
 
-  // Verified Municipal Line Operator & Tanker Provider
-  const contacts = [
-    {
-      role: isUrdu ? 'والو سپروائزر و میونسپل لائن' : 'Line Valve Operator / Supervisor',
-      name: isUrdu ? 'سپروائزر مجید' : 'Supervisor Majeed',
-      phone: '03013377675',
-      waNumber: '923013377675',
-      desc: isUrdu ? 'سیکٹر 7D/1 واٹر والو انچارج' : 'Sector 7D/1 Grid Valve Controller',
-    },
-    {
-      role: isUrdu ? 'مجاز پرائیویٹ واٹر ٹینکر' : 'Authorized Private Tanker Service',
-      name: isUrdu ? 'واٹر ٹینکر باؤزر سروس' : 'Tanker Bowser Service',
-      phone: '03001234567',
-      waNumber: '923001234567',
-      desc: isUrdu ? '1,000 اور 2,000 گیلن باؤزر آرڈر' : '1,000 / 2,000 Gal Bowser Request',
-    }
-  ]
-
   return (
     <div className="space-y-6 mt-8">
-      {/* ================= HERO: DOMESTIC UNDERGROUND WATER RESERVOIR (120 SQ. YD) ================= */}
+      {/* ================= HERO: DUAL-TANK WATER MANAGEMENT SYSTEM (120 SQ. YD) ================= */}
       <div className="relative overflow-hidden rounded-3xl border border-cyan-500/25 dark:border-cyan-500/20 bg-gradient-to-br from-slate-900 via-zinc-950 to-slate-950 p-5 sm:p-8 text-white shadow-2xl">
         {/* Cyberpunk Telemetry Radial Backdrop Glows */}
-        <div className="pointer-events-none absolute -top-28 left-1/4 h-80 w-80 rounded-full bg-cyan-500/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-28 right-8 h-80 w-80 rounded-full bg-teal-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-cyan-500/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 right-10 h-96 w-96 rounded-full bg-teal-500/10 blur-3xl" />
 
-        {/* ─── 1. Header Bar: Title, Capacity Sizing Toggle & Status Badge ─── */}
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+        {/* ─── 1. Header Bar: Title, Capacity Sizing Toggles & Source Modes ─── */}
+        <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-5 pb-6 border-b border-slate-800">
           <div className="flex items-center gap-3.5">
             <div className="size-12 sm:size-14 rounded-2xl bg-gradient-to-tr from-cyan-600 via-teal-500 to-cyan-400 text-slate-950 flex items-center justify-center shadow-lg shadow-cyan-500/25 flex-shrink-0">
-              <Waves size={26} className="text-slate-950 stroke-[2.5]" />
+              <Layers size={26} className="text-slate-950 stroke-[2.5]" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-lg sm:text-2xl font-black tracking-tight text-white">
                   {isUrdu
-                    ? 'زیرِ زمین گھریلو واٹر ٹینک • 120 گز رہائشی مکان'
-                    : 'Underground Water Reservoir • 120 Sq. Yard Home'}
+                    ? 'ڈوئل ٹینک واٹر مینجمنٹ سسٹم • 120 گز رہائشی مکان'
+                    : 'Dual-Tank Water Management System • 120 Sq. Yard Home'}
                 </h3>
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/30">
                   <span className="size-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                  Telemetry Active
+                  Dual-Reservoir Active
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1">
                 {isUrdu
-                  ? 'کراچی رہائشی واٹر مانیٹرنگ، یومیہ برن ریٹ ٹیلی میٹری اور بلدیاتی سپلائی کی پیش گوئی'
-                  : 'Karachi residential water tracking, daily burn rate gauge & predictive line forecasting'}
+                  ? 'چھت (OHT) اور زیرِ زمین (UGT) ٹینکس کا 13 روزہ سلسلہ وار ڈرین ماڈل اور کیڈنس مانیٹرنگ'
+                  : 'Interconnected Overhead (OHT) & Underground (UGT) dual-tank sequential 13-day lifecycle model'}
               </p>
             </div>
           </div>
 
-          {/* Quick Controls: Tank Capacity Toggle & Supply Source Pills */}
+          {/* Sizing & Mode Controls */}
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* Tank Capacity Sizing Toggle: 2,000 Gal vs 1,500 Gal */}
+            {/* UGT Sizing Toggle */}
             <div className="flex items-center p-1 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-inner">
+              <span className="text-[10px] font-mono font-bold text-cyan-400 px-2 uppercase">UGT:</span>
               <button
                 type="button"
-                onClick={() => setTankCapacity(2000)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-                  tankCapacity === 2000
+                onClick={() => setUgtCap(2000)}
+                className={`px-2.5 py-1 rounded-xl text-xs font-black transition-all ${
+                  ugtCap === 2000
                     ? 'bg-cyan-500 text-slate-950 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
-                title="Standard 8x8x6 ft Tank"
+                title="Standard 8x8x6 ft Underground Tank"
               >
-                {isUrdu ? '2,000 گیلن (8x8x6)' : '2,000 Gal (Standard)'}
+                2,000G
               </button>
               <button
                 type="button"
-                onClick={() => setTankCapacity(1500)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-                  tankCapacity === 1500
+                onClick={() => setUgtCap(1500)}
+                className={`px-2.5 py-1 rounded-xl text-xs font-black transition-all ${
+                  ugtCap === 1500
                     ? 'bg-cyan-500 text-slate-950 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
-                title="Compact 8x6x6 ft Tank"
+                title="Compact 8x6x6 ft Underground Tank"
               >
-                {isUrdu ? '1,500 گیلن (8x6x6)' : '1,500 Gal (Compact)'}
+                1,500G
+              </button>
+            </div>
+
+            {/* OHT Sizing Toggle */}
+            <div className="flex items-center p-1 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-inner">
+              <span className="text-[10px] font-mono font-bold text-emerald-400 px-2 uppercase">OHT:</span>
+              <button
+                type="button"
+                onClick={() => setOhtCap(600)}
+                className={`px-2.5 py-1 rounded-xl text-xs font-black transition-all ${
+                  ohtCap === 600
+                    ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Standard 600-Gallon Roof Tank"
+              >
+                600G
+              </button>
+              <button
+                type="button"
+                onClick={() => setOhtCap(750)}
+                className={`px-2.5 py-1 rounded-xl text-xs font-black transition-all ${
+                  ohtCap === 750
+                    ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Large 750-Gallon Roof Tank"
+              >
+                750G
               </button>
             </div>
 
@@ -227,287 +299,565 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
             <div className="flex items-center gap-1 p-1 rounded-2xl bg-slate-900/90 border border-slate-800">
               <button
                 type="button"
-                onClick={() => setReservoirMode('kwsb')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-                  isKwsb
+                onClick={() => {
+                  setReservoirMode('kwsb')
+                  setCurrentDay(0)
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black transition-all ${
+                  reservoirMode === 'kwsb'
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-md'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Droplet size={14} />
-                <span>{isUrdu ? 'KWSB لائن سپلائی' : 'KWSB Line Supply'}</span>
+                <Droplet size={13} />
+                <span>KWSB Supply</span>
               </button>
-
               <button
                 type="button"
                 onClick={() => setReservoirMode('tanker')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-                  !isKwsb
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black transition-all ${
+                  reservoirMode === 'tanker'
                     ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Truck size={14} />
-                <span>{isUrdu ? 'ٹینکر بیک اپ' : 'Tanker Backup'}</span>
+                <Truck size={13} />
+                <span>Tanker</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* ─── 2. 3D Isometric Fluid Tank & Telemetry Display ─── */}
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-6">
-          {/* ================= 3D ISOMETRIC CYLINDER VIEWPORT ================= */}
-          <div className="lg:col-span-5 flex flex-col items-center justify-center py-2">
-            <div
-              style={{ perspective: 1000 }}
-              className="relative w-56 sm:w-64 h-72 sm:h-84 flex items-center justify-center select-none"
-            >
-              {/* Isometric Cylinder Glass Tank */}
-              <div
-                style={{
-                  transformStyle: 'preserve-3d',
-                  transform: shouldReduceMotion ? 'none' : 'rotateX(20deg) rotateY(0deg)',
-                }}
-                className="relative w-44 sm:w-52 h-64 sm:h-72"
-              >
-                {/* Dynamic Base Contact Shadow Expanding with Water Fill */}
-                <motion.div
-                  animate={{
-                    scale: 0.85 + (fillPercentage / 100) * 0.3,
-                    opacity: 0.35 + (fillPercentage / 100) * 0.45,
-                  }}
-                  transition={{ type: 'spring', stiffness: 120, damping: 14 }}
-                  className="pointer-events-none absolute -bottom-6 left-1/2 -translate-x-1/2 w-48 sm:w-56 h-12 rounded-[50%] bg-cyan-950/80 blur-md z-0"
-                />
+        {/* ─── 2. Dual 3D Isometric Fluid Visualization & Domestic Elevation ─── */}
+        <div className="relative z-10 pt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            {/* Visual Elevation Layout: OHT (Top Right) + UGT (Bottom Left) + Interconnected Pipe */}
+            <div className="lg:col-span-6 flex flex-col items-center justify-center">
+              <div className="relative w-full max-w-[460px] h-[340px] sm:h-[370px] select-none flex items-center justify-center">
+                
+                {/* Domestic Elevation Grid Backdrop */}
+                <div className="absolute inset-0 rounded-3xl bg-slate-950/40 border border-slate-800/60 [background-image:radial-gradient(rgba(34,211,238,0.08)_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
 
-                {/* Bottom Elliptical Rim of Glass Tank */}
-                <div className="absolute bottom-0 inset-x-0 h-10 sm:h-12 rounded-[50%] border-2 border-cyan-400/40 bg-cyan-950/80 shadow-[inset_0_2px_10px_rgba(6,78,59,0.8)] z-10" />
+                {/* ================= CONNECTING PUMPING PIPE (SVG) ================= */}
+                <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" viewBox="0 0 460 370">
+                  <defs>
+                    <linearGradient id="pipeGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.8" />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity="0.8" />
+                    </linearGradient>
+                  </defs>
+                  {/* Delivery Pipe from UGT Bottom to OHT Top */}
+                  <path
+                    d="M 170 290 L 170 120 L 290 120 L 290 90"
+                    fill="none"
+                    stroke="rgba(51, 65, 85, 0.7)"
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {/* Animated Water Flow Line (Active during transfer or Phase 2) */}
+                  <path
+                    d="M 170 290 L 170 120 L 290 120 L 290 90"
+                    fill="none"
+                    stroke="url(#pipeGrad)"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeDasharray={isPhase2 ? "8 6" : "4 8"}
+                    className={isPhase2 ? "animate-[dash_1s_linear_infinite]" : "opacity-40"}
+                  />
+                  {/* Suction Motor Pump Node on Pipe */}
+                  <circle cx="170" cy="205" r="9" fill="#0f172a" stroke="#06b6d4" strokeWidth="2.5" />
+                </svg>
 
-                {/* Outer Glass Tank Body (Frosted Transparent Walls) */}
-                <div className="absolute inset-0 rounded-b-[2rem] border-x-2 border-cyan-400/30 bg-gradient-to-r from-white/10 via-white/5 to-white/10 backdrop-blur-xs overflow-hidden z-10">
-                  {/* Left Specular Glare Strip */}
-                  <div className="absolute left-2.5 inset-y-0 w-2.5 bg-gradient-to-r from-white/30 to-transparent pointer-events-none" />
-                  {/* Right Specular Glare Strip */}
-                  <div className="absolute right-3.5 inset-y-0 w-1.5 bg-gradient-to-l from-white/20 to-transparent pointer-events-none" />
+                {/* Monoblock Motor Pump Label Badge */}
+                <div className="absolute left-[28%] sm:left-[30%] top-[48%] -translate-y-1/2 z-20 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-900/90 border border-cyan-500/40 text-[9px] font-mono font-bold text-cyan-300 shadow-md backdrop-blur-xs">
+                  <Zap size={11} className={isPhase2 ? "text-amber-400 animate-pulse" : "text-cyan-400"} />
+                  <span>{isPhase2 ? '0.5 HP Pump (Active)' : '0.5 HP Monoblock (Idle)'}</span>
+                </div>
 
-                  {/* Level Graduation Markings: 25%, 50%, 75%, 100% */}
-                  <div className="absolute left-3 inset-y-6 flex flex-col justify-between text-[9px] font-mono font-bold text-cyan-200/70 pointer-events-none z-30 select-none">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-px bg-cyan-200/80" />
-                      <span>100% ({tankCapacity.toLocaleString()}G)</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-px bg-cyan-200/60" />
-                      <span>75% ({(tankCapacity * 0.75).toLocaleString()}G)</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-px bg-cyan-200/60" />
-                      <span>50% ({(tankCapacity * 0.5).toLocaleString()}G)</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-px bg-cyan-200/60" />
-                      <span>25% ({(tankCapacity * 0.25).toLocaleString()}G)</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-px bg-cyan-200/80" />
-                      <span>0%</span>
-                    </div>
+                {/* ================= 1. OVERHEAD ROOF TANK (OHT - TOP RIGHT) ================= */}
+                <div className="absolute right-4 sm:right-8 top-3 sm:top-5 z-20 flex flex-col items-center">
+                  <div className="flex items-center gap-1 mb-1.5">
+                    <Home size={12} className="text-emerald-400" />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300">
+                      Roof Tank (OHT)
+                    </span>
                   </div>
 
-                  {/* ================= DYNAMIC LIQUID COLUMN ================= */}
-                  <motion.div
-                    initial={{ height: '0%' }}
-                    animate={{ height: `${fillPercentage}%` }}
-                    transition={{
-                      type: 'spring',
-                      stiffness: 120,
-                      damping: 14,
-                      mass: 0.8,
-                    }}
-                    className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-cyan-950 via-teal-700/90 to-cyan-400/85 overflow-visible z-20"
-                  >
-                    {/* Top Water Surface Ellipse (Meniscus Disc) */}
-                    <div className="absolute -top-4 inset-x-0 h-8 sm:h-9 rounded-[50%] bg-gradient-to-tr from-cyan-300 via-teal-200 to-cyan-400 border border-white/90 shadow-[inset_0_2px_6px_rgba(255,255,255,0.8),0_2px_10px_rgba(6,182,212,0.5)] z-30" />
+                  <div style={{ perspective: 900 }} className="relative w-28 sm:w-34 h-38 sm:h-44 flex items-center justify-center">
+                    <div
+                      style={{
+                        transformStyle: 'preserve-3d',
+                        transform: shouldReduceMotion ? 'none' : 'rotateX(20deg)',
+                      }}
+                      className="relative w-24 sm:w-28 h-32 sm:h-38"
+                    >
+                      {/* Base Shadow */}
+                      <div className="pointer-events-none absolute -bottom-3 left-1/2 -translate-x-1/2 w-28 h-6 rounded-[50%] bg-emerald-950/70 blur-xs" />
 
-                    {/* Continuous Layered SVG Sinusoidal Sloshing Waves */}
-                    {!shouldReduceMotion && (
-                      <div className="absolute -top-3.5 inset-x-0 h-6 overflow-hidden pointer-events-none z-20">
-                        {/* Wave 1: Fast Surface Slosh */}
-                        <motion.div
-                          animate={{ x: [0, -120] }}
-                          transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
-                          className="absolute inset-y-0 left-0 w-[480px] flex"
-                        >
-                          <svg className="w-[480px] h-6" viewBox="0 0 480 24" fill="none">
-                            <path
-                              d="M 0 10 Q 30 0, 60 10 T 120 10 T 180 10 T 240 10 T 300 10 T 360 10 T 420 10 T 480 10 L 480 24 L 0 24 Z"
-                              fill="rgba(34, 211, 238, 0.85)"
-                            />
-                          </svg>
-                        </motion.div>
+                      {/* Bottom Elliptical Rim */}
+                      <div className="absolute bottom-0 inset-x-0 h-6 rounded-[50%] border-2 border-emerald-400/40 bg-emerald-950/80 z-10" />
 
-                        {/* Wave 2: Slower Depth Slosh */}
+                      {/* Glass Body */}
+                      <div className="absolute inset-0 rounded-b-xl border-x-2 border-emerald-400/30 bg-gradient-to-r from-white/10 via-white/5 to-white/10 backdrop-blur-xs overflow-hidden z-10">
+                        {/* Specular Glare */}
+                        <div className="absolute left-1.5 inset-y-0 w-1.5 bg-gradient-to-r from-white/25 to-transparent pointer-events-none" />
+
+                        {/* Graduation Lines */}
+                        <div className="absolute right-1.5 inset-y-3 flex flex-col justify-between text-[7px] font-mono font-bold text-emerald-200/60 pointer-events-none z-30">
+                          <span>100%</span>
+                          <span>50%</span>
+                          <span>0%</span>
+                        </div>
+
+                        {/* Liquid Column */}
                         <motion.div
-                          animate={{ x: [-120, 0] }}
-                          transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
-                          className="absolute inset-y-0 left-0 w-[480px] flex opacity-60"
+                          animate={{ height: `${ohtPercent}%` }}
+                          transition={{ type: 'spring', stiffness: 120, damping: 16 }}
+                          className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-emerald-950 via-teal-700 to-emerald-400/85 z-20"
                         >
-                          <svg className="w-[480px] h-6" viewBox="0 0 480 24" fill="none">
-                            <path
-                              d="M 0 12 Q 30 22, 60 12 T 120 12 T 180 12 T 240 12 T 300 12 T 360 12 T 420 12 T 480 12 L 480 24 L 0 24 Z"
-                              fill="rgba(13, 148, 136, 0.75)"
-                            />
-                          </svg>
+                          {/* Surface Meniscus Disc */}
+                          <div className="absolute -top-2 inset-x-0 h-5 rounded-[50%] bg-gradient-to-tr from-emerald-300 via-teal-200 to-emerald-400 border border-white/90 shadow-sm z-30" />
+
+                          {/* Dual SVG Slosh Waves */}
+                          {!shouldReduceMotion && ohtPercent > 0 && (
+                            <div className="absolute -top-2 inset-x-0 h-4 overflow-hidden pointer-events-none z-20">
+                              <motion.div
+                                animate={{ x: [0, -80] }}
+                                transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
+                                className="absolute inset-y-0 left-0 w-[240px] flex"
+                              >
+                                <svg className="w-[240px] h-4" viewBox="0 0 240 16" fill="none">
+                                  <path
+                                    d="M 0 6 Q 20 0, 40 6 T 80 6 T 120 6 T 160 6 T 200 6 T 240 6 L 240 16 L 0 16 Z"
+                                    fill="rgba(52, 211, 153, 0.85)"
+                                  />
+                                </svg>
+                              </motion.div>
+                            </div>
+                          )}
                         </motion.div>
                       </div>
-                    )}
-                  </motion.div>
+
+                      {/* Top Rim */}
+                      <div className="absolute -top-2.5 inset-x-0 h-6 rounded-[50%] border-2 border-emerald-300/50 bg-gradient-to-b from-white/20 to-transparent z-40 pointer-events-none" />
+                    </div>
+
+                    {/* Live Water Level Badge */}
+                    <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-30 px-2 py-0.5 rounded-lg bg-slate-950/95 border border-emerald-500/40 text-[10px] font-mono font-black text-emerald-300 whitespace-nowrap shadow-lg">
+                      {ohtRemaining.toLocaleString()} / {ohtCap} Gal ({ohtPercent}%)
+                    </div>
+                  </div>
                 </div>
 
-                {/* Top Glass Tank Rim Ellipse */}
-                <div className="absolute -top-3.5 inset-x-0 h-10 sm:h-12 rounded-[50%] border-2 border-cyan-300/50 bg-gradient-to-b from-white/20 via-cyan-100/10 to-transparent shadow-[inset_0_2px_6px_rgba(255,255,255,0.6)] z-40 pointer-events-none" />
+                {/* ================= 2. UNDERGROUND RESERVOIR (UGT - BOTTOM LEFT) ================= */}
+                <div className="absolute left-3 sm:left-6 bottom-4 sm:bottom-6 z-20 flex flex-col items-center">
+                  <div className="flex items-center gap-1 mb-1.5">
+                    <Waves size={13} className="text-cyan-400" />
+                    <span className="text-[10px] font-black uppercase tracking-wider text-cyan-300">
+                      Underground Tank (UGT)
+                    </span>
+                  </div>
+
+                  <div style={{ perspective: 1000 }} className="relative w-36 sm:w-46 h-46 sm:h-54 flex items-center justify-center">
+                    <div
+                      style={{
+                        transformStyle: 'preserve-3d',
+                        transform: shouldReduceMotion ? 'none' : 'rotateX(20deg)',
+                      }}
+                      className="relative w-32 sm:w-40 h-40 sm:h-48"
+                    >
+                      {/* Dynamic Ground Shadow */}
+                      <motion.div
+                        animate={{
+                          scale: 0.85 + (ugtPercent / 100) * 0.3,
+                          opacity: 0.3 + (ugtPercent / 100) * 0.45,
+                        }}
+                        transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+                        className="pointer-events-none absolute -bottom-5 left-1/2 -translate-x-1/2 w-40 sm:w-48 h-8 rounded-[50%] bg-cyan-950/80 blur-md z-0"
+                      />
+
+                      {/* Bottom Rim */}
+                      <div className="absolute bottom-0 inset-x-0 h-8 rounded-[50%] border-2 border-cyan-400/40 bg-cyan-950/80 z-10" />
+
+                      {/* Transparent Frosted Tank Body */}
+                      <div className="absolute inset-0 rounded-b-2xl border-x-2 border-cyan-400/30 bg-gradient-to-r from-white/10 via-white/5 to-white/10 backdrop-blur-xs overflow-hidden z-10">
+                        {/* Specular Highlights */}
+                        <div className="absolute left-2 inset-y-0 w-2 bg-gradient-to-r from-white/30 to-transparent pointer-events-none" />
+                        <div className="absolute right-2 inset-y-0 w-1 bg-gradient-to-l from-white/20 to-transparent pointer-events-none" />
+
+                        {/* Level Markings: 100%, 75%, 50%, 25%, 0% */}
+                        <div className="absolute left-2 inset-y-4 flex flex-col justify-between text-[8px] font-mono font-bold text-cyan-200/70 pointer-events-none z-30 select-none">
+                          <span className="flex items-center gap-1">
+                            <span className="w-2 h-px bg-cyan-200/80" />100%
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="w-1.5 h-px bg-cyan-200/60" />75%
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="w-1.5 h-px bg-cyan-200/60" />50%
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="w-1.5 h-px bg-cyan-200/60" />25%
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="w-2 h-px bg-cyan-200/80" />0%
+                          </span>
+                        </div>
+
+                        {/* Liquid Fill Column */}
+                        <motion.div
+                          animate={{ height: `${ugtPercent}%` }}
+                          transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+                          className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-cyan-950 via-teal-700/90 to-cyan-400/85 overflow-visible z-20"
+                        >
+                          {/* Surface Meniscus Disc */}
+                          <div className="absolute -top-3.5 inset-x-0 h-7 rounded-[50%] bg-gradient-to-tr from-cyan-300 via-teal-200 to-cyan-400 border border-white/90 shadow-[inset_0_2px_6px_rgba(255,255,255,0.8),0_2px_10px_rgba(6,182,212,0.5)] z-30" />
+
+                          {/* Dual SVG Sinusoidal Slosh Waves */}
+                          {!shouldReduceMotion && ugtPercent > 0 && (
+                            <div className="absolute -top-3 inset-x-0 h-5 overflow-hidden pointer-events-none z-20">
+                              <motion.div
+                                animate={{ x: [0, -100] }}
+                                transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+                                className="absolute inset-y-0 left-0 w-[400px] flex"
+                              >
+                                <svg className="w-[400px] h-5" viewBox="0 0 400 20" fill="none">
+                                  <path
+                                    d="M 0 8 Q 25 0, 50 8 T 100 8 T 150 8 T 200 8 T 250 8 T 300 8 T 350 8 T 400 8 L 400 20 L 0 20 Z"
+                                    fill="rgba(34, 211, 238, 0.85)"
+                                  />
+                                </svg>
+                              </motion.div>
+                              <motion.div
+                                animate={{ x: [-100, 0] }}
+                                transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+                                className="absolute inset-y-0 left-0 w-[400px] flex opacity-60"
+                              >
+                                <svg className="w-[400px] h-5" viewBox="0 0 400 20" fill="none">
+                                  <path
+                                    d="M 0 10 Q 25 18, 50 10 T 100 10 T 150 10 T 200 10 T 250 10 T 300 10 T 350 10 T 400 10 L 400 20 L 0 20 Z"
+                                    fill="rgba(13, 148, 136, 0.75)"
+                                  />
+                                </svg>
+                              </motion.div>
+                            </div>
+                          )}
+                        </motion.div>
+                      </div>
+
+                      {/* Top Rim */}
+                      <div className="absolute -top-3 inset-x-0 h-8 rounded-[50%] border-2 border-cyan-300/50 bg-gradient-to-b from-white/20 via-cyan-100/10 to-transparent shadow-[inset_0_2px_6px_rgba(255,255,255,0.6)] z-40 pointer-events-none" />
+                    </div>
+
+                    {/* Live Water Level Badge */}
+                    <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 z-30 px-2.5 py-0.5 rounded-lg bg-slate-950/95 border border-cyan-500/40 text-[10px] font-mono font-black text-cyan-300 whitespace-nowrap shadow-lg">
+                      {ugtRemaining.toLocaleString()} / {ugtCap.toLocaleString()} Gal ({ugtPercent}%)
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* ================= TELEMETRY METRICS GRID (4 CARDS) ================= */}
+            <div className="lg:col-span-6 space-y-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                
+                {/* Metric 1: Combined Storage Reserves */}
+                <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm backdrop-blur-xs">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                      {isUrdu ? 'مجموعی پانی ذخیرہ' : 'Combined Reserves'}
+                    </span>
+                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                      currentDay === 0
+                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/30'
+                        : totalPercent < 20
+                        ? 'bg-rose-950 text-rose-300 border border-rose-500/30 animate-pulse'
+                        : 'bg-cyan-950 text-cyan-300 border border-cyan-500/30'
+                    }`}>
+                      {currentDay === 0
+                        ? '100% Full (Supply Just Ended)'
+                        : totalPercent < 20
+                        ? 'Critical Reserve (<20%)'
+                        : `${totalPercent}% Capacity`}
+                    </span>
+                  </div>
+
+                  <div className="text-2xl sm:text-3xl font-black font-mono text-cyan-300">
+                    {totalRemaining.toLocaleString()}{' '}
+                    <span className="text-sm font-bold text-slate-400">/ {totalCapacity.toLocaleString()} Gal</span>
+                  </div>
+
+                  {/* Dual-Color Breakdown Bar: Cyan (UGT) + Emerald (OHT) */}
+                  <div className="w-full bg-slate-800 rounded-full h-2.5 mt-2.5 flex overflow-hidden p-0.5">
+                    {/* UGT portion */}
+                    <motion.div
+                      animate={{ width: `${(ugtRemaining / totalCapacity) * 100}%` }}
+                      transition={{ duration: 0.5 }}
+                      className="h-full bg-gradient-to-r from-cyan-500 to-teal-400 rounded-l-full"
+                      title={`UGT: ${ugtRemaining} Gal`}
+                    />
+                    {/* OHT portion */}
+                    <motion.div
+                      animate={{ width: `${(ohtRemaining / totalCapacity) * 100}%` }}
+                      transition={{ duration: 0.5 }}
+                      className="h-full bg-gradient-to-r from-emerald-400 to-green-300 rounded-r-full"
+                      title={`OHT: ${ohtRemaining} Gal`}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] font-mono font-bold mt-1.5 text-slate-400">
+                    <span className="text-cyan-400">UGT: {ugtRemaining.toLocaleString()}G</span>
+                    <span className="text-emerald-400">OHT: {ohtRemaining.toLocaleString()}G</span>
+                  </div>
+                </div>
+
+                {/* Metric 2: Burn Rate & Autonomy Duration */}
+                <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm backdrop-blur-xs">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                      {isUrdu ? 'یومیہ خرچ و مدت' : 'Burn Rate & Autonomy'}
+                    </span>
+                    <span className="text-[10px] font-bold text-teal-400 font-mono">
+                      13.0 Days Profile
+                    </span>
+                  </div>
+
+                  <div className="text-2xl sm:text-3xl font-black font-mono text-white flex items-baseline gap-1">
+                    <span>{daysOfWaterLeft}</span>
+                    <span className="text-xs font-bold text-slate-400">Days Left</span>
+                  </div>
+
+                  <div className="text-xs font-bold text-emerald-400 mt-1 flex items-center justify-between">
+                    <span>Burn Rate: {dailyBurnRate} Gal/Day</span>
+                    <span className={`text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded ${
+                      isPhase1 ? 'bg-emerald-950 text-emerald-300' : isPhase2 ? 'bg-cyan-950 text-cyan-300' : 'bg-rose-950 text-rose-300'
+                    }`}>
+                      {isPhase1 ? 'Phase 1: OHT Draw' : isPhase2 ? 'Phase 2: UGT Draw' : 'Dry / Refill Req.'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Metric 3: Line Pressure / Inflow Sensor */}
+                <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm backdrop-blur-xs">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                      {isUrdu ? 'لائن پریشر و ان فلو' : 'Line Pressure / Inflow'}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-teal-400">
+                      <span className="size-1.5 rounded-full bg-teal-400 animate-ping" />
+                      Live Sensor
+                    </span>
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black font-mono text-white flex items-center gap-2">
+                    <Gauge size={22} className="text-teal-400" />
+                    <span>42 PSI</span>
+                  </div>
+                  <span className="text-xs font-bold text-teal-300 mt-1 block">
+                    {isUrdu ? 'بہترین سکشن فلو (موٹر محفوظ)' : 'Optimal Suction Flow'}
+                  </span>
+                </div>
+
+                {/* Metric 4: Municipal Supply Status */}
+                <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm backdrop-blur-xs">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                      {isUrdu ? 'سپلائی کی حیثیت' : 'Supply Status'}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400 font-mono">
+                      Sector 7D/1 Grid
+                    </span>
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black text-emerald-400 flex items-center gap-2">
+                    <CheckCircle2 size={22} className="text-emerald-400" />
+                    <span>{isUrdu ? 'فعال میونسپل لائن' : 'Active Line'}</span>
+                  </div>
+                  <span className="text-xs font-bold text-slate-400 mt-1 block">
+                    {isUrdu ? 'مین گرڈ والو کھلا ہے' : 'KWSB Main Feeder Online'}
+                  </span>
+                </div>
+
               </div>
 
-              {/* Floating Tooltip Card Anchored to Current Fluid Line */}
-              <motion.div
-                animate={{ y: [-2, 3, -2] }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute -right-2 sm:-right-6 top-[32%] z-50 px-3.5 py-2 rounded-2xl border border-cyan-400/50 bg-slate-950/90 shadow-2xl backdrop-blur-md flex items-center gap-2.5"
-              >
-                <div className="size-2.5 rounded-full bg-cyan-400 animate-ping" />
-                <div className="flex flex-col">
-                  <span className="text-xs sm:text-sm font-black font-mono text-cyan-200 leading-tight">
-                    {currentVolume.toLocaleString()} Gallons ({fillPercentage}%)
-                  </span>
-                  <span className="text-[10px] font-bold text-emerald-400 leading-none mt-0.5">
-                    {isLowReserves ? '⚠️ Low Reserve Warning' : 'Optimal Reserves'}
-                  </span>
+              {/* Action: Log Overhead Tank Transfer */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-2xl bg-cyan-950/40 border border-cyan-500/30">
+                <div className="flex items-center gap-2.5">
+                  <div className="size-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+                    <ArrowUpRight size={18} />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-extrabold text-white">
+                      {isUrdu ? 'چھت کے ٹینک میں ٹرانسفر لاگ کریں' : 'Overhead Roof Tank Transfer Log'}
+                    </h5>
+                    <p className="text-[11px] text-slate-400">
+                      {isUrdu
+                        ? `معمول: 100 گیلن بیج برائے ${ohtCap} گیلن چھت ٹینک`
+                        : `Default: 100 Gal batch to ${ohtCap}-gallon roof tank`}
+                    </p>
+                  </div>
                 </div>
-              </motion.div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowTransferModal(true)}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 text-xs font-black shadow-md shadow-cyan-500/20 transition-all active:scale-95"
+                >
+                  <Plus size={16} />
+                  <span>{isUrdu ? '+ ٹرانسفر درج کریں' : '+ Log Overhead Transfer'}</span>
+                </button>
+              </div>
+
             </div>
           </div>
 
-          {/* ================= TELEMETRY METRICS GRID (4 CARDS) ================= */}
-          <div className="lg:col-span-7 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {/* Metric 1: Storage Capacity */}
-              <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm backdrop-blur-xs">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-                    {isUrdu ? 'اسٹوریج گنجائش' : 'Storage Capacity'}
-                  </span>
-                  <span className="text-[10px] font-bold text-cyan-300 font-mono">
-                    {headroomGallons.toLocaleString()} Gal Free
-                  </span>
-                </div>
-                <div className="text-2xl sm:text-3xl font-black font-mono text-cyan-300">
-                  {currentVolume.toLocaleString()} <span className="text-sm font-bold text-slate-400">/ {tankCapacity.toLocaleString()} Gal</span>
-                </div>
-                {/* Animated Progress Bar */}
-                <div className="w-full bg-slate-800 rounded-full h-2 mt-2.5 overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${fillPercentage}%` }}
-                    transition={{ duration: 0.8, ease: 'easeOut' }}
-                    className="h-full bg-gradient-to-r from-cyan-400 to-teal-400 rounded-full"
-                  />
-                </div>
-              </div>
-
-              {/* Metric 2: Line Pressure / Inflow Sensor */}
-              <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm backdrop-blur-xs">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-                    {isUrdu ? 'لائن پریشر و ان فلو' : 'Line Pressure / Inflow'}
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-teal-400">
-                    <span className="size-1.5 rounded-full bg-teal-400 animate-ping" />
-                    Live Sensor
-                  </span>
-                </div>
-                <div className="text-2xl sm:text-3xl font-black font-mono text-white flex items-center gap-2">
-                  <Gauge size={22} className="text-teal-400" />
-                  <span>42 PSI</span>
-                </div>
-                <span className="text-xs font-bold text-teal-300 mt-1 block">
-                  {isUrdu ? 'بہترین سکشن فلو (موٹر محفوظ)' : 'Optimal Suction Flow'}
-                </span>
-              </div>
-
-              {/* Metric 3: Supply Status */}
-              <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm backdrop-blur-xs">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-                    {isUrdu ? 'سپلائی کی حیثیت' : 'Supply Status'}
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-400 font-mono">
-                    Sector 7D/1 Grid
-                  </span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-emerald-400 flex items-center gap-2">
-                  <CheckCircle2 size={22} className="text-emerald-400" />
-                  <span>{isUrdu ? 'فعال میونسپل لائن' : 'Active Line'}</span>
-                </div>
-                <span className="text-xs font-bold text-slate-400 mt-1 block">
-                  {isUrdu ? 'مین گرڈ والو کھلا ہے' : 'KWSB Main Feeder Online'}
-                </span>
-              </div>
-
-              {/* Metric 4: Daily Quota & Burn Rate Gauge */}
-              <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm backdrop-blur-xs">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-                    {isUrdu ? 'یومیہ خرچ (برن ریٹ)' : 'Daily Quota & Burn Rate'}
-                  </span>
-                  <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                    isWithinBudget ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/30' : 'bg-rose-950 text-rose-300 border border-rose-500/30'
-                  }`}>
-                    {isWithinBudget ? 'Within Reserve Budget' : 'Exceeding Quota'}
-                  </span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black font-mono text-white">
-                  {burnRate} <span className="text-xs font-bold text-slate-400">Gal/Day</span>
-                  <span className="text-xs font-medium text-slate-500 ml-2">/ {quotaCeiling} Max</span>
-                </div>
-                <div className="text-xs font-bold text-emerald-400 mt-1 flex items-center gap-1">
-                  <Activity size={14} />
-                  <span>{daysOfWaterLeft} Days of Water Left</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Action: Log Overhead Tank Transfer Button */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-2xl bg-cyan-950/40 border border-cyan-500/30">
+          {/* ─── 3. Sequential 13-Day Timeline Slider & Simulation Controls ─── */}
+          <div className="mt-8 p-4 sm:p-5 rounded-2xl bg-slate-950/90 border border-slate-800 shadow-inner">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
               <div className="flex items-center gap-2.5">
-                <div className="size-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
-                  <ArrowUpRight size={18} />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPlaying(!isPlaying)}
+                  className="size-8 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 flex items-center justify-center font-bold shadow-md transition-transform active:scale-90"
+                  title={isPlaying ? "Pause Simulation" : "Auto-Play 13-Day Drain"}
+                >
+                  {isPlaying ? <Pause size={15} /> : <Play size={15} className="ml-0.5" />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPlaying(false)
+                    setCurrentDay(0)
+                  }}
+                  className="size-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-colors"
+                  title="Reset to Day 0 (Full)"
+                >
+                  <RotateCcw size={14} />
+                </button>
+
                 <div>
-                  <h5 className="text-xs font-extrabold text-white">
-                    {isUrdu ? 'چھت کے ٹینک میں ٹرانسفر لاگ کریں' : 'Overhead Roof Tank Transfer Log'}
-                  </h5>
-                  <p className="text-[11px] text-slate-400">
-                    {isUrdu
-                      ? 'معمول: 100 گیلن صبح کا بیج برائے 500 گیلن چھت ٹینک'
-                      : 'Default: 100 Gal morning batch to 500-gallon roof tank'}
+                  <span className="text-xs font-black text-white flex items-center gap-1.5">
+                    <span>Days Since Supply Ended:</span>
+                    <span className="font-mono text-cyan-300 text-sm font-extrabold bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-500/30">
+                      Day {currentDay} / 13.0
+                    </span>
+                  </span>
+                  <p className="text-[10px] text-slate-400">
+                    Sequential Drain Rule: Roof Tank (OHT) empties first (Days 0–3), then Underground Tank drains (Days 3–13).
                   </p>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowTransferModal(true)}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 text-xs font-black shadow-md shadow-cyan-500/20 transition-all active:scale-95"
-              >
-                <Plus size={16} />
-                <span>{isUrdu ? '+ ٹرانسفر لاگ درج کریں' : '+ Log Overhead Transfer'}</span>
-              </button>
+              {/* Quick Jump Buttons */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => { setIsPlaying(false); setCurrentDay(0) }}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all ${
+                    currentDay === 0 ? 'bg-cyan-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Day 0 (Full)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsPlaying(false); setCurrentDay(2) }}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all ${
+                    currentDay === 2 ? 'bg-cyan-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Day 2 (OHT Low)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsPlaying(false); setCurrentDay(3) }}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all ${
+                    currentDay === 3 ? 'bg-cyan-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Day 3 (OHT Empty)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsPlaying(false); setCurrentDay(8) }}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all ${
+                    currentDay === 8 ? 'bg-cyan-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Day 8 (UGT 50%)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsPlaying(false); setCurrentDay(13) }}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all ${
+                    currentDay === 13 ? 'bg-rose-500 text-white font-black' : 'bg-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Day 13 (Empty)
+                </button>
+              </div>
+            </div>
+
+            {/* Range Slider */}
+            <input
+              type="range"
+              min="0"
+              max="13"
+              step="0.5"
+              value={currentDay}
+              onChange={(e) => {
+                setIsPlaying(false)
+                setCurrentDay(parseFloat(e.target.value))
+              }}
+              className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
+            />
+
+            {/* Slider Markers */}
+            <div className="flex justify-between text-[9px] font-mono text-slate-500 mt-1 px-1">
+              <span>Day 0 (Full - {totalCapacity}G)</span>
+              <span>Day 3 (OHT Empty - {ugtCap}G)</span>
+              <span>Day 6</span>
+              <span>Day 9</span>
+              <span className="text-rose-400">Day 13 (0G Empty)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── 4. Water Deficit Expected Alert Card (Cadence vs. Reserve Gap) ─── */}
+        <div className="relative z-10 mt-6 p-4 sm:p-5 rounded-2xl bg-amber-950/40 border border-amber-500/40 text-amber-200 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg backdrop-blur-xs">
+          <div className="flex items-start gap-3">
+            <div className="size-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <AlertTriangle size={20} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-black uppercase tracking-wider text-amber-300">
+                  ⚠️ Water Deficit Expected • Karachi Municipal Cadence Gap
+                </span>
+                <span className="text-[10px] font-mono font-bold bg-amber-900/60 text-amber-200 px-2 py-0.5 rounded border border-amber-400/30">
+                  {deficitDays} Days Deficit
+                </span>
+              </div>
+              <p className="text-xs text-slate-200 mt-1 leading-relaxed">
+                Reserves will run out <strong>~{deficitDays} days</strong> before the next municipal line arrives (Supply cadence: <strong>Every ~{municipalCycleDays} Days</strong> vs Reserve span: <strong>{maxAutonomyDays} Days Maximum</strong>).
+                {' '}Ration consumption to <strong className="text-emerald-300 font-mono font-extrabold">{rationRate} Gal/Day</strong> to stretch supply across the full {municipalCycleDays}-day cycle.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start md:self-auto flex-shrink-0">
+            <div className="text-right font-mono">
+              <div className="text-[10px] text-slate-400 uppercase">Target Ration</div>
+              <div className="text-sm font-black text-emerald-300">{rationRate} Gal/Day</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ─── 3. Next Water Supply Forecast & Depletion Card ─── */}
+      {/* ─── 5. Next Water Supply Forecast (Predictive Cadence Model) ─── */}
       <div className="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-slate-900 to-slate-950 text-white p-6 md:p-8 rounded-3xl shadow-xl border border-indigo-500/20">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-5 mb-6">
           <div className="flex items-center gap-3">
@@ -534,7 +884,6 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
           </div>
 
           <div className="flex items-center gap-2.5">
-            {/* Status Badge: Due Any Moment / Overdue */}
             <span className="text-xs font-black px-3.5 py-1.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40 shadow-sm animate-pulse">
               Due Any Moment / Overdue
             </span>
@@ -579,7 +928,7 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
               2d 7h (~55 hrs)
             </p>
             <p className="text-xs text-cyan-300 mt-1 font-medium">
-              42 PSI (Fills 100% tank in ~8 hrs)
+              42 PSI (Fills dual tanks in ~10 hrs)
             </p>
           </div>
 
@@ -615,7 +964,7 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
           </div>
         </div>
 
-        {/* Depletion & Autonomy Engine Verdict Banner */}
+        {/* Balance Verdict Banner */}
         <div className="mt-5 p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-start sm:items-center gap-3">
             <div className="size-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold flex-shrink-0">
@@ -626,69 +975,18 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
                 {isUrdu ? 'خودمختاری کا جائزہ:' : 'Autonomy Verdict:'}
               </strong>
               {isUrdu
-                ? `ٹینک میں موجود پانی یومیہ ${burnRate} گیلن کے حساب سے مزید ${daysOfWaterLeft} دن چلے گا۔ اگلی متوقع سپلائی تک تقریباً 180 گیلن کا محفوظ ذخیرہ باقی رہے گا۔`
-                : `Tank water will sustain until the next scheduled supply cycle (~${daysOfWaterLeft} Days left) with ~180 Gallons reserve remaining.`}
+                ? `ڈوئل ٹینکس میں موجود پانی یومیہ ${dailyBurnRate} گیلن کے حساب سے ${daysOfWaterLeft} دن چلے گا۔`
+                : `Dual reservoirs provide ~${daysOfWaterLeft} Days of autonomy at current burn rate of ${dailyBurnRate} Gal/Day.`}
             </div>
           </div>
 
           <span className="text-[11px] font-black uppercase text-emerald-300 bg-emerald-900/60 px-3 py-1 rounded-xl border border-emerald-400/30 whitespace-nowrap self-start sm:self-auto">
-            {isUrdu ? 'ذخیرہ تسلی بخش ہے' : 'Autonomy Secured'}
+            {isUrdu ? 'ذخیرہ تسلی بخش ہے' : 'Dual Storage Calibrated'}
           </span>
         </div>
       </div>
 
-      {/* ─── 4. Domestic Emergency & Backup Contacts Panel ─── */}
-      <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 text-white">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Phone size={16} className="text-emerald-400" />
-            <h5 className="text-sm font-extrabold text-white">
-              {isUrdu ? 'ایمرجنسی و بیک اپ واٹر رابطے' : 'Emergency & Line Operator Contacts'}
-            </h5>
-          </div>
-          <span className="text-[10px] font-bold text-slate-400">
-            {isUrdu ? 'فوری رابطہ برائے 120 گز رہائشی' : 'Direct Sector 7D/1 Contacts'}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {contacts.map((c, i) => (
-            <div
-              key={i}
-              className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/90 flex items-center justify-between gap-3 shadow-xs"
-            >
-              <div className="min-w-0">
-                <span className="text-xs font-black text-white block truncate">{c.name}</span>
-                <span className="text-[11px] text-cyan-300 font-bold block truncate">{c.role}</span>
-                <span className="text-[10px] text-slate-400 block truncate">{c.desc}</span>
-              </div>
-
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <a
-                  href={`tel:${c.phone}`}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition-colors"
-                >
-                  <Phone size={13} />
-                  <span>Call</span>
-                </a>
-                <a
-                  href={`https://wa.me/${c.waNumber}?text=${encodeURIComponent(
-                    `Assalam o Alaikum ${c.name}, regarding water supply for 120 sq yard home in Sector 7D/1.`
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition-colors"
-                >
-                  <MessageSquare size={13} />
-                  <span>WhatsApp</span>
-                </a>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ─── 5. Pumping Transfer Log Modal ─── */}
+      {/* ─── 6. Pumping Transfer Log Modal ─── */}
       <AnimatePresence>
         {showTransferModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
@@ -709,7 +1007,7 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
                       {isUrdu ? 'چھت کے ٹینک میں ٹرانسفر لاگ' : 'Overhead Tank Pumping Transfer'}
                     </h4>
                     <p className="text-xs text-slate-400">
-                      {isUrdu ? 'زیرِ زمین ٹینک سے چھت کے 500 گیلن ٹینک میں پانی چڑھائیں' : 'Transfer batch from underground reservoir to 500-Gal roof tank'}
+                      {isUrdu ? `زیرِ زمین ٹینک سے چھت کے ${ohtCap} گیلن ٹینک میں پانی چڑھائیں` : `Transfer batch from underground reservoir to ${ohtCap}-Gal roof tank`}
                     </p>
                   </div>
                 </div>
@@ -731,7 +1029,7 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
                     <div className="text-xl font-black font-mono text-cyan-300">100 Gallons</div>
                   </div>
                   <span className="text-[11px] font-bold text-teal-300 bg-teal-900/60 px-2.5 py-1 rounded-lg">
-                    Target: 500-Gal Roof Tank
+                    Target: {ohtCap}-Gal Roof Tank
                   </span>
                 </div>
 
@@ -775,7 +1073,7 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
         )}
       </AnimatePresence>
 
-      {/* ─── 6. Historical Recorded Municipal Supply Periods Table ─── */}
+      {/* ─── 7. Historical Recorded Municipal Supply Periods Table ─── */}
       {processedEntries.length > 0 && (
         <div className="bg-slate-900/80 p-5 sm:p-6 rounded-3xl border border-slate-800 text-white shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
