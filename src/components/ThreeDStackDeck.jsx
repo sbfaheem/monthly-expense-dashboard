@@ -131,22 +131,6 @@ export const ThreeDStackDeck = ({
           style={{ perspective: 1400 }}
           className="relative w-full py-8 px-2 overflow-visible min-h-[380px] flex items-center justify-center [touch-action:pan-y]"
         >
-          {/* Floating Glass Sphere / Orb with Continuous Physics */}
-          {!shouldReduceMotion && (
-            <motion.div
-              animate={{
-                y: [-12, 14, -12],
-                x: [-10, 12, -10],
-                scale: [1, 1.08, 1],
-              }}
-              transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-              className="pointer-events-none absolute -top-2 right-4 z-40 h-16 w-16 rounded-full border border-white/80 bg-gradient-to-tr from-white/30 via-emerald-200/40 to-white/70 shadow-xl backdrop-blur-md"
-              style={{
-                boxShadow: '0 15px 30px -5px rgba(16, 185, 129, 0.35), inset 0 2px 6px rgba(255,255,255,0.9)',
-              }}
-            />
-          )}
-
           {/* Isometric Angled Deck Container */}
           <motion.div
             style={{
@@ -210,11 +194,43 @@ export const ThreeDStackDeck = ({
                       </span>
                     </div>
 
-                    <div className="my-2">
-                      <div className={`text-3xl font-black font-mono tracking-tight ${card.textColor}`}>
+                    <div className="my-2 flex items-center justify-between gap-2 min-h-[52px]">
+                      <div className={`text-2xl sm:text-3xl font-black font-mono tracking-tight ${card.textColor}`}>
                         <span className="text-base font-semibold mr-1.5 opacity-80">{displayCurrency}</span>
                         {card.value}
                       </div>
+
+                      {/* Interactive Tap Ball placed directly above + Active */}
+                      {isSelected && !shouldReduceMotion && (
+                        <div
+                          style={{ transform: 'translateZ(30px)' }}
+                          className="relative flex flex-col items-center flex-shrink-0 z-30 -mt-1"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setActiveCardIndex((prev) => (prev + 1) % cardItems.length)
+                          }}
+                        >
+                          <motion.span 
+                            animate={{ y: [-2, 2, -2] }} 
+                            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                            className="mb-0.5 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-slate-900/85 text-white shadow-xs pointer-events-none select-none backdrop-blur-xs whitespace-nowrap"
+                          >
+                            {isUrdu ? "چھوئیں 🎾" : "Tap Ball! 🎾"}
+                          </motion.span>
+
+                          <motion.div
+                            whileHover={{ scale: 1.12 }}
+                            whileTap={{ scale: 0.9 }}
+                            className="relative h-11 w-11 sm:h-12 sm:w-12 rounded-full border border-white/90 bg-gradient-to-tr from-white/35 via-emerald-200/55 to-white/95 shadow-xl backdrop-blur-md cursor-pointer"
+                            style={{
+                              boxShadow: '0 10px 25px -4px rgba(16, 185, 129, 0.45), inset 0 2px 5px rgba(255,255,255,0.95)',
+                            }}
+                          >
+                            <span className="absolute top-1 left-1.5 h-3.5 w-5 rounded-full bg-white/80 blur-2xs transform -rotate-25 pointer-events-none" />
+                            <span className="absolute bottom-1 right-1.5 h-2.5 w-2.5 rounded-full bg-emerald-400/60 blur-xs pointer-events-none" />
+                          </motion.div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
@@ -222,7 +238,7 @@ export const ThreeDStackDeck = ({
                         {card.sub}
                       </span>
                       <span className="text-[11px] text-slate-400 font-bold">
-                        {isSelected ? '✦ Active' : (isUrdu ? 'دبائیں' : 'Tap to lift')}
+                        {isSelected ? '+ Active' : (isUrdu ? 'دبائیں' : 'Tap to lift')}
                       </span>
                     </div>
                   </div>
@@ -250,11 +266,13 @@ export const ThreeDStackDeck = ({
                   {card.icon}
                 </span>
               </div>
-              <div className={`text-2xl sm:text-[26px] font-black tracking-tight font-mono py-1 ${card.textColor}`}>
+
+              <div className={`text-2xl font-black font-mono tracking-tight select-all ${card.textColor}`}>
                 {displayCurrency} {card.value}
               </div>
-              <div className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                {card.sub}
+
+              <div className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                <span>{card.sub}</span>
               </div>
             </Card3D>
           ))}

@@ -142,46 +142,43 @@ export const SummaryCards = ({
     if (isBouncing || shouldReduceMotion) return
     setIsBouncing(true)
 
-    // Phase 1: Ball arcs downwards towards the active card surface
+    // Phase 1: Ball leaps upwards off the active card
     await ballControls.start({
-      y: 95,
-      x: isRtl ? 35 : -35,
+      y: -28,
       scaleX: 0.9,
-      scaleY: 1.18,
-      transition: { duration: 0.32, ease: [0.45, 0, 0.75, 1] }
+      scaleY: 1.15,
+      transition: { duration: 0.22, ease: "easeOut" }
     })
 
-    // Phase 2: Impact moment on card!
+    // Phase 2: Ball lands back down and squashes elastically on the card surface
     setShowRipple(true)
     // Advance card index in sequence on impact
     setActiveCardIndex((prev) => (prev + 1) % cards.length)
 
     await Promise.all([
-      // Ball squashes elastically against the card surface
       ballControls.start({
-        y: 104,
-        scaleX: 1.35,
-        scaleY: 0.65,
-        transition: { duration: 0.08 }
+        y: 0,
+        scaleX: 1.25,
+        scaleY: 0.75,
+        transition: { duration: 0.12, ease: "easeIn" }
       }),
       // Deck absorbs the shockwave with a spring dip
       deckControls.start({
-        rotateX: 22,
-        y: 12,
+        rotateX: 19,
+        y: 6,
         transition: { duration: 0.08 }
       })
     ])
 
     setShowRipple(false)
 
-    // Phase 3: Ball rebounds back up into the air & card snaps back
+    // Phase 3: Ball and deck spring back to rest state
     await Promise.all([
       ballControls.start({
-        y: [104, 20, 38, 0],
-        x: [isRtl ? 35 : -35, isRtl ? 15 : -15, isRtl ? 5 : -5, 0],
-        scaleX: [1.35, 0.95, 1.04, 1],
-        scaleY: [0.65, 1.15, 0.96, 1],
-        transition: { duration: 0.52, ease: "easeOut" }
+        y: 0,
+        scaleX: 1,
+        scaleY: 1,
+        transition: { type: "spring", stiffness: 350, damping: 18 }
       }),
       deckControls.start({
         rotateX: 16,
@@ -292,36 +289,6 @@ export const SummaryCards = ({
             style={{ perspective: 1200 }}
             className="relative w-full py-4 px-2 overflow-visible min-h-[370px] sm:min-h-[410px] flex items-center justify-center [touch-action:pan-y]"
           >
-            {/* ================= INTERACTIVE BOUNCING GLASS BALL ================= */}
-            <div className="absolute -top-3 right-4 sm:right-16 z-50 flex flex-col items-center">
-              {/* Tap Tooltip Pill */}
-              <motion.span 
-                animate={{ y: [-2, 2, -2] }} 
-                transition={{ duration: 2, repeat: Infinity }}
-                className="mb-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-900/80 text-white shadow-sm pointer-events-none select-none backdrop-blur-xs"
-              >
-                {isUrdu ? "چھوئیں 🎾" : "Tap Ball! 🎾"}
-              </motion.span>
-
-              {/* The Glass Orb */}
-              <motion.button
-                type="button"
-                aria-label="Bounce ball on cards"
-                onClick={triggerBallBounce}
-                animate={ballControls}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.92 }}
-                className="relative h-14 w-14 sm:h-16 sm:w-16 rounded-full border border-white/80 bg-gradient-to-tr from-white/30 via-emerald-200/50 to-white/90 shadow-2xl backdrop-blur-md cursor-pointer focus:outline-hidden"
-                style={{
-                  boxShadow: "0 15px 35px -5px rgba(16, 185, 129, 0.45), inset 0 2px 6px rgba(255,255,255,0.9)",
-                }}
-              >
-                {/* Internal Specular Glass Highlight */}
-                <span className="absolute top-1.5 left-2 h-4 w-7 rounded-full bg-white/70 blur-2xs transform -rotate-25 pointer-events-none" />
-                <span className="absolute bottom-1 right-2 h-3 w-3 rounded-full bg-emerald-400/50 blur-xs pointer-events-none" />
-              </motion.button>
-            </div>
-
             {/* Isometric Angled Deck Container */}
             <motion.div
               animate={deckControls}
@@ -333,16 +300,6 @@ export const SummaryCards = ({
               }}
               className="relative w-full max-w-sm sm:max-w-md mx-auto h-[260px]"
             >
-              {/* Dynamic Impact Ripple Wave */}
-              {showRipple && (
-                <motion.div
-                  initial={{ opacity: 0.8, scale: 0.2 }}
-                  animate={{ opacity: 0, scale: 1.6 }}
-                  transition={{ duration: 0.45, ease: "easeOut" }}
-                  className="pointer-events-none absolute top-4 right-10 z-50 h-24 w-24 rounded-full border-2 border-emerald-400 bg-emerald-400/20"
-                />
-              )}
-
               {cards.map((card, idx) => {
                 // Calculate dynamic relative order so active card is always at the front
                 const relIndex = (idx - activeCardIndex + cards.length) % cards.length
@@ -398,6 +355,7 @@ export const SummaryCards = ({
                           textRendering: "geometricPrecision"
                         }}
                       >
+                        {/* Top Row: Label, Badge and Icon */}
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                             {card.label}
@@ -412,20 +370,68 @@ export const SummaryCards = ({
                           </div>
                         </div>
 
-                        <div className="my-2">
-                          <div className={`text-3xl font-extrabold tracking-tight ${card.valueColor}`}>
+                        {/* Middle Row: Value on the left, Interactive Tap Ball on the right */}
+                        <div className="my-1.5 flex items-center justify-between gap-2 min-h-[52px]">
+                          <div className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${card.valueColor}`}>
                             <span className="text-sm font-semibold mr-1.5 opacity-75">{displayCurrency}</span>
                             {card.value}
                           </div>
+
+                          {/* Tap Ball placed directly above the + Active text */}
+                          {isSelected && (
+                            <div
+                              style={{ transform: shouldReduceMotion ? 'none' : 'translateZ(30px)' }}
+                              className="relative flex flex-col items-center flex-shrink-0 z-30 -mt-1"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {/* Dynamic Impact Ripple Wave */}
+                              {showRipple && (
+                                <motion.div
+                                  initial={{ opacity: 0.9, scale: 0.3 }}
+                                  animate={{ opacity: 0, scale: 2.2 }}
+                                  transition={{ duration: 0.4, ease: 'easeOut' }}
+                                  className="pointer-events-none absolute -inset-2 rounded-full border-2 border-emerald-400 bg-emerald-400/25 z-0"
+                                />
+                              )}
+
+                              {/* Tap Tooltip Pill */}
+                              <motion.span 
+                                animate={shouldReduceMotion ? {} : { y: [-2, 2, -2] }} 
+                                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                                className="mb-0.5 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-slate-900/85 text-white shadow-xs pointer-events-none select-none backdrop-blur-xs whitespace-nowrap"
+                              >
+                                {isUrdu ? "چھوئیں 🎾" : "Tap Ball! 🎾"}
+                              </motion.span>
+
+                              {/* The Glass Orb */}
+                              <motion.button
+                                type="button"
+                                aria-label="Bounce ball on cards"
+                                onClick={triggerBallBounce}
+                                animate={ballControls}
+                                whileHover={{ scale: 1.12 }}
+                                whileTap={{ scale: 0.9 }}
+                                className="relative h-11 w-11 sm:h-12 sm:w-12 rounded-full border border-white/90 bg-gradient-to-tr from-white/35 via-emerald-200/55 to-white/95 shadow-xl backdrop-blur-md cursor-pointer focus:outline-hidden"
+                                style={{
+                                  boxShadow: "0 10px 25px -4px rgba(16, 185, 129, 0.45), inset 0 2px 5px rgba(255,255,255,0.95)",
+                                }}
+                              >
+                                {/* Internal Specular Glass Highlight */}
+                                <span className="absolute top-1 left-1.5 h-3.5 w-5 rounded-full bg-white/80 blur-2xs transform -rotate-25 pointer-events-none" />
+                                <span className="absolute bottom-1 right-1.5 h-2.5 w-2.5 rounded-full bg-emerald-400/60 blur-xs pointer-events-none" />
+                              </motion.button>
+                            </div>
+                          )}
                         </div>
 
+                        {/* Bottom Row: Note and + Active status */}
                         <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
                           <span className={`text-xs font-semibold flex items-center gap-1 ${card.noteColor}`}>
                             <span className="material-symbols-outlined text-xs">{card.noteIcon}</span>
                             <span>{card.note}</span>
                           </span>
                           <span className="text-[11px] text-slate-400 font-medium">
-                            {isSelected ? "✦ Active" : (isUrdu ? "چھو کر دیکھیں" : "Tap to lift")}
+                            {isSelected ? "+ Active" : (isUrdu ? "چھو کر دیکھیں" : "Tap to lift")}
                           </span>
                         </div>
                       </div>
