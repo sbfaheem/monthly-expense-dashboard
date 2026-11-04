@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { useLanguage } from '../context/LanguageContext'
 import { Card3D } from './Card3D'
@@ -20,6 +20,7 @@ export const ThreeDStackDeck = ({
   const [is3DDeckMode, setIs3DDeckMode] = useState(false)
   const [activeCardIndex, setActiveCardIndex] = useState(0)
   const shouldReduceMotion = useReducedMotion()
+  const lastAdvanceRef = useRef(0)
 
   const isUrdu = lang === 'ur'
   const displayCurrency = isUrdu ? 'روپے' : currency
@@ -104,6 +105,10 @@ export const ThreeDStackDeck = ({
       e.preventDefault?.()
       e.stopPropagation?.()
     }
+    const now = Date.now()
+    if (now - lastAdvanceRef.current < 250) return
+    lastAdvanceRef.current = now
+
     setActiveCardIndex((prev) => (prev + 1) % cardItems.length)
   }
 
@@ -163,7 +168,13 @@ export const ThreeDStackDeck = ({
                   drag={shouldReduceMotion ? false : 'y'}
                   dragConstraints={{ top: -50, bottom: 50 }}
                   onDragStart={() => setActiveCardIndex(idx)}
-                  onClick={() => setActiveCardIndex(idx)}
+                  onClick={() => {
+                    if (isSelected) {
+                      advanceCard()
+                    } else {
+                      setActiveCardIndex(idx)
+                    }
+                  }}
                   animate={{
                     z: shouldReduceMotion ? 0 : offsetZ,
                     y: offsetY,
@@ -212,8 +223,15 @@ export const ThreeDStackDeck = ({
                       {isSelected && !shouldReduceMotion && (
                         <div
                           style={{ transform: 'translateZ(30px)' }}
-                          className="relative flex flex-col items-center flex-shrink-0 z-30 -mt-1 cursor-pointer select-none"
-                          onClick={advanceCard}
+                          className="relative flex flex-col items-center flex-shrink-0 z-50 pointer-events-auto cursor-pointer select-none mt-0.5"
+                          onPointerDown={(e) => {
+                            e.stopPropagation()
+                            advanceCard(e)
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            advanceCard(e)
+                          }}
                           title={isUrdu ? "کارڈ تبدیل کرنے کے لیے چھوئیں" : "Tap ball to change summary card"}
                         >
                           <motion.span 
@@ -227,7 +245,14 @@ export const ThreeDStackDeck = ({
                           <motion.button
                             type="button"
                             aria-label="Tap ball to change summary card"
-                            onClick={advanceCard}
+                            onPointerDown={(e) => {
+                              e.stopPropagation()
+                              advanceCard(e)
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              advanceCard(e)
+                            }}
                             animate={{
                               y: [0, -14, 0],
                               scaleX: [1.14, 0.94, 1.14],
@@ -240,7 +265,7 @@ export const ThreeDStackDeck = ({
                             }}
                             whileHover={{ scale: 1.12 }}
                             whileTap={{ scale: 0.9 }}
-                            className="relative h-11 w-11 sm:h-12 sm:w-12 rounded-full border border-white/90 bg-gradient-to-tr from-white/35 via-emerald-200/55 to-white/95 shadow-xl backdrop-blur-md cursor-pointer"
+                            className="relative h-11 w-11 sm:h-12 sm:w-12 rounded-full border border-white/90 bg-gradient-to-tr from-white/35 via-emerald-200/55 to-white/95 shadow-xl backdrop-blur-md cursor-pointer z-20 pointer-events-auto focus:outline-hidden"
                             style={{
                               boxShadow: '0 10px 25px -4px rgba(16, 185, 129, 0.45), inset 0 2px 5px rgba(255,255,255,0.95)',
                             }}

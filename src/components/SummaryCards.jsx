@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, useAnimation, useReducedMotion } from 'framer-motion'
 import { useLanguage } from '../context/LanguageContext'
 import Card3D from './Card3D'
@@ -24,6 +24,7 @@ export const SummaryCards = ({
   const [activeCardIndex, setActiveCardIndex] = useState(0)
   const [isAutoPlay, setIsAutoPlay] = useState(false)
   const [showRipple, setShowRipple] = useState(false)
+  const lastAdvanceRef = useRef(0)
 
   // Framer Motion Deck Controller
   const deckControls = useAnimation()
@@ -142,6 +143,11 @@ export const SummaryCards = ({
       e.stopPropagation?.()
     }
 
+    const now = Date.now()
+    // Debounce guard to prevent accidental double-firing on rapid tap
+    if (now - lastAdvanceRef.current < 250) return
+    lastAdvanceRef.current = now
+
     // Trigger visual impact ripple
     setShowRipple(true)
     setTimeout(() => setShowRipple(false), 380)
@@ -172,7 +178,7 @@ export const SummaryCards = ({
 
   const handlePanEnd = (e, info) => {
     if (info.offset.y < -35) {
-      setActiveCardIndex((prev) => (prev + 1) % cards.length)
+      advanceCard()
     } else if (info.offset.y > 35) {
       setActiveCardIndex((prev) => (prev - 1 + cards.length) % cards.length)
     }
@@ -283,7 +289,13 @@ export const SummaryCards = ({
                 return (
                   <motion.div
                     key={card.id}
-                    onTap={() => setActiveCardIndex(idx)}
+                    onTap={() => {
+                      if (isSelected) {
+                        advanceCard()
+                      } else {
+                        setActiveCardIndex(idx)
+                      }
+                    }}
                     onPanEnd={handlePanEnd}
                     whileTap={{ scale: 0.985 }}
                     animate={{
@@ -350,8 +362,15 @@ export const SummaryCards = ({
                           {isSelected && (
                             <div
                               style={{ transform: shouldReduceMotion ? 'none' : 'translateZ(30px)' }}
-                              className="relative flex flex-col items-center flex-shrink-0 z-30 -mt-1 cursor-pointer select-none"
-                              onClick={advanceCard}
+                              className="relative flex flex-col items-center flex-shrink-0 z-50 pointer-events-auto cursor-pointer select-none mt-0.5"
+                              onPointerDown={(e) => {
+                                e.stopPropagation()
+                                advanceCard(e)
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                advanceCard(e)
+                              }}
                               title={isUrdu ? "کارڈ تبدیل کرنے کے لیے چھوئیں" : "Tap ball to change summary card"}
                             >
                               {/* Dynamic Impact Ripple Wave */}
@@ -377,7 +396,14 @@ export const SummaryCards = ({
                               <motion.button
                                 type="button"
                                 aria-label="Tap ball to change summary card"
-                                onClick={advanceCard}
+                                onPointerDown={(e) => {
+                                  e.stopPropagation()
+                                  advanceCard(e)
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  advanceCard(e)
+                                }}
                                 animate={
                                   shouldReduceMotion
                                     ? {}
@@ -394,7 +420,7 @@ export const SummaryCards = ({
                                 }}
                                 whileHover={{ scale: 1.12 }}
                                 whileTap={{ scale: 0.9 }}
-                                className="relative h-11 w-11 sm:h-12 sm:w-12 rounded-full border border-white/90 bg-gradient-to-tr from-white/35 via-emerald-200/55 to-white/95 shadow-xl backdrop-blur-md cursor-pointer focus:outline-hidden"
+                                className="relative h-11 w-11 sm:h-12 sm:w-12 rounded-full border border-white/90 bg-gradient-to-tr from-white/35 via-emerald-200/55 to-white/95 shadow-xl backdrop-blur-md cursor-pointer focus:outline-hidden z-20 pointer-events-auto"
                                 style={{
                                   boxShadow: "0 10px 25px -4px rgba(16, 185, 129, 0.45), inset 0 2px 5px rgba(255,255,255,0.95)",
                                 }}
