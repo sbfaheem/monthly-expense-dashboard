@@ -1036,6 +1036,35 @@ export default function ViewerDashboard() {
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-md mx-auto">
                 {t.noReviewsDesc}
               </p>
+
+              {/* Direct 1-Tap Quick Rating Stars */}
+              <div className="flex items-center justify-center gap-2 pt-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => {
+                      setFeedbackRating(star)
+                      handleOpenFeedback()
+                    }}
+                    className="p-1.5 rounded-xl hover:bg-amber-100/60 dark:hover:bg-amber-950/40 hover:scale-125 transition-transform"
+                    title={`Rate ${star} Stars`}
+                  >
+                    <Star size={28} className="fill-amber-400 text-amber-400 drop-shadow-sm" />
+                  </button>
+                ))}
+              </div>
+
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={handleOpenFeedback}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-black rounded-xl shadow-md shadow-primary/20 transition-all active:scale-95"
+                >
+                  <Star size={14} className="fill-white" />
+                  <span>{isUrdu ? 'ابھی اپنی رائے اور ریٹنگ درج کریں' : 'Rate & Leave Your Review Now'}</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
