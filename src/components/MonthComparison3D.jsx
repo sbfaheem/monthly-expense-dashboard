@@ -235,8 +235,8 @@ export const MonthComparison3D = ({
                   </span>
                 </div>
                 <RollingOdometer
-                  value={Math.abs(prevBalance).toLocaleString('en-PK')}
-                  prefix={prevBalance < 0 ? `-${displayCurrency}` : displayCurrency}
+                  value={(prevBalance < 0 ? '-' : '') + Math.abs(prevBalance).toLocaleString('en-PK')}
+                  prefix={displayCurrency}
                   className={`text-sm sm:text-base md:text-lg font-black font-mono ${
                     prevBalance >= 0
                       ? 'text-emerald-600 dark:text-emerald-400'
@@ -273,6 +273,8 @@ export const MonthComparison3D = ({
                 {isUrdu ? 'وصولی تبدیلی' : 'Collection'}
               </p>
               <div
+                dir="ltr"
+                style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
                 className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black font-mono ${
                   isCollectionUp
                     ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/40'
@@ -289,6 +291,8 @@ export const MonthComparison3D = ({
                 {isUrdu ? 'اخراجات تبدیلی' : 'Expenses'}
               </p>
               <div
+                dir="ltr"
+                style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
                 className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black font-mono ${
                   !isExpenseUp
                     ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/40'
@@ -365,6 +369,8 @@ export const MonthComparison3D = ({
                     className="text-sm sm:text-base md:text-lg font-black font-mono text-slate-900 dark:text-slate-100"
                   />
                   <span
+                    dir="ltr"
+                    style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
                     className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
                       isCollectionUp
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300/40'
@@ -393,6 +399,8 @@ export const MonthComparison3D = ({
                     className="text-sm sm:text-base md:text-lg font-black font-mono text-slate-900 dark:text-slate-100"
                   />
                   <span
+                    dir="ltr"
+                    style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
                     className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
                       !isExpenseUp
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300/40'
@@ -416,8 +424,8 @@ export const MonthComparison3D = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <RollingOdometer
-                    value={Math.abs(currBalance).toLocaleString('en-PK')}
-                    prefix={currBalance < 0 ? `-${displayCurrency}` : displayCurrency}
+                    value={(currBalance < 0 ? '-' : '') + Math.abs(currBalance).toLocaleString('en-PK')}
+                    prefix={displayCurrency}
                     className={`text-sm sm:text-base md:text-lg font-black font-mono ${
                       currBalance >= 0
                         ? 'text-emerald-600 dark:text-emerald-400'
@@ -425,13 +433,15 @@ export const MonthComparison3D = ({
                     }`}
                   />
                   <span
-                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                    dir="ltr"
+                    style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded inline-block ${
                       balanceDiff >= 0
                         ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
                         : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400'
                     }`}
                   >
-                    {balanceDiff >= 0 ? `+${displayCurrency}` : `-${displayCurrency}`} {absBalanceDiff}
+                    {balanceDiff >= 0 ? '+' : '-'}{displayCurrency} {absBalanceDiff}
                   </span>
                 </div>
               </div>

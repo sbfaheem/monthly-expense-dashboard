@@ -102,8 +102,15 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
               <ArrowDownRight size={18} className="text-emerald-600 dark:text-emerald-400 stroke-[3]" />
             )}
             <span>
-              {isTotalIncrease ? (isUrdu ? 'کل اضافہ' : 'Total Increase') : (isUrdu ? 'کل بچت / کمی' : 'Total Reduction')}: {isTotalIncrease ? '+' : '-'}{displayCurrency} {fmt(variance.totalDiff)}
-              {variance.totalPct ? ` (${isTotalIncrease ? '+' : ''}${variance.totalPct}%)` : ''}
+              {isTotalIncrease ? (isUrdu ? 'کل اضافہ' : 'Total Increase') : (isUrdu ? 'کل بچت / کمی' : 'Total Reduction')}:{' '}
+              <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className="inline-block font-mono">
+                {isTotalIncrease ? '+' : '-'}{displayCurrency} {fmt(variance.totalDiff)}
+              </span>
+              {variance.totalPct ? (
+                <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className="inline-block font-mono ml-1">
+                  ({isTotalIncrease ? '+' : ''}{variance.totalPct}%)
+                </span>
+              ) : ''}
             </span>
           </motion.div>
         </div>
@@ -142,17 +149,17 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
                       {item.isNew 
                         ? (isUrdu ? 'اس ماہ کا نیا خرچ' : 'New expense item this month') 
                         : (isUrdu 
-                            ? `گزشتہ ماہ (${translateMonth(variance.priorMonth.split(' ')[0], 'ur')}) میں ${displayCurrency} ${fmt(item.prev)} تھا` 
+                            ? <span>گزشتہ ماہ ({translateMonth(variance.priorMonth.split(' ')[0], 'ur')}) میں <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className="inline-block font-mono font-bold text-slate-700 dark:text-slate-300">{displayCurrency} {fmt(item.prev)}</span> تھا</span> 
                             : `Was ${currency} ${fmt(item.prev)} in ${variance.priorMonth.split(' ')[0]}`)}
                     </p>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <span className="text-sm sm:text-base md:text-lg font-black text-rose-600 dark:text-rose-400 block leading-tight">
+                  <div className="text-right flex-shrink-0" dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
+                    <span className="text-sm sm:text-base md:text-lg font-black text-rose-600 dark:text-rose-400 block leading-tight font-mono">
                       +{displayCurrency} {fmt(item.diff)}
                     </span>
                     {item.pct && (
-                      <span className="text-xs sm:text-sm font-black text-rose-500 dark:text-rose-400/90 block mt-0.5">
-                        +{item.pct}%
+                      <span className="text-xs sm:text-sm font-black text-rose-500 dark:text-rose-400/90 block mt-0.5 font-mono">
+                        +{Math.abs(Number(item.pct))}%
                       </span>
                     )}
                   </div>
@@ -191,17 +198,17 @@ export default function MonthlyVarianceBanner({ selectedMonth, allExpenses = [],
                     </p>
                     <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1 truncate">
                       {isUrdu 
-                        ? `گزشتہ ماہ (${translateMonth(variance.priorMonth.split(' ')[0], 'ur')}) میں ${displayCurrency} ${fmt(item.prev)} تھا` 
+                        ? <span>گزشتہ ماہ ({translateMonth(variance.priorMonth.split(' ')[0], 'ur')}) میں <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className="inline-block font-mono font-bold text-slate-700 dark:text-slate-300">{displayCurrency} {fmt(item.prev)}</span> تھا</span> 
                         : `Was ${currency} ${fmt(item.prev)} in ${variance.priorMonth.split(' ')[0]}`}
                     </p>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <span className="text-sm sm:text-base md:text-lg font-black text-emerald-600 dark:text-emerald-400 block leading-tight">
+                  <div className="text-right flex-shrink-0" dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
+                    <span className="text-sm sm:text-base md:text-lg font-black text-emerald-600 dark:text-emerald-400 block leading-tight font-mono">
                       -{displayCurrency} {fmt(item.diff)}
                     </span>
                     {item.pct && (
-                      <span className="text-xs sm:text-sm font-black text-emerald-500 dark:text-emerald-400/90 block mt-0.5">
-                        -{item.pct}%
+                      <span className="text-xs sm:text-sm font-black text-emerald-500 dark:text-emerald-400/90 block mt-0.5 font-mono">
+                        -{Math.abs(Number(item.pct))}%
                       </span>
                     )}
                   </div>

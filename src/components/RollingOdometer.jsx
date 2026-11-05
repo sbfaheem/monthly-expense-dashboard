@@ -109,22 +109,33 @@ export const RollingOdometer = ({
   let digitIndex = 0
 
   return (
-    <div
-      className={`inline-flex items-baseline font-mono tracking-tight tabular-nums ${className}`}
+    <span
+      dir="ltr"
       style={{
+        direction: 'ltr',
+        unicodeBidi: 'isolate',
         WebkitFontSmoothing: 'antialiased',
         MozOsxFontSmoothing: 'grayscale',
         textRendering: 'geometricPrecision',
         transform: 'translateZ(0)',
       }}
+      className={`inline-flex flex-row items-baseline font-mono tracking-tight tabular-nums ${className}`}
     >
       {prefix && (
-        <span className="text-[0.68em] font-extrabold mr-1.5 opacity-80 font-sans select-none self-center tracking-normal">
+        <span
+          dir="ltr"
+          style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+          className="text-[0.68em] font-extrabold mr-1.5 opacity-80 font-sans select-none self-center tracking-normal inline-block"
+        >
           {prefix}
         </span>
       )}
 
-      <div className="inline-flex items-baseline">
+      <span
+        dir="ltr"
+        style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+        className="inline-flex flex-row items-baseline"
+      >
         {characters.map((char, idx) => {
           const isNum = !isNaN(parseInt(char, 10))
           const delay = isNum ? digitIndex++ * 0.03 : 0
@@ -138,14 +149,18 @@ export const RollingOdometer = ({
             />
           )
         })}
-      </div>
+      </span>
 
       {suffix && (
-        <span className="text-[0.68em] font-extrabold ml-1.5 opacity-80 font-sans select-none self-center tracking-normal">
+        <span
+          dir="ltr"
+          style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+          className="text-[0.68em] font-extrabold ml-1.5 opacity-80 font-sans select-none self-center tracking-normal inline-block"
+        >
           {suffix}
         </span>
       )}
-    </div>
+    </span>
   )
 }
 

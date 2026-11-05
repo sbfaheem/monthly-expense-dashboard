@@ -6,6 +6,7 @@ class SoundEngine {
   constructor() {
     this.ctx = null
     this.STORAGE_KEY = 'dashboard_sound_muted'
+    this.lastReactionTime = 0
   }
 
   init() {
@@ -49,6 +50,9 @@ class SoundEngine {
   // ============================================================================
   playSurplusReaction(isUrdu = false) {
     if (this.isMuted()) return
+    const nowMs = Date.now()
+    if (nowMs - this.lastReactionTime < 1400) return
+    this.lastReactionTime = nowMs
     this.init()
 
     // 1A. Clear celebratory vocal exclamation: "Outstanding!"
@@ -92,15 +96,18 @@ class SoundEngine {
 
   // ============================================================================
   // 2. DEFICIT — LET'S DO BETTER! 🚀
-  // "Let's Do Better! Let's Do Better!" + Motivational crowd chanting +
+  // "Let's Do Better!" + Motivational crowd chanting +
   // energetic supportive reaction (2–3s)
   // ============================================================================
   playDeficitReaction(isUrdu = false) {
     if (this.isMuted()) return
+    const nowMs = Date.now()
+    if (nowMs - this.lastReactionTime < 1400) return
+    this.lastReactionTime = nowMs
     this.init()
 
-    // 2A. Energetic motivational chant spoken clearly: "Let's Do Better! Let's Do Better!"
-    this._speakWord(isUrdu ? 'بہتری کی طرف! آگے بڑھیں!' : "Let's Do Better! Let's Do Better!", {
+    // 2A. Energetic motivational chant spoken clearly: "Let's Do Better!"
+    this._speakWord(isUrdu ? 'بہتری کی طرف!' : "Let's Do Better!", {
       pitch: 1.12,
       rate: 1.15,
       volume: 1.0,

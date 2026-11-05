@@ -432,16 +432,16 @@ const ExpenseTable = ({
                         <Sparkles size={14} /> ✨ {isUrdu ? t.statusNew : 'New this month'}
                       </span>
                     ) : row.diff > 0 ? (
-                      <span className="inline-flex items-center gap-1.5 font-black text-rose-600 dark:text-rose-400 text-xs sm:text-sm bg-rose-50 dark:bg-rose-950/50 px-3 py-1.5 rounded-xl border border-rose-200/80 dark:border-rose-900/60">
+                      <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className="inline-flex items-center gap-1.5 font-black text-rose-600 dark:text-rose-400 text-xs sm:text-sm bg-rose-50 dark:bg-rose-950/50 px-3 py-1.5 rounded-xl border border-rose-200/80 dark:border-rose-900/60 font-mono">
                         <ArrowUpRight size={15} className="stroke-[3]" />
                         +{displayCurrency} {fmt(row.diff)}
-                        {row.pct && <span className="text-xs font-extrabold text-rose-500">({isUrdu ? `${t.statusHigher} ` : ''}+{row.pct}%)</span>}
+                        {row.pct && <span className="text-xs font-extrabold text-rose-500 font-mono">({isUrdu ? `${t.statusHigher} ` : ''}+{row.pct}%)</span>}
                       </span>
                     ) : row.diff < 0 ? (
-                      <span className="inline-flex items-center gap-1.5 font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1.5 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60">
+                      <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className="inline-flex items-center gap-1.5 font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1.5 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60 font-mono">
                         <ArrowDownRight size={15} className="stroke-[3]" />
                         -{displayCurrency} {fmt(row.diff)}
-                        {row.pct && <span className="text-xs font-extrabold text-emerald-600">({isUrdu ? `${t.statusSaved} ` : ''}{row.pct}%)</span>}
+                        {row.pct && <span className="text-xs font-extrabold text-emerald-600 font-mono">({isUrdu ? `${t.statusSaved} ` : ''}-{Math.abs(Number(row.pct))}%)</span>}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 font-bold text-slate-400 dark:text-slate-500 text-xs sm:text-sm">
@@ -603,16 +603,16 @@ const ExpenseTable = ({
                               <Sparkles size={13} /> {isUrdu ? t.statusNew : 'NEW'}
                             </span>
                           ) : row.diff > 0 ? (
-                            <span className="inline-flex items-center gap-1 font-black text-rose-600 dark:text-rose-400 text-xs lg:text-sm bg-rose-50 dark:bg-rose-950/50 px-2.5 py-1.5 rounded-xl border border-rose-200/80 dark:border-rose-900/60 whitespace-nowrap">
+                            <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className="inline-flex items-center gap-1 font-black text-rose-600 dark:text-rose-400 text-xs lg:text-sm bg-rose-50 dark:bg-rose-950/50 px-2.5 py-1.5 rounded-xl border border-rose-200/80 dark:border-rose-900/60 whitespace-nowrap font-mono">
                               <TrendingUp size={14} className="stroke-[2.5]" />
                               +{displayCurrency} {fmt(row.diff)}
-                              {row.pct && <span className="text-[11px] font-extrabold text-rose-500">({isUrdu ? `${t.statusHigher} ` : ''}▲ {row.pct}%)</span>}
+                              {row.pct && <span className="text-[11px] font-extrabold text-rose-500 font-mono">({isUrdu ? `${t.statusHigher} ` : ''}▲ {row.pct}%)</span>}
                             </span>
                           ) : row.diff < 0 ? (
-                            <span className="inline-flex items-center gap-1 font-black text-emerald-600 dark:text-emerald-400 text-xs lg:text-sm bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1.5 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60 whitespace-nowrap">
+                            <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className="inline-flex items-center gap-1 font-black text-emerald-600 dark:text-emerald-400 text-xs lg:text-sm bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1.5 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60 whitespace-nowrap font-mono">
                               <TrendingDown size={14} className="stroke-[2.5]" />
                               -{displayCurrency} {fmt(row.diff)}
-                              {row.pct && <span className="text-[11px] font-extrabold text-emerald-600">({isUrdu ? `${t.statusSaved} ` : ''}▼ {Math.abs(row.pct)}%)</span>}
+                              {row.pct && <span className="text-[11px] font-extrabold text-emerald-600 font-mono">({isUrdu ? `${t.statusSaved} ` : ''}▼ {Math.abs(row.pct)}%)</span>}
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 font-semibold text-slate-400 dark:text-slate-500 text-xs">
@@ -682,7 +682,7 @@ const ExpenseTable = ({
            <span className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
              {isUrdu ? 'کل ماہانہ اخراجات' : 'TOTAL MONTHLY EXPENSE'}
            </span>
-           <span className="text-base sm:text-xl font-black text-primary font-mono tabular-nums">
+           <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className="text-base sm:text-xl font-black text-primary font-mono tabular-nums">
              {displayCurrency} {fmt(totals.totalExpense)}
            </span>
          </div>
@@ -693,7 +693,7 @@ const ExpenseTable = ({
                ? (isUrdu ? 'ماہانہ کیش فلو (سرپلس / بچت)' : 'MONTHLY CASH FLOW (SURPLUS)') 
                : (isUrdu ? 'ماہانہ کیش فلو (خسارہ)' : 'MONTHLY CASH FLOW (DEFICIT)')}
            </span>
-           <span className={`text-base sm:text-xl font-black font-mono tabular-nums ${(totals.netCashFlow ?? totals.saving) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+           <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className={`text-base sm:text-xl font-black font-mono tabular-nums ${(totals.netCashFlow ?? totals.saving) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
              {(totals.netCashFlow ?? totals.saving) < 0 ? '-' : '+'} {displayCurrency} {fmt(totals.netCashFlow ?? totals.saving)}
            </span>
          </div>
@@ -703,7 +703,7 @@ const ExpenseTable = ({
              <span className="text-xs sm:text-sm font-bold uppercase tracking-wider">
                {isUrdu ? 'بڑے اثاثے (سی سی ٹی وی کیمرے)' : 'Capital Expenditure (CCTV)'}
              </span>
-             <span className="text-base sm:text-lg font-black font-mono tabular-nums">- {displayCurrency} {fmt(totals.record.cctvExpense)}</span>
+             <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className="text-base sm:text-lg font-black font-mono tabular-nums">- {displayCurrency} {fmt(totals.record.cctvExpense)}</span>
            </div>
          )}
 
@@ -713,7 +713,7 @@ const ExpenseTable = ({
                ? (isUrdu ? 'اختتامی بیلنس (محفوظ فنڈ)' : 'CLOSING BALANCE (ACCUMULATED SURPLUS)') 
                : (isUrdu ? 'اختتامی بیلنس (خسارہ / بقایا جات)' : 'CLOSING BALANCE (OVERDRAWN DEFICIT)')}
            </span>
-           <span className={`text-base sm:text-xl font-black font-mono tabular-nums ${(totals.closingBalance ?? totals.totalSaving) >= 0 ? 'text-secondary-gold' : 'text-red-400'}`}>
+           <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className={`text-base sm:text-xl font-black font-mono tabular-nums ${(totals.closingBalance ?? totals.totalSaving) >= 0 ? 'text-secondary-gold' : 'text-red-400'}`}>
              {(totals.closingBalance ?? totals.totalSaving) < 0 ? '-' : ''} {displayCurrency} {fmt(totals.closingBalance ?? totals.totalSaving)}
            </span>
          </div>

@@ -156,11 +156,11 @@ export default function DynamicAlertBanner({
                       : 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700'
                   }`}
                 >
-                  {isDeficit ? '⚠️ Cash Flow Alert' : '✅ Treasury Status'}
+                  {isDeficit ? (isUrdu ? '⚠️ کیش فلو انتباہ' : '⚠️ Cash Flow Alert') : (isUrdu ? '✅ خزانہ اسٹیٹس' : '✅ Treasury Status')}
                 </span>
 
                 <span className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100">
-                  {isDeficit ? 'Deficit Notice' : 'Surplus Transferred'}
+                  {isDeficit ? (isUrdu ? 'خسارہ نوٹس' : 'Deficit Notice') : (isUrdu ? 'سرپلس منتقل' : 'Surplus Transferred')}
                 </span>
 
                 {/* Interactive Crowd Audio Replay Pill */}
@@ -174,7 +174,7 @@ export default function DynamicAlertBanner({
                   }`}
                   title="Replay crowd audio reaction"
                 >
-                  <span>{isDeficit ? "🚀 Let's Do Better!" : "👏 Outstanding!"}</span>
+                  <span>{isDeficit ? (isUrdu ? "🚀 بہتری کی طرف!" : "🚀 Let's Do Better!") : (isUrdu ? "👏 شاندار!" : "👏 Outstanding!")}</span>
                   <RotateCw size={11} className="opacity-70" />
                 </button>
 
@@ -189,40 +189,69 @@ export default function DynamicAlertBanner({
                 </button>
               </div>
 
-              {/* Dynamic English Notice with Rolling Odometer */}
-              <div
-                className={`text-sm sm:text-base md:text-lg font-black leading-snug tracking-tight flex items-baseline gap-1.5 flex-wrap ${
-                  isDeficit ? 'text-amber-950 dark:text-amber-100' : 'text-emerald-950 dark:text-emerald-100'
-                }`}
-              >
-                <span>
-                  {isDeficit ? 'Expenses exceeded collections by' : 'Operating surplus of'}
-                </span>
-                <RollingOdometer
-                  value={absFormatted}
-                  prefix={currency}
-                  className="font-black text-inherit"
-                />
-                <span>
-                  {isDeficit ? '. Prompt dues clearance requested.' : ' retained in community reserves.'}
-                </span>
-              </div>
+              {/* Dynamic Notice with Rolling Odometer */}
+              {isUrdu ? (
+                <div
+                  dir="rtl"
+                  className={`text-sm sm:text-base md:text-lg font-black leading-snug tracking-tight flex items-baseline gap-2 flex-wrap font-urdu ${
+                    isDeficit ? 'text-amber-950 dark:text-amber-100' : 'text-emerald-950 dark:text-emerald-100'
+                  }`}
+                >
+                  <span>
+                    {isDeficit ? 'اس ماہ اخراجات کلیکشن سے ' : 'اس ماہ کا سرپلس ریونیو '}
+                  </span>
+                  <RollingOdometer
+                    value={absFormatted}
+                    prefix="روپے"
+                    className="font-black text-inherit"
+                  />
+                  <span>
+                    {isDeficit ? ' تجاوز کر گئے۔ بقایا جات کی ادائیگی یقینی بنائیں۔' : ' محفوظ فنڈ میں منتقل کر دیا گیا۔'}
+                  </span>
+                </div>
+              ) : (
+                <div
+                  dir="ltr"
+                  style={{ direction: 'ltr' }}
+                  className={`text-sm sm:text-base md:text-lg font-black leading-snug tracking-tight flex items-baseline gap-1.5 flex-wrap ${
+                    isDeficit ? 'text-amber-950 dark:text-amber-100' : 'text-emerald-950 dark:text-emerald-100'
+                  }`}
+                >
+                  <span>
+                    {isDeficit ? 'Expenses exceeded collections by' : 'Operating surplus of'}
+                  </span>
+                  <RollingOdometer
+                    value={absFormatted}
+                    prefix={currency}
+                    className="font-black text-inherit"
+                  />
+                  <span>
+                    {isDeficit ? '. Prompt dues clearance requested.' : ' retained in community reserves.'}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Right Side: Urdu Notice */}
+          {/* Right Side: Translation Notice */}
           <div
-            className={`border-t md:border-t-0 md:border-l ${
+            className={`border-t md:border-t-0 ${isUrdu ? 'md:border-r md:pr-6 text-left' : 'md:border-l md:pl-6 text-right'} ${
               isDeficit ? 'border-amber-200 dark:border-amber-800/60' : 'border-emerald-200 dark:border-emerald-800/60'
-            } md:pl-6 pt-3 md:pt-0 text-right flex-1`}
-            dir="rtl"
+            } pt-3 md:pt-0 flex-1`}
           >
             <p
-              className={`text-base sm:text-lg md:text-xl font-black leading-relaxed font-urdu ${
-                isDeficit ? 'text-amber-950 dark:text-amber-100' : 'text-emerald-950 dark:text-emerald-100'
+              dir={isUrdu ? 'ltr' : 'rtl'}
+              className={`text-sm sm:text-base md:text-lg font-bold leading-relaxed ${
+                isUrdu ? 'font-sans' : 'font-urdu'
+              } ${
+                isDeficit ? 'text-amber-900/80 dark:text-amber-200/80' : 'text-emerald-900/80 dark:text-emerald-200/80'
               }`}
             >
-              {defaultUrdu}
+              {isUrdu
+                ? (isDeficit
+                    ? `Net Deficit: ${currency} ${absFormatted} — Operating gap recorded.`
+                    : `Net Surplus: ${currency} ${absFormatted} — Added to reserve fund.`)
+                : defaultUrdu}
             </p>
             {customNote && customNote !== defaultUrdu && (
               <p className="text-xs sm:text-sm md:text-base font-bold text-slate-700 dark:text-slate-200 mt-2 font-urdu leading-relaxed">

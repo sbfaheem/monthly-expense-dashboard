@@ -78,7 +78,7 @@ export const HeroBalanceCard3D = ({
         <span className="text-xs text-slate-400 block font-medium">
           {t?.closingBalance || 'Closing Reserve Fund'}
         </span>
-        <div className="flex items-baseline gap-2 mt-1">
+        <div dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className="flex items-baseline gap-2 mt-1">
           <span className="text-sm font-semibold text-slate-400">{displayCurrency}</span>
           <h1 className={`text-3xl sm:text-4xl font-extrabold tracking-tight font-mono ${isDeficit ? 'text-rose-400' : 'text-emerald-400'}`}>
             {isDeficit ? `-${fmt(safeClosing)}` : fmt(safeClosing)}
@@ -90,21 +90,21 @@ export const HeroBalanceCard3D = ({
       <div style={{ transform: shouldReduceMotion ? 'none' : 'translateZ(30px)' }} className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-4 border-t border-white/10 mt-5">
         <div className="bg-white/5 backdrop-blur-sm p-3 rounded-xl border border-white/5">
           <span className="text-[11px] font-medium text-slate-400 block">{t?.monthlyCollection || 'Collection'}</span>
-          <span className="text-xs sm:text-sm font-bold text-emerald-300 font-mono mt-0.5 block">
+          <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className="text-xs sm:text-sm font-bold text-emerald-300 font-mono mt-0.5 block">
             {displayCurrency} {fmt(collection)}
           </span>
         </div>
 
         <div className="bg-white/5 backdrop-blur-sm p-3 rounded-xl border border-white/5">
           <span className="text-[11px] font-medium text-slate-400 block">{t?.totalExpense || 'Total Expense'}</span>
-          <span className="text-xs sm:text-sm font-bold text-rose-300 font-mono mt-0.5 block">
+          <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className="text-xs sm:text-sm font-bold text-rose-300 font-mono mt-0.5 block">
             {displayCurrency} {fmt(expenses)}
           </span>
         </div>
 
         <div className="bg-white/5 backdrop-blur-sm p-3 rounded-xl border border-white/5 col-span-2 sm:col-span-1">
           <span className="text-[11px] font-medium text-slate-400 block">{t?.openingBalance || 'Opening Balance'}</span>
-          <span className="text-xs sm:text-sm font-bold text-slate-200 font-mono mt-0.5 block">
+          <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className="text-xs sm:text-sm font-bold text-slate-200 font-mono mt-0.5 block">
             {displayCurrency} {fmt(openingBalance)}
           </span>
         </div>
