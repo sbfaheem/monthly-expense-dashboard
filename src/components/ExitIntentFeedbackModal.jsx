@@ -10,7 +10,8 @@ const QUICK_TAGS_EN = [
   '⚡ Fair Generator Expense',
   '🧹 Good Sanitation',
   '📋 Clear Reporting',
-  '🛡️ Reliable Security'
+  '🛡️ Reliable Security',
+  '✨ Interactive Dashboard'
 ]
 
 const QUICK_TAGS_UR = [
@@ -19,7 +20,8 @@ const QUICK_TAGS_UR = [
   '⚡ جنریٹر اخراجات مناسب',
   '🧹 صفائی کا نظام اچھا',
   '📋 تفصیلی اور واضح رپورٹ',
-  '🛡️ سیکیورٹی انتظامات تسلی بخش'
+  '🛡️ سیکیورٹی انتظامات تسلی بخش',
+  '✨ انٹرایکٹو ڈیش بورڈ'
 ]
 
 export default function ExitIntentFeedbackModal({
