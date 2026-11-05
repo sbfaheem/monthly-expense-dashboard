@@ -2,71 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { useLanguage } from '../context/LanguageContext'
 import RollingOdometer from './RollingOdometer'
-
-// ================= ZERO-DEPENDENCY PROCEDURAL SOUND ENGINE =================
-const playProceduralSound = (type = 'surplus', isMuted = false) => {
-  if (isMuted || typeof window === 'undefined') return
-  try {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext
-    if (!AudioContextClass) return
-    const ctx = new AudioContextClass()
-    if (ctx.state === 'suspended') ctx.resume()
-    const now = ctx.currentTime
-
-    if (type === 'bounce') {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.type = 'sine'
-      osc.frequency.setValueAtTime(280, now)
-      osc.frequency.exponentialRampToValueAtTime(80, now + 0.08)
-      gain.gain.setValueAtTime(0.25, now)
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08)
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.start(now)
-      osc.stop(now + 0.09)
-    } else if (type === 'surplus') {
-      const notes = [523.25, 659.25, 783.99, 1046.50]
-      notes.forEach((freq, idx) => {
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.type = 'sine'
-        osc.frequency.setValueAtTime(freq, now + idx * 0.07)
-        gain.gain.setValueAtTime(0.001, now + idx * 0.07)
-        gain.gain.exponentialRampToValueAtTime(0.16, now + idx * 0.07 + 0.03)
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.07 + 0.42)
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.start(now + idx * 0.07)
-        osc.stop(now + idx * 0.07 + 0.45)
-      })
-    } else if (type === 'deficit') {
-      const tones = [
-        { freq: 164.81, time: 0.0, dur: 0.22 },
-        { freq: 130.81, time: 0.18, dur: 0.32 }
-      ]
-      tones.forEach((t) => {
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        const filter = ctx.createBiquadFilter()
-        osc.type = 'triangle'
-        osc.frequency.setValueAtTime(t.freq, now + t.time)
-        filter.type = 'lowpass'
-        filter.frequency.setValueAtTime(420, now)
-        gain.gain.setValueAtTime(0.001, now + t.time)
-        gain.gain.exponentialRampToValueAtTime(0.14, now + t.time + 0.04)
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + t.time + t.dur)
-        osc.connect(filter)
-        filter.connect(gain)
-        gain.connect(ctx.destination)
-        osc.start(now + t.time)
-        osc.stop(now + t.time + t.dur + 0.05)
-      })
-    }
-  } catch (e) {
-    // Graceful audio fallback
-  }
-}
+import { soundEffects } from '../utils/soundEffects'
 
 export const SummaryCards = ({
   openingBalance = 0,
@@ -216,14 +152,31 @@ export const SummaryCards = ({
     }
   ]
 
-  const toggleSound = () => {
-    const next = !isMuted
-    setIsMuted(next)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('dashboard_sound_muted', String(next))
+  // Play crowd reaction based on card financial condition
+  const triggerCardReaction = (card) => {
+    let cardIsSurplus = isSurplus
+    if (card.id === 'closing') {
+      cardIsSurplus = !actualOverdrawn
+    } else if (card.id === 'cashflow') {
+      cardIsSurplus = isSurplus
+    } else if (card.id === 'expense') {
+      cardIsSurplus = !actualOverdrawn
+    } else if (card.id === 'collection') {
+      cardIsSurplus = true
     }
+
+    if (cardIsSurplus) {
+      soundEffects.playSurplusReaction(isUrdu)
+    } else {
+      soundEffects.playDeficitReaction(isUrdu)
+    }
+  }
+
+  const toggleSound = () => {
+    const next = soundEffects.toggleMute()
+    setIsMuted(next)
     if (!next) {
-      playProceduralSound(isSurplus ? 'surplus' : 'deficit', false)
+      triggerCardReaction(cards[activeCardIndex])
     }
   }
 
@@ -240,11 +193,13 @@ export const SummaryCards = ({
 
     setShowRipple(true)
     setTimeout(() => setShowRipple(false), 400)
-    playProceduralSound('bounce', isMuted)
+    
+    // Tactile contact pop
+    soundEffects.playBounce()
 
     setActiveCardIndex((prev) => {
       const nextIdx = (prev + 1) % cards.length
-      playProceduralSound(isSurplus ? 'surplus' : 'deficit', isMuted)
+      triggerCardReaction(cards[nextIdx])
       return nextIdx
     })
   }
@@ -273,7 +228,7 @@ export const SummaryCards = ({
       advanceToNextCard()
     } else {
       setActiveCardIndex(idx)
-      playProceduralSound(isSurplus ? 'surplus' : 'deficit', isMuted)
+      triggerCardReaction(cards[idx])
     }
   }
 
@@ -295,21 +250,27 @@ export const SummaryCards = ({
 
         {/* View Switcher, Audio Toggle & Auto-Bounce Controls */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Sound FX Toggle Pill */}
+          {/* Sound FX Toggle Pill with Actual Crowd Reactions */}
           <button
             type="button"
             onClick={toggleSound}
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition border ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition border ${
               !isMuted
                 ? isSurplus
                   ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 shadow-2xs'
                   : 'bg-rose-500/15 border-rose-500/40 text-rose-700 dark:text-rose-300 shadow-2xs'
                 : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400'
             }`}
-            title={isMuted ? 'Unmute Sound Effects' : 'Mute Sound Effects'}
+            title={isMuted ? 'Unmute Crowd Reactions' : 'Mute Crowd Reactions'}
           >
-            <span>{!isMuted ? '🔊' : '🔇'}</span>
-            <span>{!isMuted ? (isSurplus ? 'Surplus Audio' : 'Deficit Alert') : 'Muted'}</span>
+            <span>{!isMuted ? (isSurplus ? '👏' : '🚀') : '🔇'}</span>
+            <span>
+              {!isMuted
+                ? isSurplus
+                  ? (isUrdu ? 'شاندار! 👏' : 'Outstanding! 👏')
+                  : (isUrdu ? 'بہتری کی طرف! 🚀' : "Let's Do Better! 🚀")
+                : (isUrdu ? 'آواز بند' : 'Muted')}
+            </span>
           </button>
 
           {/* Auto Bounce Button */}
