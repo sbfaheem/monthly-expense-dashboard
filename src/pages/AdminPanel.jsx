@@ -13,6 +13,7 @@ import {
   exportFullDatabaseBackupJSON
 } from '../utils/storage'
 import Header from '../components/Header'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import MonthComparison3D from '../components/MonthComparison3D'
 import { MONTH_NAMES } from '../utils/finance'
 import SummaryCards from '../components/SummaryCards'
@@ -458,6 +459,7 @@ export default function AdminPanel() {
         </div>
 
         <div className="flex items-center gap-1.5">
+          <LanguageSwitcher />
           <a
             href="/view"
             className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:text-primary transition-colors"
@@ -603,6 +605,9 @@ export default function AdminPanel() {
           ))}
         </nav>
         <div className="p-4 border-t border-primary/10 space-y-2">
+          <div className="mb-2">
+            <LanguageSwitcher />
+          </div>
           <a href="/view" className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-colors">
             <Eye size={18}/> Viewer Mode
           </a>
