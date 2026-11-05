@@ -221,7 +221,7 @@ function PaperReceiptAccordion({ row, displayCurrency, fmt, isUrdu, t, curMonthS
                   {isUrdu ? 'وصول کنندہ / وینڈر' : 'Payee / Contractor'}
                 </span>
                 <span className="font-bold text-slate-900 dark:text-slate-100 block truncate">
-                  {auditDetails.vendor}
+                  {isUrdu ? 'سیکٹر 7D/1 مینجمنٹ' : 'Sector 7D/1 Management'}
                 </span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">
                   {auditDetails.method}
@@ -234,22 +234,12 @@ function PaperReceiptAccordion({ row, displayCurrency, fmt, isUrdu, t, curMonthS
                   {isUrdu ? 'آڈٹ تصدیق و اندراج' : 'Verification & Protocol'}
                 </span>
                 <span className="font-bold text-emerald-600 dark:text-emerald-400 block truncate">
-                  {auditDetails.auditStamp}
+                  {isUrdu ? 'سیکٹر 7D/1 مینجمنٹ۔' : 'Sector 7D/1 Management.'}
                 </span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">
-                  Welfare Committee Sign-off Verified
+                  {isUrdu ? 'ویلفیئر کمیٹی تصدیق شدہ' : 'Welfare Committee Sign-off Verified'}
                 </span>
               </div>
-            </div>
-
-            {/* Admin Audit Notes Card */}
-            <div className="bg-white/60 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800/80 text-xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                {isUrdu ? 'آڈٹ نوٹس و تصدیقی بیان' : 'Admin Audit Remarks & Protocol'}
-              </span>
-              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed font-sans">
-                "{auditDetails.auditNote}"
-              </p>
             </div>
 
             {/* Bottom Barcode Strip & Signature Footer */}
@@ -257,8 +247,8 @@ function PaperReceiptAccordion({ row, displayCurrency, fmt, isUrdu, t, curMonthS
               <div className="tracking-[3px] font-bold uppercase select-none opacity-60">
                 ||| | |||| | ||| ||||||| | ||||| | ||| {voucherId}
               </div>
-              <div className="text-center sm:text-right font-sans font-semibold">
-                Approved by Treasurer • Sector 7D/1 Welfare Committee
+              <div className="text-center sm:text-right font-sans font-semibold text-slate-700 dark:text-slate-300">
+                {isUrdu ? 'تصدیق شدہ برائے خزانچی: سیکٹر 7D/1 مینجمنٹ' : 'Approved by Treasurer: Sector 7D/1 Management'}
               </div>
             </div>
           </motion.div>
