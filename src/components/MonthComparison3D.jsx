@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { motion, useMotionValue, useSpring, useTransform, useReducedMotion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
   Wallet,
   TrendingDown,
@@ -8,8 +8,7 @@ import {
   ShieldCheck,
   Sparkles,
   ArrowRight,
-  ArrowLeftRight,
-  Layers
+  ArrowLeftRight
 } from 'lucide-react'
 import { useLanguage } from '../context/LanguageContext'
 import { translateMonth } from '../utils/translations'
@@ -39,7 +38,7 @@ export const MonthComparison3D = ({
   const displayCurrency = isUrdu ? 'روپے' : currency
   const shouldReduceMotion = useReducedMotion()
 
-  // Active focused card on tap (0: balanced, 1: prev lifted, 2: curr lifted)
+  // Active focused card on tap (1: prev lifted, 2: curr lifted)
   const [elevatedCard, setElevatedCard] = useState(2)
 
   // Mobile segmented view: 'split' | 'prev' | 'current'
@@ -80,30 +79,6 @@ export const MonthComparison3D = ({
   const balanceDiff = currBalance - prevBalance
   const absBalanceDiff = Math.abs(balanceDiff).toLocaleString('en-PK')
   const isFavorableVariance = currNet >= prevNet
-
-  // Interactive Pointer / Touch 3D Physics
-  const mouseX = useMotionValue(0)
-  const mouseY = useMotionValue(0)
-
-  const springConfig = { damping: 26, stiffness: 200, mass: 0.4 }
-  const smoothX = useSpring(mouseX, springConfig)
-  const smoothY = useSpring(mouseY, springConfig)
-
-  const interactiveRotateX = useTransform(smoothY, [-0.5, 0.5], [7, -7])
-  const interactiveRotateY = useTransform(smoothX, [-0.5, 0.5], [-7, 7])
-
-  const handlePointerMove = (e) => {
-    if (shouldReduceMotion) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    if (!rect.width || !rect.height) return
-    mouseX.set((e.clientX - rect.left) / rect.width - 0.5)
-    mouseY.set((e.clientY - rect.top) / rect.height - 0.5)
-  }
-
-  const handlePointerLeave = () => {
-    mouseX.set(0)
-    mouseY.set(0)
-  }
 
   return (
     <div className="w-full my-8">
@@ -168,48 +143,25 @@ export const MonthComparison3D = ({
         </div>
       </div>
 
-      {/* ─── 3D Perspective Stage ─── */}
-      <div
-        style={{ perspective: 1400 }}
-        onPointerMove={handlePointerMove}
-        onPointerLeave={handlePointerLeave}
-        className="w-full relative [touch-action:pan-y] select-none"
-      >
-        {/* Continuous 3D Ambient Levitation (Visible on Mobile & Desktop) */}
-        <motion.div
-          animate={shouldReduceMotion ? {} : {
-            y: [-3, 3, -3],
-            rotateZ: [-0.4, 0.4, -0.4],
-          }}
-          transition={{
-            duration: 6,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-          style={{
-            rotateX: shouldReduceMotion ? 0 : interactiveRotateX,
-            rotateY: shouldReduceMotion ? 0 : interactiveRotateY,
-            transformStyle: 'preserve-3d',
-          }}
-          className="relative grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] items-center gap-5 sm:gap-6 will-change-transform"
-        >
+      {/* ─── 100% RAZOR-SHARP CARD STAGE (ZERO BLUR) ─── */}
+      <div className="w-full relative">
+        <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] items-center gap-5 sm:gap-6">
+          
           {/* ================= CARD 1: PREVIOUS CYCLE ================= */}
           <motion.div
             onClick={() => setElevatedCard(1)}
-            animate={{
-              scale: elevatedCard === 1 ? 1.02 : 1,
-              z: elevatedCard === 1 ? 30 : 10,
-            }}
-            transition={{ type: 'spring', stiffness: 280, damping: 24 }}
-            className={`relative rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white/95 dark:bg-[#0f172a] p-6 sm:p-7 shadow-xl shadow-slate-200/40 dark:shadow-none overflow-hidden flex flex-col justify-between cursor-pointer transition-shadow ${
-              mobileTab === 'current' ? 'hidden sm:flex' : 'flex'
-            }`}
+            whileHover={shouldReduceMotion ? {} : { y: -4 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            className={`relative rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#0f172a] p-6 sm:p-7 overflow-hidden flex flex-col justify-between cursor-pointer transition-all duration-200 ${
+              elevatedCard === 1
+                ? 'shadow-[0_20px_45px_-10px_rgba(59,130,246,0.18),0_8px_20px_-4px_rgba(0,0,0,0.06)] ring-2 ring-primary/30'
+                : 'shadow-[0_10px_30px_-5px_rgba(0,0,0,0.06),0_4px_12px_-2px_rgba(0,0,0,0.04)]'
+            } ${mobileTab === 'current' ? 'hidden lg:flex' : 'flex'}`}
             style={{
-              transform: 'translateZ(0)',
-              backfaceVisibility: 'hidden',
+              transform: 'none',
               WebkitFontSmoothing: 'antialiased',
               MozOsxFontSmoothing: 'grayscale',
-              textRendering: 'geometricPrecision',
+              textRendering: 'optimizeLegibility',
             }}
           >
             {/* Header */}
@@ -304,109 +256,90 @@ export const MonthComparison3D = ({
             </div>
           </motion.div>
 
-          {/* ================= CENTER PILLAR: ANIMATED 3D VARIANCE / DELTA ================= */}
-          <motion.div
-            animate={shouldReduceMotion ? {} : {
-              scale: [1, 1.03, 1],
-            }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-            className="hidden lg:flex flex-col items-center justify-center p-4 rounded-3xl bg-[#070b16] border-2 border-cyan-500/40 shadow-2xl text-center w-[178px] flex-shrink-0 z-20 self-center relative overflow-hidden"
-            style={{
-              transform: 'translateZ(35px)',
-              boxShadow: '0 0 25px rgba(6, 182, 212, 0.25)',
-            }}
-          >
-            {/* Animated Laser Scanline Effect */}
-            <motion.div
-              animate={{ y: ['-100%', '220%'] }}
-              transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
-              className="pointer-events-none absolute inset-x-0 h-10 bg-gradient-to-b from-transparent via-cyan-400/20 to-transparent"
-            />
+          {/* ================= CENTER PILLAR: FLOATING VARIANCE / DELTA ================= */}
+          <div className="hidden lg:flex flex-col items-center justify-center p-4 rounded-3xl bg-[#070b16] border-2 border-cyan-500/40 shadow-xl text-center w-[178px] flex-shrink-0 z-20 self-center relative overflow-hidden">
+            {/* Ambient Background Radial Glow */}
+            <div className="pointer-events-none absolute -top-10 -left-10 size-32 rounded-full bg-cyan-500/20 blur-2xl" />
 
-            {/* Header Chip */}
-            <div className="flex items-center gap-1.5 text-[10px] font-mono font-black uppercase tracking-wider text-cyan-400 mb-3 relative z-10">
-              <Sparkles size={12} className="text-cyan-300 animate-pulse" />
-              <span>{isUrdu ? 'تغیر / ڈیلٹا' : 'VARIANCE / DELTA'}</span>
+            {/* Top Pill Icon */}
+            <div className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-cyan-400 mb-3">
+              <Sparkles size={13} className="text-cyan-400 animate-pulse" />
+              <span>Variance / Delta</span>
             </div>
 
-            {/* Collection Delta */}
-            <div className="w-full mb-2.5 p-2 rounded-2xl bg-slate-900/95 border border-slate-800 text-center relative z-10 shadow-inner">
-              <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5 tracking-wider">
-                {isUrdu ? 'وصولی' : 'COLLECTION'}
-              </span>
-              <span className={`text-xs font-mono font-black ${
-                isCollectionUp ? 'text-emerald-400' : 'text-rose-400'
-              }`}>
-                {isCollectionUp ? '↑ +' : '↓ '}{collectionPct}%
-              </span>
+            {/* Collection Shift */}
+            <div className="w-full bg-slate-900/90 rounded-2xl p-2.5 mb-2.5 border border-slate-800">
+              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wide mb-1">
+                {isUrdu ? 'وصولی تبدیلی' : 'Collection'}
+              </p>
+              <div
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black font-mono ${
+                  isCollectionUp
+                    ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/40'
+                    : 'bg-rose-950/80 text-rose-400 border border-rose-500/40'
+                }`}
+              >
+                <span>{isCollectionUp ? '↑ +' : '↓ '}{collectionPct}%</span>
+              </div>
             </div>
 
-            {/* Expenses Delta */}
-            <div className="w-full p-2 rounded-2xl bg-slate-900/95 border border-slate-800 text-center relative z-10 shadow-inner">
-              <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5 tracking-wider">
-                {isUrdu ? 'اخراجات' : 'EXPENSES'}
-              </span>
-              <span className={`text-xs font-mono font-black ${
-                !isExpenseUp ? 'text-emerald-400' : 'text-rose-400'
-              }`}>
-                {isExpenseUp ? '↑ +' : '↓ '}{expensePct}%
-              </span>
+            {/* Expense Shift */}
+            <div className="w-full bg-slate-900/90 rounded-2xl p-2.5 mb-3 border border-slate-800">
+              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wide mb-1">
+                {isUrdu ? 'اخراجات تبدیلی' : 'Expenses'}
+              </p>
+              <div
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black font-mono ${
+                  !isExpenseUp
+                    ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/40'
+                    : 'bg-rose-950/80 text-rose-400 border border-rose-500/40'
+                }`}
+              >
+                <span>{isExpenseUp ? '↑ +' : '↓ '}{expensePct}%</span>
+              </div>
             </div>
 
-            {/* Pulsing Arrow */}
-            <motion.div
-              animate={{ x: [0, 4, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-              className="mt-3 text-cyan-400/90 flex items-center justify-center relative z-10"
-            >
-              <ArrowRight size={16} />
-            </motion.div>
-          </motion.div>
+            {/* Center Arrow */}
+            <div className="size-7 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center">
+              <ArrowRight size={14} className={isUrdu ? 'rotate-180' : ''} />
+            </div>
+          </div>
 
-          {/* ================= CARD 2: CURRENT ACTIVE CYCLE (HERO CARD) ================= */}
+          {/* ================= CARD 2: CURRENT CYCLE ================= */}
           <motion.div
             onClick={() => setElevatedCard(2)}
-            animate={{
-              scale: elevatedCard === 2 ? 1.02 : 1,
-              z: elevatedCard === 2 ? 30 : 10,
-            }}
-            transition={{ type: 'spring', stiffness: 280, damping: 24 }}
-            className={`relative rounded-3xl border-2 border-indigo-500/50 bg-white/95 dark:bg-[#0f172a] p-6 sm:p-7 shadow-2xl shadow-indigo-500/15 overflow-hidden flex flex-col justify-between cursor-pointer transition-shadow ${
-              mobileTab === 'prev' ? 'hidden sm:flex' : 'flex'
-            }`}
+            whileHover={shouldReduceMotion ? {} : { y: -4 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            className={`relative rounded-3xl border-2 border-indigo-500/50 dark:border-indigo-500/40 bg-gradient-to-b from-indigo-50/40 via-white to-white dark:from-slate-900 dark:via-[#0b1120] dark:to-[#0b1120] p-6 sm:p-7 overflow-hidden flex flex-col justify-between cursor-pointer transition-all duration-200 ${
+              elevatedCard === 2
+                ? 'shadow-[0_25px_50px_-12px_rgba(99,102,241,0.25),0_10px_25px_-5px_rgba(0,0,0,0.08)] ring-2 ring-indigo-500/40'
+                : 'shadow-[0_10px_30px_-5px_rgba(0,0,0,0.06),0_4px_12px_-2px_rgba(0,0,0,0.04)]'
+            } ${mobileTab === 'prev' ? 'hidden lg:flex' : 'flex'}`}
             style={{
-              transform: 'translateZ(0)',
-              backfaceVisibility: 'hidden',
+              transform: 'none',
               WebkitFontSmoothing: 'antialiased',
               MozOsxFontSmoothing: 'grayscale',
-              textRendering: 'geometricPrecision',
+              textRendering: 'optimizeLegibility',
             }}
           >
-            {/* Top Indicator Line */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-primary to-cyan-400" />
-
             {/* Header */}
-            <div className="flex items-center justify-between pb-3.5 border-b border-indigo-500/20">
+            <div className="flex items-center justify-between pb-3.5 border-b border-indigo-100 dark:border-slate-800">
               <div>
-                <span className="text-[10px] font-mono uppercase font-extrabold tracking-wider text-indigo-600 dark:text-cyan-400">
+                <span className="text-[10px] font-mono uppercase font-extrabold tracking-wider text-indigo-500 dark:text-indigo-400">
                   {isUrdu ? 'موجودہ فعال سائیکل' : 'CURRENT ACTIVE CYCLE'}
                 </span>
-                <h4 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5">
+                <h4 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight mt-0.5">
                   {translateMonth(currName, lang)}
                 </h4>
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="px-2.5 py-1 rounded-full text-[11px] font-black bg-blue-600 text-white shadow-xs">
+                <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-600 text-white shadow-xs">
                   Live Active
                 </span>
                 <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${
                   isCurrSurplus
-                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                    : 'bg-rose-50 text-rose-700 dark:bg-rose-950/70 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                    : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
                 }`}>
                   {isUrdu ? (isCurrSurplus ? 'سرپلس' : 'خسارہ') : (isCurrSurplus ? 'Surplus' : 'Deficit')}
                 </span>
@@ -416,7 +349,7 @@ export const MonthComparison3D = ({
             {/* Metrics */}
             <div className="space-y-3 pt-3.5">
               {/* Collection Row */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-slate-800/80 border border-indigo-100/70 dark:border-slate-700/80">
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-slate-800/90 border border-indigo-100 dark:border-slate-700/80 shadow-xs">
                 <div className="flex items-center gap-2.5">
                   <div className="size-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
                     <Wallet size={16} />
@@ -432,7 +365,7 @@ export const MonthComparison3D = ({
                     className="text-sm sm:text-base md:text-lg font-black font-mono text-slate-900 dark:text-slate-100"
                   />
                   <span
-                    className={`inline-flex items-center gap-0.5 text-[11px] font-mono font-black px-2 py-0.5 rounded-md ${
+                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
                       isCollectionUp
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300/40'
                         : 'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300/40'
@@ -444,7 +377,7 @@ export const MonthComparison3D = ({
               </div>
 
               {/* Expenses Row */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-slate-800/80 border border-indigo-100/70 dark:border-slate-700/80">
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-slate-800/90 border border-indigo-100 dark:border-slate-700/80 shadow-xs">
                 <div className="flex items-center gap-2.5">
                   <div className="size-8 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center flex-shrink-0">
                     <TrendingDown size={16} />
@@ -460,7 +393,7 @@ export const MonthComparison3D = ({
                     className="text-sm sm:text-base md:text-lg font-black font-mono text-slate-900 dark:text-slate-100"
                   />
                   <span
-                    className={`inline-flex items-center gap-0.5 text-[11px] font-mono font-black px-2 py-0.5 rounded-md ${
+                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
                       !isExpenseUp
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300/40'
                         : 'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300/40'
@@ -520,13 +453,13 @@ export const MonthComparison3D = ({
                 ) : (
                   <>
                     <TrendingDown size={14} />
-                    <span>{isUrdu ? 'خسارے میں اضافہ' : 'Higher Deficit Gap'}</span>
+                    <span>{isUrdu ? 'اضافی خسارہ' : 'Higher Deficit Gap'}</span>
                   </>
                 )}
               </span>
             </div>
           </motion.div>
-        </motion.div>
+        </div>
       </div>
     </div>
   )
