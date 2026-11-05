@@ -1,3 +1,4 @@
+import { sanitizeExpenseName } from './normalizeExpense.js'
 import { db } from './firebase'
 import { collection, doc, getDoc, getDocs, query, orderBy, limit, setDoc, addDoc, updateDoc, deleteDoc, writeBatch, increment } from 'firebase/firestore'
 import { calculateMonthlyFinances, calculateMultiMonthContinuity, getMonthSortKey } from './finance'
@@ -237,7 +238,7 @@ export const loadData = async () => {
       date: data.date,
       month: data.month,
       category: data.category,
-      name: data.name,
+      name: sanitizeExpenseName(data.name),
       amount: Number(data.amount),
       description: data.description || '',
     }
@@ -400,7 +401,7 @@ export const addExpense = async (expense) => {
     date: expense.date,
     month: getMonthYear(expense.date),
     category: expense.category,
-    name: expense.name,
+    name: sanitizeExpenseName(expense.name),
     amount: Number(expense.amount),
     description: expense.description || '',
     createdAt: Date.now(),
@@ -414,7 +415,7 @@ export const updateExpense = async (expense) => {
     date: expense.date,
     month: getMonthYear(expense.date),
     category: expense.category,
-    name: expense.name,
+    name: sanitizeExpenseName(expense.name),
     amount: Number(expense.amount),
     description: expense.description || '',
   })

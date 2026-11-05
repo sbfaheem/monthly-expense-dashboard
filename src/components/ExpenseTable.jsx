@@ -28,7 +28,7 @@ function PaperReceiptAccordion({ row, displayCurrency, fmt, isUrdu, t, curMonthS
   // Contextual audit details based on category
   const auditDetails = useMemo(() => {
     const cat = row.category || ''
-    const nameLower = (row.name || '').toLowerCase()
+    const nameLower = (row.normName || row.name || '').toLowerCase()
 
     if (cat.includes('Salaries') || cat.includes('Payroll') || nameLower.includes('salary') || nameLower.includes('guard')) {
       return {
@@ -88,7 +88,7 @@ function PaperReceiptAccordion({ row, displayCurrency, fmt, isUrdu, t, curMonthS
       auditNote: isUrdu ? 'کمیٹی خزانچی اور صدر کے دستخط کے بعد ادائیگی کلیئر کی گئی۔' : 'Cross-checked with ledger book and signed by Committee Treasurer.',
       codePrefix: 'VCH',
     }
-  }, [row.category, row.name, isUrdu])
+  }, [row.category, row.normName, row.name, isUrdu])
 
   const voucherId = `${auditDetails.codePrefix}-2026-${(row.id || row.name).toString().replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() || '7D01'}`
 
@@ -169,7 +169,7 @@ function PaperReceiptAccordion({ row, displayCurrency, fmt, isUrdu, t, curMonthS
                 {isUrdu ? 'مد کا نام اور زمرہ' : 'Line Item & Classification'}
               </span>
               <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
-                {isUrdu ? translateItemName(row.name, 'ur') : row.name}
+                {isUrdu ? translateItemName(row.normName || row.name, 'ur') : (row.normName || row.name)}
               </h4>
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5 block">
                 {isUrdu ? translateCategory(row.category, 'ur') : row.category}
@@ -391,7 +391,7 @@ const ExpenseTable = ({
                   {/* Card Header: Item Name + Category */}
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <span className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 leading-snug">
-                      {isUrdu ? translateItemName(row.name, 'ur') : row.name}
+                      {isUrdu ? translateItemName(row.normName || row.name, 'ur') : (row.normName || row.name)}
                     </span>
                     <span className={`text-xs font-bold px-2.5 py-1 rounded-lg border flex-shrink-0 ${catClass}`}>
                       {isUrdu ? translateCategory(row.category, 'ur') : row.category}
@@ -552,7 +552,7 @@ const ExpenseTable = ({
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-2">
                               <span className="text-sm lg:text-base font-black text-slate-900 dark:text-slate-100 leading-snug group-hover:text-primary transition-colors">
-                                {isUrdu ? translateItemName(row.name, 'ur') : row.name}
+                                {isUrdu ? translateItemName(row.normName || row.name, 'ur') : (row.normName || row.name)}
                               </span>
                               <ChevronDown
                                 size={14}

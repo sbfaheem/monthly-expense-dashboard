@@ -431,7 +431,8 @@ export function translateItemName(name, lang = 'en') {
   if (lower.includes('electrical') || lower.includes('accessories') || lower.includes('wire')) return translations.ur.itemElectricalAcc;
   if (lower.includes('bulb') || lower.includes('streetlight') || lower.includes('light')) return translations.ur.itemBulbRepair;
   if (lower.includes('uniform')) return translations.ur.itemUniforms;
-  if (lower.includes('cleaning') || lower.includes('jhado') || lower.includes('bans') || lower.includes('broom')) return translations.ur.itemCleaning;
+  if (lower === 'jharo' || lower === 'jhado') return 'جھاڑو';
+  if (lower.includes('cleaning') || lower.includes('jhado') || lower.includes('jharo') || lower.includes('bans') || lower.includes('broom')) return translations.ur.itemCleaning;
   if (lower.includes('lock') || lower.includes('tala')) return translations.ur.itemLock;
   if (lower.includes('park') || lower.includes('grass') || lower.includes('mali') || lower.includes('gardener')) return translations.ur.itemPark;
   if (lower.includes('water') || lower.includes('tanker')) return translations.ur.itemWaterTanker;

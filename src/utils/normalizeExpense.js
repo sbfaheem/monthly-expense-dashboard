@@ -8,10 +8,10 @@ export const ITEM_MAP = {
   // Bulb / Lighting
   "new blub": "New Bulb",
   "new bulb": "New Bulb",
-  "blub repair": "Bulb Repair",
-  "bulb repair": "Bulb Repair",
-  "blub repaired": "Bulb Repair",
-  "bulb repaired": "Bulb Repair",
+  "blub repair": "Bulb Repaired",
+  "bulb repair": "Bulb Repaired",
+  "blub repaired": "Bulb Repaired",
+  "bulb repaired": "Bulb Repaired",
   "blub": "Bulb",
   "bulb": "Bulb",
   
@@ -23,8 +23,10 @@ export const ITEM_MAP = {
   "security guard new uniform": "Uniforms",
 
   // Cleaning & Tools
-  "jahdo": "Jhado / Cleaning",
-  "jhado": "Jhado / Cleaning",
+  "jahdo": "Jharo",
+  "jhado": "Jharo",
+  "jharo": "Jharo",
+  "jhadu": "Jharo",
   "balcha": "Balcha / Shovel",
   "sweeper accessories": "Sweeper Accessories",
   "chemical + wash": "Chemical & Wash",
@@ -102,6 +104,7 @@ export const CATEGORY_MAPPINGS = {
     'Electrician - Extra',
     'Electrical Accessories',
     'Bulb Repair',
+    'Bulb Repaired',
     'New Bulb',
     'Power Supply'
   ],
@@ -110,6 +113,7 @@ export const CATEGORY_MAPPINGS = {
     'Uniform & Shoes',
     'Bans / Bamboo',
     'Jhado / Cleaning',
+    'Jharo',
     'Balcha / Shovel',
     'Locks / Security Hardware',
     'Sweeper Accessories',
@@ -151,10 +155,43 @@ export const CATEGORY_MAPPINGS = {
  * @param {string} rawText 
  * @returns {string} Normalized item name
  */
+/**
+ * Sanitizes and auto-corrects common expense name typos and naming variations
+ * Ensures "Blub Repaired" -> "Bulb Repaired" and "Jhado" -> "Jharo" everywhere
+ * @param {string} rawName
+ * @returns {string} Sanitized name
+ */
+export function sanitizeExpenseName(rawName) {
+  if (!rawName || typeof rawName !== 'string') return rawName || '';
+  let name = rawName.trim();
+  // Standardize Bulb Repaired
+  if ((/blub/i.test(name) || /bulb/i.test(name)) && /repair/i.test(name)) {
+    return 'Bulb Repaired';
+  }
+  // Standardize Jharo
+  if (/^(jhado|jahdo|jharo|jhadu)$/i.test(name) || /^(jhado|jahdo|jharo|jhadu)\s*\/\s*cleaning$/i.test(name)) {
+    return 'Jharo';
+  }
+  // General blub typo
+  if (/blub/i.test(name)) {
+    name = name.replace(/blub/gi, (match) => {
+      if (match === 'BLUB') return 'BULB';
+      if (match === 'Blub') return 'Bulb';
+      return 'bulb';
+    });
+  }
+  // General jhado typo
+  if (/jhado|jahdo|jhadu/i.test(name)) {
+    name = name.replace(/jhado|jahdo|jhadu/gi, 'Jharo');
+  }
+  return name;
+}
+
 export function normalizeItem(rawText) {
-  if (!rawText) return "Uncategorized"
-  const cleaned = rawText.trim().toLowerCase()
-  return ITEM_MAP[cleaned] || rawText.trim()
+  if (!rawText) return "Uncategorized";
+  const sanitized = sanitizeExpenseName(rawText);
+  const cleaned = sanitized.toLowerCase();
+  return ITEM_MAP[cleaned] || sanitized;
 }
 
 /**
@@ -176,7 +213,7 @@ export function getParentCategory(itemRawOrNormalized, fallbackCategory = '') {
   const lower = norm.toLowerCase()
   if (lower.includes('salary') || lower.includes('security') || lower.includes('guard')) return 'Salaries & Payroll'
   if (lower.includes('bulb') || lower.includes('electric') || lower.includes('wire') || lower.includes('light')) return 'Electrical & Infrastructure'
-  if (lower.includes('uniform') || lower.includes('jhado') || lower.includes('bans') || lower.includes('lock') || lower.includes('balcha') || lower.includes('hardware')) return 'Supplies & Hardware'
+  if (lower.includes('uniform') || lower.includes('jhado') || lower.includes('jharo') || lower.includes('bans') || lower.includes('lock') || lower.includes('balcha') || lower.includes('hardware')) return 'Supplies & Hardware'
   if (lower.includes('cctv') || lower.includes('camera') || lower.includes('fan') || lower.includes('capital') || lower.includes('furniture') || lower.includes('shed')) return 'Capital Expenditures (CapEx)'
   if (lower.includes('tanker') || lower.includes('water') || lower.includes('park') || lower.includes('event') || lower.includes('clean') || lower.includes('utility')) return 'Community & Utilities'
 
