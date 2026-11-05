@@ -519,7 +519,7 @@ export const Charts = ({
                   />
                 </div>
                 <span className="text-[8px] font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.2 rounded-full border border-emerald-500/20">
-                  {isUrdu ? translateMonth(selectedMonth || 'September 2026', 'ur') : (selectedMonth || 'September 2026')}
+                  {isUrdu ? translateMonth(selectedMonth || 'October 2026', 'ur') : (selectedMonth || 'October 2026')}
                 </span>
               </motion.div>
             </motion.div>

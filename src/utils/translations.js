@@ -437,6 +437,9 @@ export function translateItemName(name, lang = 'en') {
   if (lower.includes('water') || lower.includes('tanker')) return translations.ur.itemWaterTanker;
   if (lower.includes('event') || lower.includes('independence') || lower.includes('14 aug') || lower.includes('azadi')) return translations.ur.itemEvent;
   if (lower.includes('cctv') || lower.includes('camera')) return translations.ur.itemCCTV;
+  if (lower.includes('power supply')) return 'پاور سپلائی چارجز';
+  if (lower.includes('paint')) return 'پینٹر چارجز و رنگ و روغن';
+  if (lower.includes('shoe')) return 'اسٹاف یونیفارم اور جوتے';
   if (lower.includes('welder') || lower.includes('axe') || lower.includes('kulhari')) return 'ویلڈر چارجز اور کلہاڑی';
   if (lower.includes('chamber') || lower.includes('dhakan') || lower.includes('cover')) return 'چیمبر ڈھکن';
   return name;

@@ -16,20 +16,20 @@ import RollingOdometer from './RollingOdometer'
 
 export const MonthComparison3D = ({
   previousMonth = {
-    name: 'August 2026',
-    collection: 282250,
-    expenses: 306285,
-    balance: -4012,
-    closingBalance: -4012,
-    status: 'Deficit'
-  },
-  currentMonth = {
     name: 'September 2026',
     collection: 279050,
     expenses: 297425,
     balance: -22387,
     closingBalance: -22387,
     status: 'Deficit'
+  },
+  currentMonth = {
+    name: 'October 2026',
+    collection: 291350,
+    expenses: 273364,
+    balance: -4401,
+    closingBalance: -4401,
+    status: 'Surplus'
   },
   currency = 'PKR'
 }) => {

@@ -10,12 +10,16 @@ export const ITEM_MAP = {
   "new bulb": "New Bulb",
   "blub repair": "Bulb Repair",
   "bulb repair": "Bulb Repair",
+  "blub repaired": "Bulb Repair",
+  "bulb repaired": "Bulb Repair",
   "blub": "Bulb",
   "bulb": "Bulb",
   
   // Uniforms
   "uniform": "Uniforms",
   "uniforms": "Uniforms",
+  "uniform & shoes": "Uniform & Shoes",
+  "uniform and shoes": "Uniform & Shoes",
   "security guard new uniform": "Uniforms",
 
   // Cleaning & Tools
@@ -42,6 +46,8 @@ export const ITEM_MAP = {
   // Electrical
   "electricial accessories": "Electrical Accessories",
   "electrical accessories": "Electrical Accessories",
+  "electric accessories": "Electrical Accessories",
+  "power supply": "Power Supply",
   "electrician (arham)": "Electrician - Extra",
   "electrician charges": "Electrician - Retainer",
   "electrician retainer": "Electrician - Retainer",
@@ -63,6 +69,7 @@ export const ITEM_MAP = {
   "miscellaneous": "Miscellaneous Expenses",
   "miscellaneous expenses": "Miscellaneous Expenses",
   "welder charges": "Welder Charges",
+  "painter charges": "Painter Charges",
   "welder charges + culhari": "Welder Charges & Axe",
 
   // CapEx
@@ -95,10 +102,12 @@ export const CATEGORY_MAPPINGS = {
     'Electrician - Extra',
     'Electrical Accessories',
     'Bulb Repair',
-    'New Bulb'
+    'New Bulb',
+    'Power Supply'
   ],
   'Supplies & Hardware': [
     'Uniforms',
+    'Uniform & Shoes',
     'Bans / Bamboo',
     'Jhado / Cleaning',
     'Balcha / Shovel',
@@ -123,6 +132,7 @@ export const CATEGORY_MAPPINGS = {
     'Miscellaneous Expenses',
     'Gutter Cleaning',
     'Welder Charges',
+    'Painter Charges',
     'Welder Charges & Axe'
   ],
   'Capital Expenditures (CapEx)': [

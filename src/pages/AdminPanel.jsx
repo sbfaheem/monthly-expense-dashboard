@@ -99,18 +99,18 @@ export default function AdminPanel() {
     if (!currentMonthKey) {
       return {
         previousMonthData: {
-          name: 'July 2026',
-          collection: 265000,
-          expenses: 284200,
-          balance: 8200,
-          status: 'Surplus'
+          name: 'September 2026',
+          collection: 279050,
+          expenses: 297425,
+          balance: -22387,
+          status: 'Deficit'
         },
         currentMonthData: {
-          name: 'August 2026',
-          collection: 282250,
-          expenses: 306285,
-          balance: -4012,
-          status: 'Deficit'
+          name: 'October 2026',
+          collection: 291350,
+          expenses: 273364,
+          balance: -4401,
+          status: 'Surplus'
         }
       }
     }

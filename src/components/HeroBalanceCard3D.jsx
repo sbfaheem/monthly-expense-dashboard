@@ -5,7 +5,7 @@ import { useLanguage } from '../context/LanguageContext'
 import { translateMonth } from '../utils/translations'
 
 export const HeroBalanceCard3D = ({ 
-  currentMonth = 'August 2026', 
+  currentMonth = 'October 2026', 
   collection = 0, 
   expenses = 0, 
   closingBalance = 0, 
