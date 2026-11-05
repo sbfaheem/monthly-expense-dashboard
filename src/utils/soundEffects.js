@@ -47,6 +47,7 @@ class SoundEngine {
   // ============================================================================
   // 1. SURPLUS — OUTSTANDING! 👏
   // "Outstanding!" + Crowd applause + cheering + celebratory reaction (2–3s)
+  // Identical high-energy experience in both English & Urdu
   // ============================================================================
   playSurplusReaction(isUrdu = false) {
     if (this.isMuted()) return
@@ -56,11 +57,10 @@ class SoundEngine {
     this.init()
 
     // 1A. Clear celebratory vocal exclamation: "Outstanding!"
-    this._speakWord(isUrdu ? 'شاندار! بہترین!' : 'Outstanding!', {
+    this._speakWord('Outstanding!', {
       pitch: 1.2,
       rate: 1.05,
-      volume: 1.0,
-      isUrdu
+      volume: 1.0
     })
 
     if (!this.ctx) return
@@ -98,6 +98,7 @@ class SoundEngine {
   // 2. DEFICIT — LET'S DO BETTER! 🚀
   // "Let's Do Better!" + Motivational crowd chanting +
   // energetic supportive reaction (2–3s)
+  // Identical high-energy experience in both English & Urdu
   // ============================================================================
   playDeficitReaction(isUrdu = false) {
     if (this.isMuted()) return
@@ -107,11 +108,10 @@ class SoundEngine {
     this.init()
 
     // 2A. Energetic motivational chant spoken clearly: "Let's Do Better!"
-    this._speakWord(isUrdu ? 'بہتری کی طرف!' : "Let's Do Better!", {
+    this._speakWord("Let's Do Better!", {
       pitch: 1.12,
       rate: 1.15,
-      volume: 1.0,
-      isUrdu
+      volume: 1.0
     })
 
     if (!this.ctx) return
@@ -175,7 +175,7 @@ class SoundEngine {
   // INTERNAL ACOUSTIC SYNTHESIS HELPERS
   // ============================================================================
 
-  _speakWord(text, { pitch = 1.0, rate = 1.0, volume = 1.0, isUrdu = false } = {}) {
+  _speakWord(text, { pitch = 1.0, rate = 1.0, volume = 1.0 } = {}) {
     if (typeof window === 'undefined' || !window.speechSynthesis) return
     try {
       window.speechSynthesis.cancel()
@@ -183,11 +183,18 @@ class SoundEngine {
       utterance.pitch = pitch
       utterance.rate = rate
       utterance.volume = volume
+      utterance.lang = 'en-US'
 
       const voices = window.speechSynthesis.getVoices()
       if (voices && voices.length > 0) {
-        const langPrefix = isUrdu ? 'ur' : 'en'
-        const matched = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith(langPrefix))
+        // Find best energetic English voice
+        const matched = voices.find(
+          (v) =>
+            v.lang &&
+            (v.lang.startsWith('en-US') ||
+              v.lang.startsWith('en-GB') ||
+              v.lang.toLowerCase().startsWith('en'))
+        )
         if (matched) utterance.voice = matched
       }
 
