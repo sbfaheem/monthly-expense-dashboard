@@ -11,6 +11,7 @@ import MonthlyVarianceBanner from '../components/MonthlyVarianceBanner'
 import DynamicAlertBanner from '../components/DynamicAlertBanner'
 import WhatsAppSnapshotModal from '../components/WhatsAppSnapshotModal'
 import BankDetailsModal from '../components/BankDetailsModal'
+import ExitIntentFeedbackModal from '../components/ExitIntentFeedbackModal'
 import { FEATURE_FLAGS } from '../config/features'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useLanguage } from '../context/LanguageContext'
@@ -388,6 +389,35 @@ export default function ViewerDashboard() {
       setFeedbackAddress(manualAddress || '')
     }
     setShowFeedbackModal(true)
+  }
+
+  const handleExitFeedbackSubmit = async (payload) => {
+    try {
+      const created = await submitFeedback(payload)
+      if (created) {
+        setData(prev => ({
+          ...prev,
+          feedback: [created, ...(prev.feedback || [])]
+        }))
+
+        if (!resident && payload.name && payload.name !== 'Anonymous Resident' && payload.name !== 'Verified Resident') {
+          const fullProfile = {
+            name: payload.name,
+            phone: payload.phone || '',
+            houseAddress: payload.houseAddress || '',
+            houseNo: payload.houseAddress || '',
+            group: detectedGroup || 'Direct Community Resident',
+            tag: 'Resident'
+          }
+          setResident(fullProfile)
+          localStorage.setItem('resident_identity', JSON.stringify(fullProfile))
+        }
+      }
+      return created
+    } catch (err) {
+      console.warn("Exit feedback submission error:", err)
+      return null
+    }
   }
 
   const handleSubmitFeedback = async (e) => {
@@ -1480,6 +1510,14 @@ export default function ViewerDashboard() {
       <BankDetailsModal
         isOpen={showBankDetailsModal}
         onClose={() => setShowBankDetailsModal(false)}
+      />
+
+      {/* Smart Pre-Exit Rating & Review Prompt (Desktop & Mobile) */}
+      <ExitIntentFeedbackModal
+        resident={resident}
+        currentMonthKey={currentMonthKey}
+        onSubmitFeedback={handleExitFeedbackSubmit}
+        isAdmin={false}
       />
     </div>
   )
