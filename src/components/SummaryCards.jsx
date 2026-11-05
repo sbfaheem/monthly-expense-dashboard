@@ -1,8 +1,74 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, useAnimation, useReducedMotion } from 'framer-motion'
 import { useLanguage } from '../context/LanguageContext'
-import Card3D from './Card3D'
-import RollingOdometer from './RollingOdometer'
+
+// ================= ZERO-DEPENDENCY PROCEDURAL SOUND ENGINE =================
+const playProceduralSound = (type = 'surplus', isMuted = false) => {
+  if (isMuted || typeof window === 'undefined') return
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext
+    if (!AudioContextClass) return
+    const ctx = new AudioContextClass()
+    if (ctx.state === 'suspended') ctx.resume()
+    const now = ctx.currentTime
+
+    if (type === 'bounce') {
+      // Tactile impact pop on badge strike
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(280, now)
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.08)
+      gain.gain.setValueAtTime(0.25, now)
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(now)
+      osc.stop(now + 0.09)
+    } else if (type === 'surplus') {
+      // Ascending celebratory harmonic chime (C5 -> E5 -> G5 -> C6)
+      const notes = [523.25, 659.25, 783.99, 1046.50]
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(freq, now + idx * 0.07)
+        gain.gain.setValueAtTime(0.001, now + idx * 0.07)
+        gain.gain.exponentialRampToValueAtTime(0.16, now + idx * 0.07 + 0.03)
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.07 + 0.42)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start(now + idx * 0.07)
+        osc.stop(now + idx * 0.07 + 0.45)
+      })
+    } else if (type === 'deficit') {
+      // Warm cautionary double pulse (E3 -> C3)
+      const tones = [
+        { freq: 164.81, time: 0.0, dur: 0.22 },
+        { freq: 130.81, time: 0.18, dur: 0.32 }
+      ]
+      tones.forEach((t) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        const filter = ctx.createBiquadFilter()
+        osc.type = 'triangle'
+        osc.frequency.setValueAtTime(t.freq, now + t.time)
+        filter.type = 'lowpass'
+        filter.frequency.setValueAtTime(420, now)
+        gain.gain.setValueAtTime(0.001, now + t.time)
+        gain.gain.exponentialRampToValueAtTime(0.14, now + t.time + 0.04)
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + t.time + t.dur)
+        osc.connect(filter)
+        filter.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start(now + t.time)
+        osc.stop(now + t.time + t.dur + 0.05)
+      })
+    }
+  } catch (e) {
+    // Fallback if browser blocks audio
+  }
+}
 
 export const SummaryCards = ({
   openingBalance = 0,
@@ -19,15 +85,22 @@ export const SummaryCards = ({
 }) => {
   const { lang, t, isRtl } = useLanguage ? useLanguage() : { lang: 'en', t: {}, isRtl: false }
   const shouldReduceMotion = useReducedMotion()
-  
+
   // Views & Card state
   const [is3DDeckView, setIs3DDeckView] = useState(true)
   const [activeCardIndex, setActiveCardIndex] = useState(0)
+  const [isBouncing, setIsBouncing] = useState(false)
   const [isAutoPlay, setIsAutoPlay] = useState(false)
   const [showRipple, setShowRipple] = useState(false)
-  const lastAdvanceRef = useRef(0)
+  const [isMuted, setIsMuted] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('dashboard_sound_muted') === 'true'
+    }
+    return false
+  })
 
-  // Framer Motion Deck Controller
+  // Physics animation controllers
+  const ballControls = useAnimation()
   const deckControls = useAnimation()
 
   const isUrdu = lang === 'ur'
@@ -41,61 +114,31 @@ export const SummaryCards = ({
   const actualOverdrawn = typeof isOverdrawn === 'boolean' ? isOverdrawn : actualClosing < 0
   const isSurplus = actualNetCashFlow >= 0
 
-  // Standardized 5-Card Sequence:
-  // 1. Opening Balance
-  // 2. Monthly Collection
-  // 3. Total Expense
-  // 4. Net Surplus / Net Deficit
-  // 5. Closing Reserve Fund / Closing Balance
   const cards = [
     {
-      id: 'opening',
-      label: t?.openingBalance || 'Opening Balance',
-      value: (Number(openingBalance) < 0 ? '-' : '') + fmt(Math.abs(openingBalance)),
-      note: isNoData ? '0%' : (isUrdu ? 'گزشتہ اختتامی' : 'Previous closing'),
-      icon: 'account_balance',
-      iconColor: 'text-slate-400',
-      noteIcon: 'trending_flat',
-      noteColor: 'text-slate-500 dark:text-slate-400',
-      valueColor: 'text-slate-900 dark:text-slate-100',
-      accentBorder: 'border-slate-400 dark:border-slate-600',
-      badgeBg: 'bg-slate-700 text-white',
-      gradient: 'from-slate-500/10 via-slate-50/40 dark:via-slate-950/20 to-white dark:to-slate-900',
-      cardClass: 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-slate-400'
-    },
-    {
-      id: 'collection',
-      label: t?.monthlyCollection || 'Monthly Collection',
-      value: fmt(monthlyCollection),
-      note: isNoData ? '0%' : (isUrdu ? 'رہائشیوں سے وصولی' : 'Resident collections'),
-      icon: 'payments',
-      iconColor: 'text-orange-500',
-      noteIcon: 'receipt_long',
-      noteColor: 'text-slate-500 dark:text-slate-400',
-      valueColor: 'text-slate-900 dark:text-slate-100',
-      accentBorder: 'border-orange-500',
-      badgeBg: 'bg-orange-500 text-white',
-      gradient: 'from-orange-500/10 via-orange-50/40 dark:via-orange-950/20 to-white dark:to-slate-900',
-      cardClass: 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-orange-500'
-    },
-    {
-      id: 'expense',
-      label: t?.totalExpense || 'Total Expense',
-      value: fmt(totalExpense),
-      note: isNoData ? '0%' : (isUrdu ? 'کل آپریشنل اخراجات' : 'Total operational spend'),
-      icon: 'shopping_cart',
-      iconColor: 'text-emerald-600 dark:text-emerald-400',
-      noteIcon: 'receipt',
-      noteColor: 'text-emerald-700 dark:text-emerald-300',
-      valueColor: 'text-slate-900 dark:text-slate-100',
-      accentBorder: 'border-emerald-600 dark:border-emerald-500',
-      badgeBg: 'bg-emerald-600 text-white',
-      gradient: 'from-emerald-600/10 via-emerald-50/40 dark:via-emerald-950/20 to-white dark:to-slate-900',
-      cardClass: 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-emerald-600'
+      id: 'closing',
+      label: !actualOverdrawn ? (t?.closingBalance || 'Closing Balance') : `${t?.closingBalance || 'Closing Balance'} (${t?.overdrawn || 'Overdrawn'})`,
+      value: fmt(Math.abs(actualClosing)),
+      note: isNoData ? '0%' : (!actualOverdrawn 
+        ? (isUrdu ? 'جمع شدہ محفوظ فنڈ' : 'Accumulated Reserve') 
+        : (isUrdu ? 'خسارہ / بقایا جات' : 'Overdrawn / Deficit')),
+      icon: 'account_balance_wallet',
+      iconColor: !actualOverdrawn ? 'text-emerald-500' : 'text-rose-500',
+      noteIcon: !actualOverdrawn ? 'stars' : 'warning',
+      noteColor: !actualOverdrawn ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
+      valueColor: !actualOverdrawn ? 'text-slate-900 dark:text-slate-100' : 'text-rose-600 dark:text-rose-400',
+      accentBorder: !actualOverdrawn ? 'border-emerald-500' : 'border-rose-500',
+      badgeBg: !actualOverdrawn ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white',
+      gradient: !actualOverdrawn 
+        ? 'from-emerald-500/10 via-emerald-50/40 dark:via-emerald-950/20 to-white dark:to-slate-900' 
+        : 'from-rose-500/15 via-rose-50/60 dark:via-rose-950/30 to-white dark:to-slate-900',
+      cardClass: !actualOverdrawn 
+        ? 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-secondary-gold' 
+        : '!bg-rose-50 dark:!bg-rose-900/20 !border-rose-200 dark:!border-rose-900/50 border-l-4 !border-l-rose-500'
     },
     {
       id: 'cashflow',
-      label: isSurplus ? (t?.netSurplus || 'Monthly Surplus') : (t?.netDeficit || 'Net Deficit'),
+      label: isSurplus ? (t?.netSurplus || 'Monthly Surplus') : (t?.netDeficit || 'Monthly Deficit'),
       value: fmt(Math.abs(actualNetCashFlow)),
       note: isNoData ? '0%' : (isSurplus 
         ? (isUrdu ? 'بچت (+ مثبت کیش فلو)' : 'Surplus (+ Cash Flow)') 
@@ -115,114 +158,194 @@ export const SummaryCards = ({
         : '!bg-rose-50 dark:!bg-rose-950/20 !border-rose-200 dark:!border-rose-900 border-l-4 !border-l-rose-500'
     },
     {
-      id: 'closing',
-      label: !actualOverdrawn ? (t?.closingBalance || 'Closing Balance') : (isUrdu ? 'اختتامی فنڈ (خسارہ)' : 'Closing Reserve Fund (Overdrawn)'),
-      value: fmt(Math.abs(actualClosing)),
-      note: isNoData ? '0%' : (!actualOverdrawn 
-        ? (isUrdu ? 'جمع شدہ محفوظ فنڈ' : 'Accumulated Reserve') 
-        : (isUrdu ? 'خسارہ / بقایا جات' : 'Overdrawn / Deficit')),
-      icon: 'account_balance_wallet',
-      iconColor: !actualOverdrawn ? 'text-emerald-500' : 'text-rose-500',
-      noteIcon: !actualOverdrawn ? 'stars' : 'warning',
-      noteColor: !actualOverdrawn ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
-      valueColor: !actualOverdrawn ? 'text-slate-900 dark:text-slate-100' : 'text-rose-600 dark:text-rose-400',
-      accentBorder: !actualOverdrawn ? 'border-emerald-500' : 'border-rose-500',
-      badgeBg: !actualOverdrawn ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white',
-      gradient: !actualOverdrawn 
-        ? 'from-emerald-500/10 via-emerald-50/40 dark:via-emerald-950/20 to-white dark:to-slate-900' 
-        : 'from-rose-500/15 via-rose-50/60 dark:via-rose-950/30 to-white dark:to-slate-900',
-      cardClass: !actualOverdrawn 
-        ? 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-secondary-gold' 
-        : '!bg-rose-50 dark:!bg-rose-900/20 !border-rose-200 dark:!border-rose-900/50 border-l-4 !border-l-rose-500'
-    }
+      id: 'collection',
+      label: t?.monthlyCollection || 'Monthly Collection',
+      value: fmt(monthlyCollection),
+      note: isNoData ? '0%' : (isUrdu ? 'رہائشیوں سے وصولی' : 'Resident collections'),
+      icon: 'payments',
+      iconColor: 'text-orange-500',
+      noteIcon: 'receipt_long',
+      noteColor: 'text-slate-500',
+      valueColor: 'text-slate-900 dark:text-slate-100',
+      accentBorder: 'border-orange-500',
+      badgeBg: 'bg-orange-500 text-white',
+      gradient: 'from-orange-500/10 via-orange-50/40 dark:via-orange-950/20 to-white dark:to-slate-900',
+      cardClass: 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-orange-500'
+    },
+    {
+      id: 'expense',
+      label: t?.totalExpense || 'Total Expense',
+      value: fmt(totalExpense),
+      note: isNoData ? '0%' : (isUrdu ? 'کل آپریشنل اخراجات' : 'Total operational spend'),
+      icon: 'shopping_cart',
+      iconColor: 'text-primary',
+      noteIcon: 'receipt',
+      noteColor: 'text-primary',
+      valueColor: 'text-slate-900 dark:text-slate-100',
+      accentBorder: 'border-blue-500',
+      badgeBg: 'bg-blue-600 text-white',
+      gradient: 'from-blue-500/10 via-blue-50/40 dark:via-blue-950/20 to-white dark:to-slate-900',
+      cardClass: 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-primary'
+    },
+    {
+      id: 'opening',
+      label: t?.openingBalance || 'Opening Balance',
+      value: fmt(openingBalance),
+      note: isNoData ? '0%' : (isUrdu ? 'گزشتہ اختتامی' : 'Previous closing'),
+      icon: 'account_balance',
+      iconColor: 'text-slate-400',
+      noteIcon: 'trending_flat',
+      noteColor: 'text-slate-400',
+      valueColor: 'text-slate-900 dark:text-slate-100',
+      accentBorder: 'border-slate-400',
+      badgeBg: 'bg-slate-700 text-white',
+      gradient: 'from-slate-500/10 via-slate-50/40 dark:via-slate-950/20 to-white dark:to-slate-900',
+      cardClass: 'bg-white dark:bg-slate-800 border border-primary/10'
+    },
   ]
 
-  // ================= 3D CARD TRANSITION ON BALL TAP =================
-  const advanceCard = (e) => {
-    if (e) {
-      e.preventDefault?.()
-      e.stopPropagation?.()
+  const toggleSound = () => {
+    const next = !isMuted
+    setIsMuted(next)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('dashboard_sound_muted', String(next))
     }
-
-    const now = Date.now()
-    // Debounce guard to prevent accidental double-firing on rapid tap
-    if (now - lastAdvanceRef.current < 250) return
-    lastAdvanceRef.current = now
-
-    // Trigger visual impact ripple
-    setShowRipple(true)
-    setTimeout(() => setShowRipple(false), 380)
-
-    // Dynamic deck spring reaction
-    if (!shouldReduceMotion) {
-      deckControls.start({
-        rotateX: [16, 21, 16],
-        y: [0, 8, 0],
-        transition: { duration: 0.35, ease: 'easeOut' }
-      })
+    if (!next) {
+      playProceduralSound(isSurplus ? 'surplus' : 'deficit', false)
     }
-
-    // Immediately advance to next Summary Card
-    setActiveCardIndex((prev) => (prev + 1) % cards.length)
   }
 
-  // Auto-play loop to advance cards
+  // ================= 3D BALL BOUNCE PHYSICS RIGHT AT +ACTIVE =================
+  const triggerBallBounce = async () => {
+    if (isBouncing || shouldReduceMotion) return
+    setIsBouncing(true)
+
+    // Phase 1: Ball leaps UP from the +Active badge
+    await ballControls.start({
+      y: -36,
+      scaleX: 0.88,
+      scaleY: 1.18,
+      transition: { duration: 0.22, ease: 'easeOut' }
+    })
+
+    // Phase 2: Ball slams DOWN directly onto the +Active badge surface
+    await ballControls.start({
+      y: 4,
+      scaleX: 1.35,
+      scaleY: 0.65,
+      transition: { duration: 0.1, ease: 'easeIn' }
+    })
+
+    // Phase 3: Contact impact! Shockwave, pop sound & audio chime
+    setShowRipple(true)
+    playProceduralSound('bounce', isMuted)
+
+    setActiveCardIndex((prev) => {
+      const nextIdx = (prev + 1) % cards.length
+      playProceduralSound(isSurplus ? 'surplus' : 'deficit', isMuted)
+      return nextIdx
+    })
+
+    // Deck dips slightly to absorb the physical shock
+    deckControls.start({
+      rotateX: [16, 20, 16],
+      y: [0, 5, 0],
+      transition: { duration: 0.2 }
+    })
+
+    setShowRipple(false)
+
+    // Phase 4: Rebound back to gentle hovering rest position
+    await ballControls.start({
+      y: [4, -8, 0],
+      scaleX: [1.35, 0.95, 1],
+      scaleY: [0.65, 1.1, 1],
+      transition: { duration: 0.35, ease: 'easeOut' }
+    })
+
+    setIsBouncing(false)
+  }
+
+  // Auto-play loop
   useEffect(() => {
     let timer
-    if (isAutoPlay && is3DDeckView) {
-      timer = setInterval(() => {
-        advanceCard()
-      }, 2500)
+    if (isAutoPlay && is3DDeckView && !isBouncing) {
+      timer = setTimeout(() => {
+        triggerBallBounce()
+      }, 2200)
     }
-    return () => clearInterval(timer)
-  }, [isAutoPlay, is3DDeckView])
+    return () => clearTimeout(timer)
+  }, [isAutoPlay, is3DDeckView, isBouncing, activeCardIndex])
 
   const handlePanEnd = (e, info) => {
     if (info.offset.y < -35) {
-      advanceCard()
+      setActiveCardIndex((prev) => (prev + 1) % cards.length)
+      playProceduralSound(isSurplus ? 'surplus' : 'deficit', isMuted)
     } else if (info.offset.y > 35) {
       setActiveCardIndex((prev) => (prev - 1 + cards.length) % cards.length)
+      playProceduralSound(isSurplus ? 'surplus' : 'deficit', isMuted)
     }
+  }
+
+  const handleCardTap = (idx) => {
+    setActiveCardIndex(idx)
+    playProceduralSound(isSurplus ? 'surplus' : 'deficit', isMuted)
   }
 
   return (
     <div className="w-full my-4">
-      {/* 3D Mode Header & Segmented View Switcher */}
+      {/* View Header & Segmented Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3 px-1">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             {isUrdu ? 'مالیاتی جائزہ (خلاصہ)' : 'Financial Summary'}
           </span>
           {is3DDeckView && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Interactive 3D
+            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+              3D Motion
             </span>
           )}
         </div>
 
-        {/* View Switcher & Auto-Play Controls */}
-        <div className="flex items-center gap-2">
+        {/* View Switcher, Audio Toggle & Auto-Bounce Controls */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Sound FX Toggle Pill */}
+          <button
+            type="button"
+            onClick={toggleSound}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition border ${
+              !isMuted
+                ? isSurplus
+                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-300 shadow-2xs'
+                  : 'bg-rose-500/20 border-rose-500/50 text-rose-700 dark:text-rose-300 shadow-2xs'
+                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400'
+            }`}
+            title={isMuted ? 'Unmute Sound Effects' : 'Mute Sound Effects'}
+          >
+            <span>{!isMuted ? '🔊' : '🔇'}</span>
+            <span>{!isMuted ? (isSurplus ? 'Surplus Audio' : 'Deficit Alert') : 'Muted'}</span>
+          </button>
+
+          {/* Auto Bounce Button */}
           {is3DDeckView && (
             <button
               type="button"
               onClick={() => setIsAutoPlay(!isAutoPlay)}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition border ${
                 isAutoPlay
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
-                  : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:text-slate-800'
+                  ? 'bg-emerald-500 text-white border-emerald-600 shadow-sm animate-pulse'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
               }`}
-              title={isAutoPlay ? 'Pause Auto Animation' : 'Auto Play Bounce'}
             >
-              <span>{isAutoPlay ? '⏸ Auto' : '▶ Auto'}</span>
+              <span>{isAutoPlay ? '⏸ Pause' : '▶ Auto Bounce'}</span>
             </button>
           )}
 
-          {/* Segmented View Switcher */}
+          {/* Dual Segmented View Pill */}
           <div className="inline-flex items-center p-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs">
             <button
               type="button"
-              onClick={() => setIs3DDeckView(false)}
+              onClick={() => { setIs3DDeckView(false); setIsAutoPlay(false); }}
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all duration-200 ${
                 !is3DDeckView
                   ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
@@ -230,8 +353,9 @@ export const SummaryCards = ({
               }`}
             >
               <span>▦</span>
-              <span>{isUrdu ? 'کلاسک منظر' : 'Classic View'}</span>
+              <span>{isUrdu ? 'کلاسک گرڈ' : 'Classic Grid'}</span>
             </button>
+
             <button
               type="button"
               onClick={() => setIs3DDeckView(true)}
@@ -248,40 +372,47 @@ export const SummaryCards = ({
         </div>
       </div>
 
-      {/* Mode Render: 3D Isometric Stack Deck vs Classic Responsive Grid */}
       {is3DDeckView ? (
-        /* ================= 3D ISOMETRIC STACK DECK ================= */
-        <div className="relative w-full overflow-hidden rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-gradient-to-b from-slate-50/80 via-white to-slate-50/50 dark:from-slate-900/90 dark:via-slate-850 dark:to-slate-900 p-4 sm:p-6 shadow-md select-none">
-          {/* Subtle Background Radial Grid Pattern */}
-          <div 
-            className="pointer-events-none absolute inset-0 opacity-25 dark:opacity-10"
-            style={{
-              backgroundImage: 'radial-gradient(circle at 1px 1px, #94a3b8 1px, transparent 0)',
-              backgroundSize: '24px 24px',
-            }}
-          />
+        /* ================= 3D REVOLVING DECK VIEW ================= */
+        <div className="w-full">
+          {/* Quick Category Selector Pills */}
+          <div className="flex items-center gap-1.5 mb-2 overflow-x-auto pb-1 scrollbar-none">
+            {cards.map((card, i) => (
+              <button
+                key={card.id}
+                type="button"
+                onClick={() => handleCardTap(i)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
+                  activeCardIndex === i
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm scale-105'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                }`}
+              >
+                {i + 1}. {card.label.split(' ')[0]}
+              </button>
+            ))}
+          </div>
 
           <div 
             style={{ perspective: 1200 }}
-            className="relative w-full py-4 px-2 overflow-visible min-h-[370px] sm:min-h-[410px] flex items-center justify-center [touch-action:pan-y]"
+            className="relative w-full py-4 px-2 overflow-visible min-h-[380px] sm:min-h-[420px] flex items-center justify-center [touch-action:pan-y]"
           >
             {/* Isometric Angled Deck Container */}
             <motion.div
               animate={deckControls}
               style={{
-                transformStyle: "preserve-3d",
+                transformStyle: 'preserve-3d',
                 rotateX: 16,
                 rotateZ: -4,
                 rotateY: isRtl ? -10 : 10,
               }}
               className="relative w-full max-w-sm sm:max-w-md mx-auto h-[260px]"
             >
+              {/* Cards Stack */}
               {cards.map((card, idx) => {
-                // Calculate dynamic relative order so active card is always at the front
                 const relIndex = (idx - activeCardIndex + cards.length) % cards.length
                 const isSelected = relIndex === 0
 
-                // Geometry cascading down smoothly
                 const offsetZ = isSelected ? 70 : -relIndex * 24
                 const offsetY = isSelected ? -10 : relIndex * 42
                 const scale = isSelected ? 1.02 : 1 - relIndex * 0.025
@@ -290,13 +421,7 @@ export const SummaryCards = ({
                 return (
                   <motion.div
                     key={card.id}
-                    onTap={() => {
-                      if (isSelected) {
-                        advanceCard()
-                      } else {
-                        setActiveCardIndex(idx)
-                      }
-                    }}
+                    onTap={() => handleCardTap(idx)}
                     onPanEnd={handlePanEnd}
                     whileTap={{ scale: 0.985 }}
                     animate={{
@@ -305,14 +430,14 @@ export const SummaryCards = ({
                       scale: shouldReduceMotion ? 1 : scale,
                     }}
                     transition={{
-                      type: "spring",
+                      type: 'spring',
                       stiffness: 300,
                       damping: 26,
                       mass: 0.5,
                     }}
                     style={{
-                      transformStyle: "preserve-3d",
-                      position: "absolute",
+                      transformStyle: 'preserve-3d',
+                      position: 'absolute',
                       top: 0,
                       left: 0,
                       right: 0,
@@ -321,23 +446,23 @@ export const SummaryCards = ({
                     className="cursor-pointer select-none will-change-transform"
                   >
                     <div
-                      className={`rounded-3xl border-2 ${card.accentBorder} bg-gradient-to-b ${card.gradient} p-5 shadow-xl backdrop-blur-md transition-shadow`}
+                      className={`rounded-3xl border-2 ${card.accentBorder} bg-gradient-to-b ${card.gradient} p-5 shadow-xl backdrop-blur-md transition-shadow relative overflow-visible`}
                       style={{
                         boxShadow: isSelected
-                          ? "0 25px 45px -12px rgba(15, 23, 42, 0.30)"
-                          : "0 10px 20px -6px rgba(15, 23, 42, 0.12)",
+                          ? '0 25px 45px -12px rgba(15, 23, 42, 0.30)'
+                          : '0 10px 20px -6px rgba(15, 23, 42, 0.12)',
                       }}
                     >
-                      {/* Crisp Vector Typography Layer */}
+                      {/* Crisp Vector Typography Layer (No GPU Texture Blur) */}
                       <div 
                         style={{
-                          transform: "translateZ(1px)",
-                          WebkitFontSmoothing: "antialiased",
-                          MozOsxFontSmoothing: "grayscale",
-                          textRendering: "geometricPrecision"
+                          transform: 'translateZ(1px)',
+                          WebkitFontSmoothing: 'antialiased',
+                          MozOsxFontSmoothing: 'grayscale',
+                          textRendering: 'geometricPrecision'
                         }}
                       >
-                        {/* Top Row: Label, Badge and Icon */}
+                        {/* Card Header */}
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                             {card.label}
@@ -352,113 +477,81 @@ export const SummaryCards = ({
                           </div>
                         </div>
 
-                        {/* Middle Row: Value on the left, Interactive Tap Ball on the right */}
-                        <div className="my-1.5 flex items-center justify-between gap-2 min-h-[52px]">
-                          <div className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${card.valueColor}`}>
-                            <RollingOdometer value={card.value} prefix={displayCurrency} />
-
+                        {/* Card Amount */}
+                        <div className="my-2">
+                          <div className={`text-3xl font-extrabold tracking-tight ${card.valueColor}`}>
+                            <span className="text-sm font-semibold mr-1.5 opacity-75">{displayCurrency}</span>
+                            {card.value}
                           </div>
-
-                          {/* Continuously Bouncing Ball placed directly above the + Active text */}
-                          {isSelected && (
-                            <div
-                              style={{ transform: shouldReduceMotion ? 'none' : 'translateZ(30px)' }}
-                              className="relative flex flex-col items-center flex-shrink-0 z-50 pointer-events-auto cursor-pointer select-none mt-0.5"
-                              onPointerDown={(e) => {
-                                e.stopPropagation()
-                                advanceCard(e)
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                advanceCard(e)
-                              }}
-                              title={isUrdu ? "کارڈ تبدیل کرنے کے لیے چھوئیں" : "Tap ball to change summary card"}
-                            >
-                              {/* Dynamic Impact Ripple Wave */}
-                              {showRipple && (
-                                <motion.div
-                                  initial={{ opacity: 0.9, scale: 0.3 }}
-                                  animate={{ opacity: 0, scale: 2.2 }}
-                                  transition={{ duration: 0.4, ease: 'easeOut' }}
-                                  className="pointer-events-none absolute -inset-2 rounded-full border-2 border-emerald-400 bg-emerald-400/25 z-0"
-                                />
-                              )}
-
-                              {/* Tap Tooltip Pill */}
-                              <motion.span 
-                                animate={shouldReduceMotion ? {} : { y: [-1, 1, -1] }} 
-                                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                                className="mb-0.5 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-slate-900/85 text-white shadow-xs pointer-events-none select-none backdrop-blur-xs whitespace-nowrap"
-                              >
-                                {isUrdu ? "چھوئیں 🎾" : "Tap Ball! 🎾"}
-                              </motion.span>
-
-                              {/* Continuously Bouncing Glass Ball */}
-                              <motion.button
-                                type="button"
-                                aria-label="Tap ball to change summary card"
-                                onPointerDown={(e) => {
-                                  e.stopPropagation()
-                                  advanceCard(e)
-                                }}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  advanceCard(e)
-                                }}
-                                animate={
-                                  shouldReduceMotion
-                                    ? {}
-                                    : {
-                                        y: [0, -14, 0],
-                                        scaleX: [1.14, 0.94, 1.14],
-                                        scaleY: [0.86, 1.10, 0.86],
-                                      }
-                                }
-                                transition={{
-                                  duration: 0.72,
-                                  repeat: Infinity,
-                                  ease: 'easeInOut',
-                                }}
-                                whileHover={{ scale: 1.12 }}
-                                whileTap={{ scale: 0.9 }}
-                                className="relative h-11 w-11 sm:h-12 sm:w-12 rounded-full border border-white/90 bg-gradient-to-tr from-white/35 via-emerald-200/55 to-white/95 shadow-xl backdrop-blur-md cursor-pointer focus:outline-hidden z-20 pointer-events-auto"
-                                style={{
-                                  boxShadow: "0 10px 25px -4px rgba(16, 185, 129, 0.45), inset 0 2px 5px rgba(255,255,255,0.95)",
-                                }}
-                              >
-                                {/* Internal Specular Glass Highlight */}
-                                <span className="absolute top-1 left-1.5 h-3.5 w-5 rounded-full bg-white/80 blur-2xs transform -rotate-25 pointer-events-none" />
-                                <span className="absolute bottom-1 right-1.5 h-2.5 w-2.5 rounded-full bg-emerald-400/60 blur-xs pointer-events-none" />
-                              </motion.button>
-
-                              {/* Dynamic Shadow expanding/contracting with the bounce */}
-                              {!shouldReduceMotion && (
-                                <motion.div
-                                  animate={{
-                                    scaleX: [1.1, 0.6, 1.1],
-                                    opacity: [0.4, 0.12, 0.4],
-                                  }}
-                                  transition={{
-                                    duration: 0.72,
-                                    repeat: Infinity,
-                                    ease: 'easeInOut',
-                                  }}
-                                  className="w-7 h-1.5 rounded-full bg-emerald-950/30 dark:bg-black/40 blur-[1.5px] mt-0.5 pointer-events-none"
-                                />
-                              )}
-                            </div>
-                          )}
                         </div>
 
-                        {/* Bottom Row: Note and + Active status */}
-                        <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-700/60">
+                        {/* Card Footer: Sub-note on Left & Active Badge with 3D Ball on Right */}
+                        <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-700/60 relative">
                           <span className={`text-xs font-semibold flex items-center gap-1 ${card.noteColor}`}>
                             <span className="material-symbols-outlined text-xs">{card.noteIcon}</span>
                             <span>{card.note}</span>
                           </span>
-                          <span className="text-[11px] text-slate-400 font-medium">
-                            {isSelected ? "+ Active" : (isUrdu ? "چھو کر دیکھیں" : "Tap to lift")}
-                          </span>
+
+                          {/* ================= AT THE PLACE OF ACTIVE ================= */}
+                          {isSelected ? (
+                            <div className="relative flex items-center">
+                              {/* Shockwave Ripple under Active Badge on Bounce Impact */}
+                              {showRipple && (
+                                <motion.div
+                                  initial={{ opacity: 0.9, scale: 0.4 }}
+                                  animate={{ opacity: 0, scale: 2 }}
+                                  transition={{ duration: 0.45, ease: 'easeOut' }}
+                                  className={`pointer-events-none absolute -inset-2 rounded-full border-2 ${
+                                    isSurplus ? 'border-emerald-400 bg-emerald-400/30' : 'border-rose-400 bg-rose-400/30'
+                                  }`}
+                                />
+                              )}
+
+                              {/* Interactive Badge + 3D Ball Resting Right At Active */}
+                              <motion.button
+                                type="button"
+                                aria-label="Tap ball to bounce and switch cards"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  triggerBallBounce()
+                                }}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                className={`group relative flex items-center gap-2 pl-3 pr-1.5 py-1 rounded-full border shadow-sm transition-all cursor-pointer ${
+                                  isSurplus
+                                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
+                                    : 'bg-rose-500/15 border-rose-500/40 text-rose-700 dark:text-rose-300'
+                                }`}
+                              >
+                                <span className="text-xs font-extrabold flex items-center gap-1 select-none">
+                                  <span className="text-[10px]">✦</span>
+                                  <span>Active</span>
+                                </span>
+
+                                {/* 3D Glass Ball Embedded Right At Active Badge */}
+                                <motion.div
+                                  animate={ballControls}
+                                  className={`relative size-8 sm:size-9 rounded-full border border-white/90 shadow-lg backdrop-blur-md flex items-center justify-center ${
+                                    isSurplus
+                                      ? 'bg-gradient-to-tr from-white/40 via-emerald-200/70 to-white/95'
+                                      : 'bg-gradient-to-tr from-white/40 via-rose-200/70 to-white/95'
+                                  }`}
+                                  style={{
+                                    boxShadow: isSurplus
+                                      ? '0 6px 18px -2px rgba(16, 185, 129, 0.55), inset 0 2px 4px rgba(255,255,255,0.95)'
+                                      : '0 6px 18px -2px rgba(244, 63, 94, 0.55), inset 0 2px 4px rgba(255,255,255,0.95)',
+                                  }}
+                                >
+                                  <span className="absolute top-0.5 left-1 h-2 w-3 rounded-full bg-white/90 blur-[0.5px] transform -rotate-25 pointer-events-none" />
+                                  <span className={`absolute bottom-0.5 right-1 size-1.5 rounded-full blur-[0.5px] pointer-events-none ${isSurplus ? 'bg-emerald-400/80' : 'bg-rose-400/80'}`} />
+                                </motion.div>
+                              </motion.button>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 font-medium">
+                              {isUrdu ? 'چھو کر دیکھیں' : 'Tap to lift'}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -469,34 +562,37 @@ export const SummaryCards = ({
           </div>
         </div>
       ) : (
-        /* ================= CLASSIC RESPONSIVE GRID ================= */
+        /* ================= 100% CRISP 2D CLASSIC GRID ================= */
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {cards.map((card) => (
-            <Card3D
+            <div
               key={card.id}
-              maxTilt={8}
-              depthZ={12}
-              glareMaxOpacity={0.2}
-              className={`p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between ${card.cardClass}`}
+              className={`p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between ${card.cardClass}`}
+              style={{
+                transform: 'none',
+                WebkitFontSmoothing: 'antialiased',
+                MozOsxFontSmoothing: 'grayscale',
+                textRendering: 'optimizeLegibility',
+              }}
             >
               <div className="flex items-center justify-between mb-3">
-                <span className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+                <span className="text-slate-600 dark:text-slate-300 text-sm font-medium">
                   {card.label}
                 </span>
-                <span className={`material-symbols-outlined ${card.iconColor}`}>
+                <span className={`material-symbols-outlined text-xl ${card.iconColor}`}>
                   {card.icon}
                 </span>
               </div>
 
               <div className={`text-2xl font-bold tracking-tight select-all ${card.valueColor}`}>
-                <RollingOdometer value={card.value} prefix={displayCurrency} />
+                {displayCurrency} {card.value}
               </div>
 
               <div className={`mt-2 text-xs font-semibold flex items-center gap-1 ${card.noteColor}`}>
                 <span className="material-symbols-outlined text-xs">{card.noteIcon}</span>
                 <span>{card.note}</span>
               </div>
-            </Card3D>
+            </div>
           ))}
         </div>
       )}

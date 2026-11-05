@@ -20,6 +20,26 @@ import { exportToCSV, printReport } from '../utils/export'
 import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
 import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2, Calendar, Landmark } from 'lucide-react'
 
+const QUICK_TAGS_EN = [
+  '💎 100% Transparent',
+  '💧 Water Updates Helpful',
+  '⚡ Fair Generator Expense',
+  '🧹 Good Sanitation',
+  '📋 Clear Reporting',
+  '🛡️ Reliable Security',
+  '✨ Interactive Dashboard'
+]
+
+const QUICK_TAGS_UR = [
+  '💎 مکمل شفاف اکاؤنٹس',
+  '💧 پانی کی معلومات کارآمد',
+  '⚡ جنریٹر اخراجات مناسب',
+  '🧹 صفائی کا نظام اچھا',
+  '📋 تفصیلی اور واضح رپورٹ',
+  '🛡️ سیکیورٹی انتظامات تسلی بخش',
+  '✨ انٹرایکٹو ڈیش بورڈ'
+]
+
 // Helper to normalize phone numbers for robust matching (last 10 digits)
 const normalizePhone = (p) => (p || '').replace(/[^0-9]/g, '').slice(-10)
 
@@ -81,6 +101,7 @@ export default function ViewerDashboard() {
   const [feedbackPhone, setFeedbackPhone] = useState('')
   const [feedbackAddress, setFeedbackAddress] = useState('')
   const [feedbackComment, setFeedbackComment] = useState('')
+  const [feedbackSelectedTags, setFeedbackSelectedTags] = useState([])
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false)
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [showWhatsAppSnapshotModal, setShowWhatsAppSnapshotModal] = useState(false)
@@ -374,10 +395,17 @@ export default function ViewerDashboard() {
     setShowCheckInModal(false)
   }
 
+  const handleToggleFeedbackTag = (tag) => {
+    setFeedbackSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    )
+  }
+
   const handleOpenFeedback = () => {
     setFeedbackRating(5)
     setFeedbackHoverRating(0)
     setFeedbackComment('')
+    setFeedbackSelectedTags([])
     setFeedbackSubmitted(false)
     if (resident) {
       setFeedbackName(resident.name || '')
@@ -428,12 +456,17 @@ export default function ViewerDashboard() {
     }
     setFeedbackSubmitting(true)
     try {
+      const tagsText = feedbackSelectedTags.join(' • ')
+      let combinedComment = feedbackComment.trim()
+      if (tagsText) {
+        combinedComment = combinedComment ? `${tagsText}\n${combinedComment}` : tagsText
+      }
       const payload = {
         name: feedbackName.trim(),
         phone: feedbackPhone.trim(),
         houseAddress: feedbackAddress.trim(),
         rating: Number(feedbackRating || 5),
-        comment: feedbackComment.trim(),
+        comment: combinedComment,
         monthViewed: currentMonthKey
       }
       const created = await submitFeedback(payload)
@@ -1453,6 +1486,32 @@ export default function ViewerDashboard() {
                           required
                         />
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Impressions (Tap to add) */}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                      {isUrdu ? 'فوری تاثرات (ایک یا زائد منتخب کریں):' : 'Quick Impressions (Tap to add):'}
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(isUrdu ? QUICK_TAGS_UR : QUICK_TAGS_EN).map((tag) => {
+                        const isSelected = feedbackSelectedTags.includes(tag)
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => handleToggleFeedbackTag(tag)}
+                            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
+                              isSelected
+                                ? 'bg-amber-500 text-white shadow-xs font-black scale-102'
+                                : 'bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700'
+                            }`}
+                          >
+                            {tag}
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
 
