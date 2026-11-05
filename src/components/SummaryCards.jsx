@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { useLanguage } from '../context/LanguageContext'
 import RollingOdometer from './RollingOdometer'
@@ -81,15 +81,29 @@ export const SummaryCards = ({
   currency = 'PKR',
   isNoData = false
 }) => {
-  const { lang, t } = useLanguage ? useLanguage() : { lang: 'en', t: {} }
+  const { lang, t, isRtl } = useLanguage ? useLanguage() : { lang: 'en', t: {}, isRtl: false }
   const shouldReduceMotion = useReducedMotion()
 
+  // Views & Card state
+  const [is3DDeckView, setIs3DDeckView] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('dashboard_cards_view')
+      if (stored) return stored === '3d'
+    }
+    return true // Default to 3D Deck view
+  })
+
+  const [activeCardIndex, setActiveCardIndex] = useState(0)
+  const [isAutoPlay, setIsAutoPlay] = useState(false)
+  const [showRipple, setShowRipple] = useState(false)
   const [isMuted, setIsMuted] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('dashboard_sound_muted') === 'true'
     }
     return false
   })
+
+  const lastAdvanceRef = useRef(0)
 
   const isUrdu = lang === 'ur'
   const displayCurrency = isUrdu ? 'روپے' : currency
@@ -121,6 +135,9 @@ export const SummaryCards = ({
       noteIcon: 'trending_flat',
       noteColor: 'text-slate-500 dark:text-slate-400',
       valueColor: 'text-slate-900 dark:text-slate-100',
+      accentBorder: 'border-slate-300 dark:border-slate-700',
+      badgeBg: 'bg-slate-700 text-white',
+      gradient: 'from-slate-500/10 via-slate-50/40 dark:via-slate-950/20 to-white dark:to-slate-900',
       cardClass: 'bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 shadow-sm'
     },
     {
@@ -133,6 +150,9 @@ export const SummaryCards = ({
       noteIcon: 'receipt_long',
       noteColor: 'text-slate-500 dark:text-slate-400',
       valueColor: 'text-slate-900 dark:text-slate-100',
+      accentBorder: 'border-orange-500',
+      badgeBg: 'bg-orange-500 text-white',
+      gradient: 'from-orange-500/10 via-orange-50/40 dark:via-orange-950/20 to-white dark:to-slate-900',
       cardClass: 'bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 border-l-4 border-l-orange-500 shadow-sm'
     },
     {
@@ -145,6 +165,9 @@ export const SummaryCards = ({
       noteIcon: 'receipt',
       noteColor: 'text-emerald-700 dark:text-emerald-400 font-semibold',
       valueColor: 'text-slate-900 dark:text-slate-100',
+      accentBorder: 'border-emerald-600',
+      badgeBg: 'bg-emerald-600 text-white',
+      gradient: 'from-emerald-500/10 via-emerald-50/40 dark:via-emerald-950/20 to-white dark:to-slate-900',
       cardClass: 'bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 border-l-4 border-l-emerald-600 shadow-sm'
     },
     {
@@ -159,6 +182,11 @@ export const SummaryCards = ({
       noteIcon: isSurplus ? 'check_circle' : 'warning',
       noteColor: isSurplus ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
       valueColor: isSurplus ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
+      accentBorder: isSurplus ? 'border-teal-500' : 'border-rose-500',
+      badgeBg: isSurplus ? 'bg-teal-600 text-white' : 'bg-rose-600 text-white',
+      gradient: isSurplus 
+        ? 'from-teal-500/10 via-teal-50/40 dark:via-teal-950/20 to-white dark:to-slate-900' 
+        : 'from-rose-500/15 via-rose-50/60 dark:via-rose-950/30 to-white dark:to-slate-900',
       cardClass: isSurplus 
         ? 'bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 border-l-4 border-l-emerald-500 shadow-sm' 
         : '!bg-rose-50/70 dark:!bg-rose-950/20 !border-rose-200/90 dark:!border-rose-900/50 border-l-4 !border-l-rose-500 shadow-sm'
@@ -167,7 +195,7 @@ export const SummaryCards = ({
       id: 'closing',
       label: !actualOverdrawn 
         ? (t?.closingBalance || 'Closing Reserve Fund') 
-        : (isUrdu ? `${t?.closingBalance || 'اختتامی ریزرو فنڈ'}\n(${t?.overdrawn || 'خسارہ'})` : 'Closing Reserve Fund\n(Overdrawn)'),
+        : (isUrdu ? `${t?.closingBalance || 'اختتامی ریزرو فنڈ'}\n(${t?.overdrawn || 'خسارہ'})` : 'Closing Reserve Fund (Overdrawn)'),
       value: fmt(Math.abs(actualClosing)),
       note: isNoData ? '0%' : (!actualOverdrawn 
         ? (isUrdu ? 'جمع شدہ محفوظ فنڈ' : 'Accumulated Reserve') 
@@ -177,6 +205,11 @@ export const SummaryCards = ({
       noteIcon: !actualOverdrawn ? 'stars' : 'warning',
       noteColor: !actualOverdrawn ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
       valueColor: !actualOverdrawn ? 'text-slate-900 dark:text-slate-100' : 'text-rose-600 dark:text-rose-400',
+      accentBorder: !actualOverdrawn ? 'border-emerald-500' : 'border-rose-500',
+      badgeBg: !actualOverdrawn ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white',
+      gradient: !actualOverdrawn 
+        ? 'from-emerald-500/10 via-emerald-50/40 dark:via-emerald-950/20 to-white dark:to-slate-900' 
+        : 'from-rose-500/15 via-rose-50/60 dark:via-rose-950/30 to-white dark:to-slate-900',
       cardClass: !actualOverdrawn 
         ? 'bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 border-l-4 border-l-emerald-500 shadow-sm' 
         : '!bg-rose-50/70 dark:!bg-rose-950/20 !border-rose-200/90 dark:!border-rose-900/50 border-l-4 !border-l-rose-600 shadow-sm'
@@ -194,79 +227,407 @@ export const SummaryCards = ({
     }
   }
 
+  // ================= GUARANTEED ADVANCE DISPATCHER =================
+  const advanceToNextCard = (e) => {
+    if (e) {
+      if (typeof e.stopPropagation === 'function') e.stopPropagation()
+      if (typeof e.preventDefault === 'function') e.preventDefault()
+    }
+
+    const now = Date.now()
+    if (now - lastAdvanceRef.current < 250) return
+    lastAdvanceRef.current = now
+
+    setShowRipple(true)
+    setTimeout(() => setShowRipple(false), 400)
+    playProceduralSound('bounce', isMuted)
+
+    setActiveCardIndex((prev) => {
+      const nextIdx = (prev + 1) % cards.length
+      playProceduralSound(isSurplus ? 'surplus' : 'deficit', isMuted)
+      return nextIdx
+    })
+  }
+
+  // Auto-play loop
+  useEffect(() => {
+    let interval = null
+    if (isAutoPlay && is3DDeckView) {
+      interval = setInterval(() => {
+        advanceToNextCard()
+      }, 3500)
+    }
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [isAutoPlay, is3DDeckView])
+
+  const handlePanEnd = (e, info) => {
+    if (Math.abs(info.offset.x) > 40 || Math.abs(info.offset.y) > 40) {
+      advanceToNextCard()
+    }
+  }
+
+  const handleCardClick = (idx) => {
+    if (idx === activeCardIndex) {
+      advanceToNextCard()
+    } else {
+      setActiveCardIndex(idx)
+      playProceduralSound(isSurplus ? 'surplus' : 'deficit', isMuted)
+    }
+  }
+
   return (
     <div className="w-full my-4">
-      {/* Header & Controls */}
+      {/* View Header & Segmented Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3 px-1">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            {isUrdu ? 'مالیاتی جائزہ (خلاصہ)' : 'Financial Summary'}
+            {isUrdu ? 'مالیاتی جائزہ (خلاصہ)' : 'FINANCIAL SUMMARY'}
           </span>
-          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-            5 KPI Cards
-          </span>
+          {is3DDeckView && (
+            <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center gap-1 border border-emerald-200 dark:border-emerald-800/60">
+              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>INTERACTIVE 3D</span>
+            </span>
+          )}
         </div>
 
-        {/* Sound FX Toggle Pill */}
-        <button
-          type="button"
-          onClick={toggleSound}
-          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition border ${
-            !isMuted
-              ? isSurplus
-                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 shadow-2xs'
-                : 'bg-rose-500/15 border-rose-500/40 text-rose-700 dark:text-rose-300 shadow-2xs'
-              : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400'
-          }`}
-          title={isMuted ? 'Unmute Sound Effects' : 'Mute Sound Effects'}
-        >
-          <span>{!isMuted ? '🔊' : '🔇'}</span>
-          <span>{!isMuted ? (isSurplus ? 'Surplus Audio' : 'Deficit Alert') : 'Muted'}</span>
-        </button>
-      </div>
-
-      {/* ================= 100% CRISP 5-CARD HORIZONTAL GRID ================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
-        {cards.map((card) => (
-          <motion.div
-            key={card.id}
-            whileHover={shouldReduceMotion ? {} : { y: -3 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-xs hover:shadow-md transition-shadow duration-200 flex flex-col justify-between ${card.cardClass}`}
-            style={{
-              transform: 'none',
-              WebkitFontSmoothing: 'antialiased',
-              MozOsxFontSmoothing: 'grayscale',
-              textRendering: 'optimizeLegibility',
-            }}
+        {/* View Switcher, Audio Toggle & Auto-Bounce Controls */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Sound FX Toggle Pill */}
+          <button
+            type="button"
+            onClick={toggleSound}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition border ${
+              !isMuted
+                ? isSurplus
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 shadow-2xs'
+                  : 'bg-rose-500/15 border-rose-500/40 text-rose-700 dark:text-rose-300 shadow-2xs'
+                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400'
+            }`}
+            title={isMuted ? 'Unmute Sound Effects' : 'Mute Sound Effects'}
           >
-            {/* Top row: Label & Icon */}
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <span className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-bold leading-tight whitespace-pre-line min-h-[2.4em] flex items-center">
-                {card.label}
-              </span>
-              <span className={`material-symbols-outlined text-xl sm:text-2xl flex-shrink-0 ${card.iconColor}`}>
-                {card.icon}
-              </span>
-            </div>
+            <span>{!isMuted ? '🔊' : '🔇'}</span>
+            <span>{!isMuted ? (isSurplus ? 'Surplus Audio' : 'Deficit Alert') : 'Muted'}</span>
+          </button>
 
-            {/* Middle: Mechanical Rolling Odometer Tumblers */}
-            <div className="my-2 select-all">
-              <RollingOdometer
-                value={card.value}
-                prefix={displayCurrency}
-                className={`text-xl sm:text-2xl font-black tracking-tight ${card.valueColor}`}
-              />
-            </div>
+          {/* Auto Bounce Button */}
+          {is3DDeckView && (
+            <button
+              type="button"
+              onClick={() => setIsAutoPlay(!isAutoPlay)}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition border ${
+                isAutoPlay
+                  ? 'bg-emerald-500 text-white border-emerald-600 shadow-sm animate-pulse'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <span>{isAutoPlay ? '⏸ Pause' : '▶ Auto'}</span>
+            </button>
+          )}
 
-            {/* Bottom: Note */}
-            <div className={`mt-2 pt-2 border-t border-slate-100 dark:border-slate-700/60 text-[11px] sm:text-xs font-semibold flex items-center gap-1.5 ${card.noteColor}`}>
-              <span className="material-symbols-outlined text-xs sm:text-sm">{card.noteIcon}</span>
-              <span className="truncate">{card.note}</span>
-            </div>
-          </motion.div>
-        ))}
+          {/* Dual Segmented View Pill */}
+          <div className="inline-flex items-center p-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => {
+                setIs3DDeckView(false)
+                setIsAutoPlay(false)
+                if (typeof window !== 'undefined') localStorage.setItem('dashboard_cards_view', 'grid')
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all duration-200 ${
+                !is3DDeckView
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
+              }`}
+            >
+              <span>☷</span>
+              <span>{isUrdu ? 'کلاسک گرڈ' : 'Classic View'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIs3DDeckView(true)
+                if (typeof window !== 'undefined') localStorage.setItem('dashboard_cards_view', '3d')
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all duration-200 ${
+                is3DDeckView
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium'
+              }`}
+            >
+              <span>🎴</span>
+              <span>{isUrdu ? 'تھری ڈی ڈیک' : '3D Deck'}</span>
+            </button>
+          </div>
+        </div>
       </div>
+
+      {is3DDeckView ? (
+        /* ================= 3D REVOLVING DECK VIEW ================= */
+        <div className="w-full">
+          {/* Quick Category Selector Pills */}
+          <div className="flex items-center gap-1.5 mb-2 overflow-x-auto pb-1 scrollbar-none">
+            {cards.map((card, i) => (
+              <button
+                key={card.id}
+                type="button"
+                onClick={() => handleCardClick(i)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
+                  activeCardIndex === i
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm scale-105'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                }`}
+              >
+                {i + 1}. {card.label.split(' ')[0]}
+              </button>
+            ))}
+          </div>
+
+          <div 
+            style={{ perspective: 1200 }}
+            className="relative w-full py-4 px-2 overflow-visible min-h-[380px] sm:min-h-[420px] flex items-center justify-center [touch-action:pan-y] border border-slate-200/60 dark:border-slate-800/80 rounded-3xl bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:16px_16px]"
+          >
+            {/* Isometric Angled Deck Container */}
+            <motion.div
+              style={{
+                transformStyle: 'preserve-3d',
+                rotateX: 16,
+                rotateZ: -3,
+                rotateY: isRtl ? -8 : 8,
+              }}
+              className="relative w-full max-w-sm sm:max-w-md mx-auto h-[260px]"
+            >
+              {/* Cards Stack */}
+              {cards.map((card, idx) => {
+                const relIndex = (idx - activeCardIndex + cards.length) % cards.length
+                const isSelected = relIndex === 0
+
+                const offsetZ = isSelected ? 70 : -relIndex * 24
+                const offsetY = isSelected ? -10 : relIndex * 42
+                const scale = isSelected ? 1.02 : 1 - relIndex * 0.025
+                const cardZIndex = 30 - relIndex
+
+                return (
+                  <motion.div
+                    key={card.id}
+                    onTap={() => handleCardClick(idx)}
+                    onPanEnd={handlePanEnd}
+                    whileTap={{ scale: 0.985 }}
+                    animate={{
+                      z: shouldReduceMotion ? 0 : offsetZ,
+                      y: shouldReduceMotion ? 0 : offsetY,
+                      scale: shouldReduceMotion ? 1 : scale,
+                    }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 300,
+                      damping: 26,
+                      mass: 0.5,
+                    }}
+                    style={{
+                      transformStyle: 'preserve-3d',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      zIndex: cardZIndex,
+                    }}
+                    className="cursor-pointer select-none will-change-transform"
+                  >
+                    <div
+                      className={`rounded-3xl border-2 ${card.accentBorder} bg-gradient-to-b ${card.gradient} p-5 shadow-xl backdrop-blur-md transition-shadow relative overflow-visible`}
+                      style={{
+                        boxShadow: isSelected
+                          ? '0 25px 45px -12px rgba(15, 23, 42, 0.30)'
+                          : '0 10px 20px -6px rgba(15, 23, 42, 0.12)',
+                      }}
+                    >
+                      {/* Crisp Vector Typography Layer */}
+                      <div 
+                        style={{
+                          transform: 'translateZ(1px)',
+                          WebkitFontSmoothing: 'antialiased',
+                          MozOsxFontSmoothing: 'grayscale',
+                          textRendering: 'geometricPrecision'
+                        }}
+                      >
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                            {card.label}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${card.badgeBg}`}>
+                              {idx + 1} / {cards.length}
+                            </span>
+                            <span className={`material-symbols-outlined text-sm ${card.iconColor}`}>
+                              {card.icon}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Amount with 3D Rolling Odometer */}
+                        <div className="my-2">
+                          <RollingOdometer
+                            value={card.value}
+                            prefix={displayCurrency}
+                            className={`text-3xl font-extrabold tracking-tight ${card.valueColor}`}
+                          />
+                        </div>
+
+                        {/* Footer with Active Badge & Bouncing Ball */}
+                        <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-700/60 relative">
+                          <span className={`text-xs font-semibold flex items-center gap-1 ${card.noteColor}`}>
+                            <span className="material-symbols-outlined text-xs">{card.noteIcon}</span>
+                            <span>{card.note}</span>
+                          </span>
+
+                          {/* ================= ACTIVE BUTTON WITH CONTINUOUS BOUNCING BALL ================= */}
+                          {isSelected ? (
+                            <div className="relative flex items-center z-20">
+                              {/* Shockwave Ripple */}
+                              {showRipple && (
+                                <motion.div
+                                  initial={{ opacity: 0.9, scale: 0.4 }}
+                                  animate={{ opacity: 0, scale: 2 }}
+                                  transition={{ duration: 0.4, ease: 'easeOut' }}
+                                  className={`pointer-events-none absolute -inset-2 rounded-full border-2 ${
+                                    isSurplus ? 'border-emerald-400 bg-emerald-400/30' : 'border-rose-400 bg-rose-400/30'
+                                  }`}
+                                />
+                              )}
+
+                              {/* Clickable Badge Trigger */}
+                              <motion.button
+                                type="button"
+                                aria-label="Advance Card"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.92 }}
+                                onTap={advanceToNextCard}
+                                onClick={advanceToNextCard}
+                                className={`group relative flex items-center gap-2 pl-3 pr-2 py-1 rounded-full border shadow-sm transition-all cursor-pointer pointer-events-auto select-none ${
+                                  isSurplus
+                                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25'
+                                    : 'bg-rose-500/15 border-rose-500/40 text-rose-700 dark:text-rose-300 hover:bg-rose-500/25'
+                                }`}
+                              >
+                                <span className="text-xs font-extrabold flex items-center gap-1 pointer-events-none">
+                                  <span className="text-[10px]">✦</span>
+                                  <span>Active</span>
+                                </span>
+
+                                {/* Ball Housing */}
+                                <div className="relative size-8 flex items-center justify-center cursor-pointer pointer-events-auto">
+                                  {/* Tooltip: Tap Ball! 🔮 */}
+                                  <span className="absolute -top-7 right-0 text-[10px] font-black font-mono px-2 py-0.5 rounded-full bg-slate-900 text-white shadow-md border border-slate-700/80 whitespace-nowrap animate-bounce pointer-events-none z-30">
+                                    Tap Ball! 🔮
+                                  </span>
+
+                                  {/* Shadow */}
+                                  {!shouldReduceMotion && (
+                                    <motion.span
+                                      animate={{
+                                        scale: [1, 0.45, 1],
+                                        opacity: [0.65, 0.15, 0.65],
+                                      }}
+                                      transition={{
+                                        duration: 0.85,
+                                        repeat: Infinity,
+                                        times: [0, 0.5, 1],
+                                        ease: 'easeInOut',
+                                      }}
+                                      className={`absolute bottom-0 inset-x-1 h-1.5 rounded-full blur-[1px] pointer-events-none ${
+                                        isSurplus ? 'bg-emerald-900/40' : 'bg-rose-900/40'
+                                      }`}
+                                    />
+                                  )}
+
+                                  {/* CONTINUOUS BOUNCING GLASS BALL */}
+                                  <motion.div
+                                    animate={shouldReduceMotion ? {} : {
+                                      y: [0, -18, 0],
+                                      scaleX: [1.22, 0.9, 1.22],
+                                      scaleY: [0.8, 1.14, 0.8],
+                                    }}
+                                    transition={{
+                                      duration: 0.85,
+                                      repeat: Infinity,
+                                      times: [0, 0.5, 1],
+                                      ease: ['easeOut', 'easeIn'],
+                                    }}
+                                    className={`relative size-7 rounded-full border border-white/90 shadow-md backdrop-blur-md flex items-center justify-center cursor-pointer pointer-events-auto ${
+                                      isSurplus
+                                        ? 'bg-gradient-to-tr from-white/40 via-emerald-200/70 to-white/95'
+                                        : 'bg-gradient-to-tr from-white/40 via-rose-200/70 to-white/95'
+                                    }`}
+                                    style={{
+                                      boxShadow: isSurplus
+                                        ? '0 6px 16px -2px rgba(16, 185, 129, 0.55), inset 0 2px 4px rgba(255,255,255,0.95)'
+                                        : '0 6px 16px -2px rgba(244, 63, 94, 0.55), inset 0 2px 4px rgba(255,255,255,0.95)',
+                                    }}
+                                  >
+                                    <span className="absolute top-0.5 left-1 h-1.5 w-2.5 rounded-full bg-white/90 blur-[0.5px] transform -rotate-25 pointer-events-none" />
+                                    <span className={`absolute bottom-0.5 right-1 size-1 rounded-full blur-[0.5px] pointer-events-none ${isSurplus ? 'bg-emerald-400/80' : 'bg-rose-400/80'}`} />
+                                  </motion.div>
+                                </div>
+                              </motion.button>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 font-medium">
+                              {isUrdu ? 'چھو کر دیکھیں' : 'Tap to lift'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </motion.div>
+          </div>
+        </div>
+      ) : (
+        /* ================= 100% CRISP 2D CLASSIC GRID ================= */
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {cards.map((card) => (
+            <div
+              key={card.id}
+              className={`p-5 rounded-2xl shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between ${card.cardClass}`}
+              style={{
+                transform: 'none',
+                WebkitFontSmoothing: 'antialiased',
+                MozOsxFontSmoothing: 'grayscale',
+                textRendering: 'optimizeLegibility',
+              }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-slate-600 dark:text-slate-300 text-sm font-medium leading-tight whitespace-pre-line">
+                  {card.label}
+                </span>
+                <span className={`material-symbols-outlined text-xl ${card.iconColor}`}>
+                  {card.icon}
+                </span>
+              </div>
+
+              <div className="my-1">
+                <RollingOdometer
+                  value={card.value}
+                  prefix={displayCurrency}
+                  className={`text-2xl font-bold tracking-tight select-all ${card.valueColor}`}
+                />
+              </div>
+
+              <div className={`mt-2 text-xs font-semibold flex items-center gap-1 ${card.noteColor}`}>
+                <span className="material-symbols-outlined text-xs">{card.noteIcon}</span>
+                <span>{card.note}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
