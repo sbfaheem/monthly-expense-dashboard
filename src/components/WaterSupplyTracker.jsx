@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   Droplet, Clock, Calendar, Sparkles, TrendingUp, Share2, Check, Timer,
   Gauge, Waves, Truck, ArrowUpRight, Plus, AlertTriangle, ShieldCheck,
-  Activity, CheckCircle2, ChevronRight, X, Play, Pause, RotateCcw,
+  Activity, CheckCircle2, ChevronRight, X, RotateCcw,
   Home, Zap, Layers, AlertCircle
 } from 'lucide-react'
 import { predictNextWaterSupply } from '../utils/waterPrediction'
@@ -27,10 +27,75 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
   // Lifespan is exactly 13.0 days after supply cut off
   const dailyBurnRate = Math.round(totalCapacity / 13)
 
-  // Simulation day slider: Day 0.0 (Full) to Day 13.0 (Empty)
-  const [currentDay, setCurrentDay] = useState(0)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const playTimerRef = useRef(null)
+  // ─── 2. Automatic Live Elapsed Water Supply Counter & Persistence ───
+  const STORAGE_KEY = 'kwsb_last_supply_ended_at'
+
+  // Default to 2 days, 4 hours, and 45 minutes ago if no saved timestamp exists
+  const getDefaultEndedAt = () => {
+    const twoDaysFourHoursFortyFiveMinsMs = (2 * 24 * 3600 + 4 * 3600 + 45 * 60) * 1000
+    return Date.now() - twoDaysFourHoursFortyFiveMinsMs
+  }
+
+  const [lastSupplyEndedAt, setLastSupplyEndedAt] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved) {
+        const parsed = parseInt(saved, 10)
+        if (!isNaN(parsed) && parsed > 0) return parsed
+      }
+    }
+    return getDefaultEndedAt()
+  })
+
+  // Live real-time clock ticking every 1 second
+  const [now, setNow] = useState(Date.now())
+  const [resetToast, setResetToast] = useState(false)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now())
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // 1-Click Calibration: Reset cycle when supply has just finished pumping
+  const handleResetSupplyTimer = () => {
+    const newTimestamp = Date.now()
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEY, newTimestamp.toString())
+    }
+    setLastSupplyEndedAt(newTimestamp)
+    setNow(newTimestamp)
+    setResetToast(true)
+    setTimeout(() => setResetToast(false), 2500)
+  }
+
+  // Elapsed Time Calculation
+  const elapsedMs = Math.max(0, now - lastSupplyEndedAt)
+  const elapsedTotalSeconds = Math.floor(elapsedMs / 1000)
+
+  const elapsedDays = Math.floor(elapsedTotalSeconds / 86400)
+  const elapsedHours = Math.floor((elapsedTotalSeconds % 86400) / 3600)
+  const elapsedMinutes = Math.floor((elapsedTotalSeconds % 3600) / 60)
+  const elapsedSeconds = elapsedTotalSeconds % 60
+
+  const daysStr = String(elapsedDays).padStart(2, '0')
+  const hoursStr = String(elapsedHours).padStart(2, '0')
+  const minsStr = String(elapsedMinutes).padStart(2, '0')
+  const secsStr = String(elapsedSeconds).padStart(2, '0')
+
+  // Real-time Day progression for 13-day tank drainage (exact float clamped to 13.0)
+  const currentDay = Math.min(13.0, parseFloat((elapsedTotalSeconds / 86400).toFixed(4)))
+
+  // Next KWSB Supply Prediction (~16.7 days municipal cycle for Sector 7D/1)
+  const municipalCycleDays = 16.7
+  const municipalCycleMs = municipalCycleDays * 24 * 3600 * 1000
+  const nextSupplyTarget = lastSupplyEndedAt + municipalCycleMs
+  const remMs = Math.max(0, nextSupplyTarget - now)
+  const remTotalSecs = Math.floor(remMs / 1000)
+  const remDays = Math.floor(remTotalSecs / 86400)
+  const remHours = Math.floor((remTotalSecs % 86400) / 3600)
+  const cycleProgressPct = Math.min(100, Math.max(0, (elapsedMs / municipalCycleMs) * 100)).toFixed(1)
 
   // Sequential Depletion Calculation
   // Total water burned = (currentDay / 13) * totalCapacity
@@ -64,28 +129,9 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
   const isDry = totalRemaining <= 0 || currentDay >= 13
 
   // Municipal cadence deficit metrics
-  const municipalCycleDays = 16.7
   const maxAutonomyDays = 13.0
   const deficitDays = (municipalCycleDays - maxAutonomyDays).toFixed(1) // 3.7 days
   const rationRate = Math.round(totalCapacity / municipalCycleDays) // ~126 Gal/Day for 2,100 Gal
-
-  // Auto-play simulation loop
-  useEffect(() => {
-    if (isPlaying) {
-      playTimerRef.current = setInterval(() => {
-        setCurrentDay((prev) => {
-          if (prev >= 13) {
-            setIsPlaying(false)
-            return 13
-          }
-          return Math.min(13, parseFloat((prev + 0.5).toFixed(1)))
-        })
-      }, 650)
-    } else {
-      clearInterval(playTimerRef.current)
-    }
-    return () => clearInterval(playTimerRef.current)
-  }, [isPlaying])
 
   // ─── 2. HTML5 Canvas Dual-Tank Slosh Simulation ───
   const canvasRef = useRef(null)
@@ -125,7 +171,7 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
       ctx.stroke()
 
       // Flow pulses inside pipe when pump is active
-      if (isPhase2 || isPlaying) {
+      if (isPhase2) {
         ctx.beginPath()
         ctx.moveTo(150, 290)
         ctx.lineTo(150, 105)
@@ -366,7 +412,7 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
 
     render()
     return () => cancelAnimationFrame(animationId)
-  }, [ugtPercent, ohtPercent, isPhase2, isPlaying, shouldReduceMotion])
+  }, [ugtPercent, ohtPercent, isPhase2, shouldReduceMotion])
 
   // ─── 3. Overhead Pumping Transfer Log State ───
   const [showTransferModal, setShowTransferModal] = useState(false)
@@ -589,10 +635,7 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
             <div className="flex items-center gap-1 p-1 rounded-2xl bg-[#0f172a]/90 border border-slate-800">
               <button
                 type="button"
-                onClick={() => {
-                  setReservoirMode('kwsb')
-                  setCurrentDay(0)
-                }}
+                onClick={() => setReservoirMode('kwsb')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black transition-all ${
                   reservoirMode === 'kwsb'
                     ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-md'
@@ -827,115 +870,153 @@ export default function WaterSupplyTracker({ entries = [], allWaterSupply = [], 
             </div>
           </div>
 
-          {/* ─── 4. Day Counter & Sequential Depletion Controller ─── */}
+          {/* ─── 4. Automatic Live Elapsed Water Supply Counter ─── */}
           <div className="mt-8 p-4 sm:p-5 rounded-2xl bg-[#070b16] border border-slate-800 shadow-inner">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  className="size-8 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 flex items-center justify-center font-bold shadow-md transition-transform active:scale-90"
-                  title={isPlaying ? "Pause Simulation" : "Auto-Play 13-Day Drain"}
-                >
-                  {isPlaying ? <Pause size={15} /> : <Play size={15} className="ml-0.5" />}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsPlaying(false)
-                    setCurrentDay(0)
-                  }}
-                  className="size-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-colors"
-                  title="Reset to Day 0 (Full)"
-                >
-                  <RotateCcw size={14} />
-                </button>
-
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
+              <div className="flex items-start gap-3">
+                <div className="size-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Timer size={19} className="animate-pulse" />
+                </div>
                 <div>
-                  <span className="text-xs font-black text-white flex items-center gap-1.5">
-                    <span>Days Since Supply Ended:</span>
-                    <span className="font-mono text-cyan-300 text-sm font-extrabold bg-cyan-950/80 px-2.5 py-0.5 rounded border border-cyan-500/30">
-                      Day {currentDay} / 13.0
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-black uppercase tracking-wider text-white">
+                      {isUrdu ? 'آخری سپلائی کے بعد گزرا ہوا وقت' : 'Time Elapsed Since Last Supply Ended'}
                     </span>
-                  </span>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Sequential Drain Rule: Roof Tank (OHT) empties first (Days 0–3), then Underground Tank drains (Days 3–13).
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-mono font-bold bg-cyan-950/80 text-cyan-300 px-2.5 py-0.5 rounded-full border border-cyan-500/30">
+                      <span className="size-1.5 rounded-full bg-cyan-400 animate-ping" />
+                      <span>{isUrdu ? 'لائیو رئیل ٹائم کلاک' : 'LIVE REAL-TIME CLOCK'}</span>
+                    </span>
+                    <span className="font-mono text-cyan-300 text-xs font-extrabold bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700">
+                      Day {currentDay.toFixed(2)} / 13.0
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                    {isUrdu
+                      ? 'خودکار اخراج کا اصول: چھت کا ٹینک (OHT) پہلے خالی ہوتا ہے (0-3 دن)، پھر زیر زمین ٹینک (UGT) استعمال ہوتا ہے (3-13 دن)۔'
+                      : 'Sequential Drainage Rule: Roof Tank (OHT) empties first (Days 0–3), then Underground Tank (UGT) drains (Days 3–13).'}
                   </p>
                 </div>
               </div>
 
-              {/* Quick Select Buttons */}
-              <div className="flex items-center gap-1.5 flex-wrap">
+              {/* 1-Click Calibration Button & Toast */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 flex-shrink-0">
+                {resetToast && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-bold shadow-lg"
+                  >
+                    <Check size={13} className="text-emerald-400" />
+                    <span>{isUrdu ? 'سائیکل ری سیٹ (00:00:00)' : 'Reset to Day 0:00:00'}</span>
+                  </motion.div>
+                )}
                 <button
                   type="button"
-                  onClick={() => { setIsPlaying(false); setCurrentDay(0) }}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all ${
-                    currentDay === 0 ? 'bg-cyan-500 text-slate-950 font-black' : 'bg-slate-850 text-slate-400 hover:text-white bg-slate-800'
-                  }`}
+                  onClick={handleResetSupplyTimer}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500/20 to-teal-500/20 hover:from-cyan-500/30 hover:to-teal-500/30 border border-cyan-500/40 hover:border-cyan-400 text-cyan-200 hover:text-white text-xs font-black shadow-md transition-all active:scale-95 group"
+                  title={isUrdu ? 'پانی کی نئی سپلائی ختم ہونے پر ٹائمر ری سیٹ کریں' : 'Reset cycle when municipal supply has just finished pumping'}
                 >
-                  Day 0 (Full)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsPlaying(false); setCurrentDay(2) }}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all ${
-                    currentDay === 2 ? 'bg-cyan-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Day 2 (OHT Low)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsPlaying(false); setCurrentDay(phase1Days) }}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all ${
-                    currentDay === phase1Days ? 'bg-cyan-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Day 3 (OHT Empty)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsPlaying(false); setCurrentDay(8) }}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all ${
-                    currentDay === 8 ? 'bg-cyan-500 text-slate-950 font-black' : 'bg-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Day 8 (UGT 50%)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setIsPlaying(false); setCurrentDay(13) }}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-all ${
-                    currentDay === 13 ? 'bg-rose-500 text-white font-black' : 'bg-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Day 13 (Empty)
+                  <RotateCcw size={14} className="text-cyan-400 group-hover:rotate-180 transition-transform duration-500" />
+                  <span>{isUrdu ? '🔄 سپلائی ابھی ختم ہوئی / ری سیٹ' : '🔄 Supply Just Ended / Reset Timer'}</span>
                 </button>
               </div>
             </div>
 
-            {/* Smooth Scrubber Slider */}
-            <input
-              type="range"
-              min="0"
-              max="13"
-              step="0.1"
-              value={currentDay}
-              onChange={(e) => {
-                setIsPlaying(false)
-                setCurrentDay(parseFloat(e.target.value))
-              }}
-              className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
-            />
+            {/* 4 High-Contrast Digital Countdown Blocks */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+              {/* DAYS */}
+              <div className="relative overflow-hidden rounded-xl bg-[#0a0f1d] border border-cyan-500/30 p-3.5 text-center shadow-lg group hover:border-cyan-400/60 transition-colors">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-60" />
+                <div className="text-[10px] font-mono uppercase font-extrabold tracking-wider text-slate-400 mb-1 flex items-center justify-center gap-1">
+                  <span>{isUrdu ? 'دن' : 'DAYS'}</span>
+                </div>
+                <div className="font-mono text-3xl sm:text-4xl font-black text-cyan-300 tracking-tight drop-shadow-[0_0_12px_rgba(6,182,212,0.45)]">
+                  {daysStr}
+                </div>
+                <div className="text-[9px] font-mono text-slate-500 mt-1">
+                  {isUrdu ? `${daysStr} مکمل دن` : `${daysStr} Full Days`}
+                </div>
+              </div>
 
-            {/* Slider Ticks */}
-            <div className="flex justify-between text-[9px] font-mono text-slate-500 mt-1 px-1">
-              <span>Day 0 (Full - {totalCapacity}G)</span>
-              <span>Day 3</span>
-              <span>Day 6</span>
-              <span>Day 9</span>
-              <span className="text-rose-400">Day 13 (0G Empty)</span>
+              {/* HOURS */}
+              <div className="relative overflow-hidden rounded-xl bg-[#0a0f1d] border border-teal-500/30 p-3.5 text-center shadow-lg group hover:border-teal-400/60 transition-colors">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-teal-400 to-transparent opacity-60" />
+                <div className="text-[10px] font-mono uppercase font-extrabold tracking-wider text-slate-400 mb-1 flex items-center justify-center gap-1">
+                  <span>{isUrdu ? 'گھنٹے' : 'HOURS'}</span>
+                </div>
+                <div className="font-mono text-3xl sm:text-4xl font-black text-teal-300 tracking-tight drop-shadow-[0_0_12px_rgba(20,184,166,0.45)]">
+                  {hoursStr}
+                </div>
+                <div className="text-[9px] font-mono text-slate-500 mt-1">
+                  {isUrdu ? `${hoursStr} گھنٹے` : `${hoursStr} Hours`}
+                </div>
+              </div>
+
+              {/* MINUTES */}
+              <div className="relative overflow-hidden rounded-xl bg-[#0a0f1d] border border-emerald-500/30 p-3.5 text-center shadow-lg group hover:border-emerald-400/60 transition-colors">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-60" />
+                <div className="text-[10px] font-mono uppercase font-extrabold tracking-wider text-slate-400 mb-1 flex items-center justify-center gap-1">
+                  <span>{isUrdu ? 'منٹ' : 'MINUTES'}</span>
+                </div>
+                <div className="font-mono text-3xl sm:text-4xl font-black text-emerald-300 tracking-tight drop-shadow-[0_0_12px_rgba(16,185,129,0.45)]">
+                  {minsStr}
+                </div>
+                <div className="text-[9px] font-mono text-slate-500 mt-1">
+                  {isUrdu ? `${minsStr} منٹ` : `${minsStr} Minutes`}
+                </div>
+              </div>
+
+              {/* SECONDS */}
+              <div className="relative overflow-hidden rounded-xl bg-[#0a0f1d] border border-cyan-500/30 p-3.5 text-center shadow-lg group hover:border-cyan-400/60 transition-colors">
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-60" />
+                <div className="text-[10px] font-mono uppercase font-extrabold tracking-wider text-slate-400 mb-1 flex items-center justify-center gap-1">
+                  <span>{isUrdu ? 'سیکنڈ' : 'SECONDS'}</span>
+                </div>
+                <div className="font-mono text-3xl sm:text-4xl font-black text-cyan-300 tracking-tight drop-shadow-[0_0_12px_rgba(6,182,212,0.45)]">
+                  {secsStr}
+                </div>
+                <div className="text-[9px] font-mono text-slate-500 mt-1">
+                  {isUrdu ? 'لائیو سیکنڈز' : 'Live Ticking'}
+                </div>
+              </div>
+            </div>
+
+            {/* Next Supply Cycle Prediction Bar */}
+            <div className="p-3.5 rounded-xl bg-[#0a0f1d]/90 border border-slate-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2">
+                  <Clock size={14} className="text-cyan-400 flex-shrink-0" />
+                  <span className="text-xs font-bold text-slate-200">
+                    {isUrdu
+                      ? `اگلی کے ڈبلیو ایس بی سپلائی کا متوقع وقت: تقریباً ${remDays} دن ${remHours} گھنٹے میں`
+                      : `Estimated Next KWSB Supply In: ~${remDays} Days ${remHours} Hours`}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-slate-400">
+                    {isUrdu ? `سائیکل پیش رفت: ${cycleProgressPct}%` : `Elapsed Cycle: ${cycleProgressPct}%`}
+                  </span>
+                  <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-500/30 font-extrabold">
+                    16.7d Cycle
+                  </span>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="relative w-full h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 rounded-full"
+                  style={{ width: `${cycleProgressPct}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                />
+              </div>
+
+              <div className="flex justify-between items-center text-[9px] font-mono text-slate-500 mt-1.5 px-0.5">
+                <span>{isUrdu ? 'آغاز (0 دن)' : 'Start (Day 0 - Tanks Full)'}</span>
+                <span className="text-amber-400">{isUrdu ? 'ذخیرہ ختم (13 واں دن)' : 'Reserve Depletion (Day 13.0)'}</span>
+                <span className="text-teal-400">{isUrdu ? 'اگلی لائن سپلائی (~16.7 واں دن)' : 'Next Line Supply (~Day 16.7)'}</span>
+              </div>
             </div>
           </div>
         </div>
