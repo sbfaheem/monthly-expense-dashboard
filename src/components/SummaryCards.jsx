@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react'
-import { motion, useAnimation, useReducedMotion } from 'framer-motion'
+import React, { useState, useEffect, useRef } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { useLanguage } from '../context/LanguageContext'
+import RollingOdometer from './RollingOdometer'
 
 // ================= ZERO-DEPENDENCY PROCEDURAL SOUND ENGINE =================
 const playProceduralSound = (type = 'surplus', isMuted = false) => {
@@ -13,7 +14,6 @@ const playProceduralSound = (type = 'surplus', isMuted = false) => {
     const now = ctx.currentTime
 
     if (type === 'bounce') {
-      // Tactile impact pop on badge strike
       const osc = ctx.createOscillator()
       const gain = ctx.createGain()
       osc.type = 'sine'
@@ -26,7 +26,6 @@ const playProceduralSound = (type = 'surplus', isMuted = false) => {
       osc.start(now)
       osc.stop(now + 0.09)
     } else if (type === 'surplus') {
-      // Ascending celebratory harmonic chime (C5 -> E5 -> G5 -> C6)
       const notes = [523.25, 659.25, 783.99, 1046.50]
       notes.forEach((freq, idx) => {
         const osc = ctx.createOscillator()
@@ -42,7 +41,6 @@ const playProceduralSound = (type = 'surplus', isMuted = false) => {
         osc.stop(now + idx * 0.07 + 0.45)
       })
     } else if (type === 'deficit') {
-      // Warm cautionary double pulse (E3 -> C3)
       const tones = [
         { freq: 164.81, time: 0.0, dur: 0.22 },
         { freq: 130.81, time: 0.18, dur: 0.32 }
@@ -66,7 +64,7 @@ const playProceduralSound = (type = 'surplus', isMuted = false) => {
       })
     }
   } catch (e) {
-    // Fallback if browser blocks audio
+    // Graceful audio fallback
   }
 }
 
@@ -87,9 +85,14 @@ export const SummaryCards = ({
   const shouldReduceMotion = useReducedMotion()
 
   // Views & Card state
-  const [is3DDeckView, setIs3DDeckView] = useState(true)
+  const [is3DDeckView, setIs3DDeckView] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('dashboard_cards_view')
+      if (stored) return stored === '3d'
+    }
+    return false // Default to the 5-card Classic Grid as in user screenshot
+  })
   const [activeCardIndex, setActiveCardIndex] = useState(0)
-  const [isBouncing, setIsBouncing] = useState(false)
   const [isAutoPlay, setIsAutoPlay] = useState(false)
   const [showRipple, setShowRipple] = useState(false)
   const [isMuted, setIsMuted] = useState(() => {
@@ -99,9 +102,7 @@ export const SummaryCards = ({
     return false
   })
 
-  // Physics animation controllers
-  const ballControls = useAnimation()
-  const deckControls = useAnimation()
+  const lastAdvanceRef = useRef(0)
 
   const isUrdu = lang === 'ur'
   const displayCurrency = isUrdu ? 'روپے' : currency
@@ -114,10 +115,81 @@ export const SummaryCards = ({
   const actualOverdrawn = typeof isOverdrawn === 'boolean' ? isOverdrawn : actualClosing < 0
   const isSurplus = actualNetCashFlow >= 0
 
+  const safeOpening = Number(openingBalance || 0)
+  const openingStr = (safeOpening < 0 ? '-' : '') + fmt(Math.abs(safeOpening))
+
   const cards = [
     {
+      id: 'opening',
+      label: t?.openingBalance || 'Opening Balance',
+      value: openingStr,
+      note: isNoData ? '0%' : (isUrdu ? 'گزشتہ اختتامی' : 'Previous closing'),
+      icon: 'account_balance',
+      iconColor: 'text-slate-400 dark:text-slate-500',
+      noteIcon: 'trending_flat',
+      noteColor: 'text-slate-500 dark:text-slate-400',
+      valueColor: 'text-slate-900 dark:text-slate-100',
+      accentBorder: 'border-slate-300 dark:border-slate-700',
+      badgeBg: 'bg-slate-700 text-white',
+      gradient: 'from-slate-500/10 via-slate-50/40 dark:via-slate-950/20 to-white dark:to-slate-900',
+      cardClass: 'bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 shadow-sm'
+    },
+    {
+      id: 'collection',
+      label: t?.monthlyCollection || 'Monthly Collection',
+      value: fmt(monthlyCollection),
+      note: isNoData ? '0%' : (isUrdu ? 'رہائشیوں سے وصولی' : 'Resident collections'),
+      icon: 'payments',
+      iconColor: 'text-orange-500',
+      noteIcon: 'receipt_long',
+      noteColor: 'text-slate-500 dark:text-slate-400',
+      valueColor: 'text-slate-900 dark:text-slate-100',
+      accentBorder: 'border-orange-500',
+      badgeBg: 'bg-orange-500 text-white',
+      gradient: 'from-orange-500/10 via-orange-50/40 dark:via-orange-950/20 to-white dark:to-slate-900',
+      cardClass: 'bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 border-l-4 border-l-orange-500 shadow-sm'
+    },
+    {
+      id: 'expense',
+      label: t?.totalExpense || 'Total Expense',
+      value: fmt(totalExpense),
+      note: isNoData ? '0%' : (isUrdu ? 'کل آپریشنل اخراجات' : 'Total operational spend'),
+      icon: 'shopping_cart',
+      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      noteIcon: 'receipt',
+      noteColor: 'text-emerald-700 dark:text-emerald-400 font-semibold',
+      valueColor: 'text-slate-900 dark:text-slate-100',
+      accentBorder: 'border-emerald-600',
+      badgeBg: 'bg-emerald-600 text-white',
+      gradient: 'from-emerald-500/10 via-emerald-50/40 dark:via-emerald-950/20 to-white dark:to-slate-900',
+      cardClass: 'bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 border-l-4 border-l-emerald-600 shadow-sm'
+    },
+    {
+      id: 'cashflow',
+      label: isSurplus ? (t?.netSurplus || 'Net Surplus') : (t?.netDeficit || 'Net Deficit'),
+      value: fmt(Math.abs(actualNetCashFlow)),
+      note: isNoData ? '0%' : (isSurplus 
+        ? (isUrdu ? 'بچت (+ مثبت کیش فلو)' : 'Surplus (+ Cash Flow)') 
+        : (isUrdu ? 'خسارہ (- منفی کیش فلو)' : 'Deficit (- Net Outflow)')),
+      icon: isSurplus ? 'trending_up' : 'trending_down',
+      iconColor: isSurplus ? 'text-emerald-500' : 'text-rose-500',
+      noteIcon: isSurplus ? 'check_circle' : 'warning',
+      noteColor: isSurplus ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
+      valueColor: isSurplus ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
+      accentBorder: isSurplus ? 'border-teal-500' : 'border-rose-500',
+      badgeBg: isSurplus ? 'bg-teal-600 text-white' : 'bg-rose-600 text-white',
+      gradient: isSurplus 
+        ? 'from-teal-500/10 via-teal-50/40 dark:via-teal-950/20 to-white dark:to-slate-900' 
+        : 'from-rose-500/15 via-rose-50/60 dark:via-rose-950/30 to-white dark:to-slate-900',
+      cardClass: isSurplus 
+        ? 'bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 border-l-4 border-l-emerald-500 shadow-sm' 
+        : '!bg-rose-50/70 dark:!bg-rose-950/20 !border-rose-200/90 dark:!border-rose-900/50 border-l-4 !border-l-rose-500 shadow-sm'
+    },
+    {
       id: 'closing',
-      label: !actualOverdrawn ? (t?.closingBalance || 'Closing Balance') : `${t?.closingBalance || 'Closing Balance'} (${t?.overdrawn || 'Overdrawn'})`,
+      label: !actualOverdrawn 
+        ? (t?.closingBalance || 'Closing Reserve Fund') 
+        : (isUrdu ? `${t?.closingBalance || 'اختتامی ریزرو فنڈ'}\n(${t?.overdrawn || 'خسارہ'})` : 'Closing Reserve Fund\n(Overdrawn)'),
       value: fmt(Math.abs(actualClosing)),
       note: isNoData ? '0%' : (!actualOverdrawn 
         ? (isUrdu ? 'جمع شدہ محفوظ فنڈ' : 'Accumulated Reserve') 
@@ -133,75 +205,9 @@ export const SummaryCards = ({
         ? 'from-emerald-500/10 via-emerald-50/40 dark:via-emerald-950/20 to-white dark:to-slate-900' 
         : 'from-rose-500/15 via-rose-50/60 dark:via-rose-950/30 to-white dark:to-slate-900',
       cardClass: !actualOverdrawn 
-        ? 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-secondary-gold' 
-        : '!bg-rose-50 dark:!bg-rose-900/20 !border-rose-200 dark:!border-rose-900/50 border-l-4 !border-l-rose-500'
-    },
-    {
-      id: 'cashflow',
-      label: isSurplus ? (t?.netSurplus || 'Monthly Surplus') : (t?.netDeficit || 'Monthly Deficit'),
-      value: fmt(Math.abs(actualNetCashFlow)),
-      note: isNoData ? '0%' : (isSurplus 
-        ? (isUrdu ? 'بچت (+ مثبت کیش فلو)' : 'Surplus (+ Cash Flow)') 
-        : (isUrdu ? 'خسارہ (- منفی کیش فلو)' : 'Deficit (- Net Outflow)')),
-      icon: isSurplus ? 'savings' : 'trending_down',
-      iconColor: isSurplus ? 'text-emerald-500' : 'text-rose-500',
-      noteIcon: isSurplus ? 'check_circle' : 'warning',
-      noteColor: isSurplus ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
-      valueColor: isSurplus ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
-      accentBorder: isSurplus ? 'border-teal-500' : 'border-rose-500',
-      badgeBg: isSurplus ? 'bg-teal-600 text-white' : 'bg-rose-600 text-white',
-      gradient: isSurplus 
-        ? 'from-teal-500/10 via-teal-50/40 dark:via-teal-950/20 to-white dark:to-slate-900' 
-        : 'from-rose-500/15 via-rose-50/60 dark:via-rose-950/30 to-white dark:to-slate-900',
-      cardClass: isSurplus 
-        ? 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-emerald-500' 
-        : '!bg-rose-50 dark:!bg-rose-950/20 !border-rose-200 dark:!border-rose-900 border-l-4 !border-l-rose-500'
-    },
-    {
-      id: 'collection',
-      label: t?.monthlyCollection || 'Monthly Collection',
-      value: fmt(monthlyCollection),
-      note: isNoData ? '0%' : (isUrdu ? 'رہائشیوں سے وصولی' : 'Resident collections'),
-      icon: 'payments',
-      iconColor: 'text-orange-500',
-      noteIcon: 'receipt_long',
-      noteColor: 'text-slate-500',
-      valueColor: 'text-slate-900 dark:text-slate-100',
-      accentBorder: 'border-orange-500',
-      badgeBg: 'bg-orange-500 text-white',
-      gradient: 'from-orange-500/10 via-orange-50/40 dark:via-orange-950/20 to-white dark:to-slate-900',
-      cardClass: 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-orange-500'
-    },
-    {
-      id: 'expense',
-      label: t?.totalExpense || 'Total Expense',
-      value: fmt(totalExpense),
-      note: isNoData ? '0%' : (isUrdu ? 'کل آپریشنل اخراجات' : 'Total operational spend'),
-      icon: 'shopping_cart',
-      iconColor: 'text-primary',
-      noteIcon: 'receipt',
-      noteColor: 'text-primary',
-      valueColor: 'text-slate-900 dark:text-slate-100',
-      accentBorder: 'border-blue-500',
-      badgeBg: 'bg-blue-600 text-white',
-      gradient: 'from-blue-500/10 via-blue-50/40 dark:via-blue-950/20 to-white dark:to-slate-900',
-      cardClass: 'bg-white dark:bg-slate-800 border border-primary/10 border-l-4 border-l-primary'
-    },
-    {
-      id: 'opening',
-      label: t?.openingBalance || 'Opening Balance',
-      value: fmt(openingBalance),
-      note: isNoData ? '0%' : (isUrdu ? 'گزشتہ اختتامی' : 'Previous closing'),
-      icon: 'account_balance',
-      iconColor: 'text-slate-400',
-      noteIcon: 'trending_flat',
-      noteColor: 'text-slate-400',
-      valueColor: 'text-slate-900 dark:text-slate-100',
-      accentBorder: 'border-slate-400',
-      badgeBg: 'bg-slate-700 text-white',
-      gradient: 'from-slate-500/10 via-slate-50/40 dark:via-slate-950/20 to-white dark:to-slate-900',
-      cardClass: 'bg-white dark:bg-slate-800 border border-primary/10'
-    },
+        ? 'bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 border-l-4 border-l-emerald-500 shadow-sm' 
+        : '!bg-rose-50/70 dark:!bg-rose-950/20 !border-rose-200/90 dark:!border-rose-900/50 border-l-4 !border-l-rose-600 shadow-sm'
+    }
   ]
 
   const toggleSound = () => {
@@ -215,81 +221,68 @@ export const SummaryCards = ({
     }
   }
 
-  // ================= 3D BALL BOUNCE PHYSICS RIGHT AT +ACTIVE =================
-  const triggerBallBounce = async () => {
-    if (isBouncing || shouldReduceMotion) return
-    setIsBouncing(true)
+  // ================= GUARANTEED ADVANCE DISPATCHER =================
+  const advanceToNextCard = (e) => {
+    if (e) {
+      if (typeof e.stopPropagation === 'function') e.stopPropagation()
+      if (typeof e.preventDefault === 'function') e.preventDefault()
+    }
 
-    // Phase 1: Ball leaps UP from the +Active badge
-    await ballControls.start({
-      y: -36,
-      scaleX: 0.88,
-      scaleY: 1.18,
-      transition: { duration: 0.22, ease: 'easeOut' }
-    })
+    const now = Date.now()
+    if (now - lastAdvanceRef.current < 250) return
+    lastAdvanceRef.current = now
 
-    // Phase 2: Ball slams DOWN directly onto the +Active badge surface
-    await ballControls.start({
-      y: 4,
-      scaleX: 1.35,
-      scaleY: 0.65,
-      transition: { duration: 0.1, ease: 'easeIn' }
-    })
-
-    // Phase 3: Contact impact! Shockwave, pop sound & audio chime
+    // Shockwave ripple
     setShowRipple(true)
+    setTimeout(() => setShowRipple(false), 400)
+
+    // Tactile bounce audio
     playProceduralSound('bounce', isMuted)
 
+    // Advance index
     setActiveCardIndex((prev) => {
       const nextIdx = (prev + 1) % cards.length
       playProceduralSound(isSurplus ? 'surplus' : 'deficit', isMuted)
       return nextIdx
     })
-
-    // Deck dips slightly to absorb the physical shock
-    deckControls.start({
-      rotateX: [16, 20, 16],
-      y: [0, 5, 0],
-      transition: { duration: 0.2 }
-    })
-
-    setShowRipple(false)
-
-    // Phase 4: Rebound back to gentle hovering rest position
-    await ballControls.start({
-      y: [4, -8, 0],
-      scaleX: [1.35, 0.95, 1],
-      scaleY: [0.65, 1.1, 1],
-      transition: { duration: 0.35, ease: 'easeOut' }
-    })
-
-    setIsBouncing(false)
   }
 
   // Auto-play loop
   useEffect(() => {
     let timer
-    if (isAutoPlay && is3DDeckView && !isBouncing) {
+    if (isAutoPlay && is3DDeckView) {
       timer = setTimeout(() => {
-        triggerBallBounce()
-      }, 2200)
+        advanceToNextCard()
+      }, 2300)
     }
     return () => clearTimeout(timer)
-  }, [isAutoPlay, is3DDeckView, isBouncing, activeCardIndex])
+  }, [isAutoPlay, is3DDeckView, activeCardIndex])
 
+  // Swiping gestures
   const handlePanEnd = (e, info) => {
     if (info.offset.y < -35) {
-      setActiveCardIndex((prev) => (prev + 1) % cards.length)
-      playProceduralSound(isSurplus ? 'surplus' : 'deficit', isMuted)
+      advanceToNextCard(e)
     } else if (info.offset.y > 35) {
+      if (e && typeof e.stopPropagation === 'function') e.stopPropagation()
+      const now = Date.now()
+      if (now - lastAdvanceRef.current < 250) return
+      lastAdvanceRef.current = now
+
+      setShowRipple(true)
+      setTimeout(() => setShowRipple(false), 400)
+      playProceduralSound('bounce', isMuted)
       setActiveCardIndex((prev) => (prev - 1 + cards.length) % cards.length)
       playProceduralSound(isSurplus ? 'surplus' : 'deficit', isMuted)
     }
   }
 
-  const handleCardTap = (idx) => {
-    setActiveCardIndex(idx)
-    playProceduralSound(isSurplus ? 'surplus' : 'deficit', isMuted)
+  const handleCardClick = (idx) => {
+    if (idx === activeCardIndex) {
+      advanceToNextCard()
+    } else {
+      setActiveCardIndex(idx)
+      playProceduralSound(isSurplus ? 'surplus' : 'deficit', isMuted)
+    }
   }
 
   return (
@@ -345,7 +338,7 @@ export const SummaryCards = ({
           <div className="inline-flex items-center p-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xs">
             <button
               type="button"
-              onClick={() => { setIs3DDeckView(false); setIsAutoPlay(false); }}
+              onClick={() => { setIs3DDeckView(false); setIsAutoPlay(false); if (typeof window !== 'undefined') localStorage.setItem('dashboard_cards_view', 'grid'); }}
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all duration-200 ${
                 !is3DDeckView
                   ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
@@ -358,7 +351,7 @@ export const SummaryCards = ({
 
             <button
               type="button"
-              onClick={() => setIs3DDeckView(true)}
+              onClick={() => { setIs3DDeckView(true); if (typeof window !== 'undefined') localStorage.setItem('dashboard_cards_view', '3d'); }}
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs transition-all duration-200 ${
                 is3DDeckView
                   ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
@@ -381,7 +374,7 @@ export const SummaryCards = ({
               <button
                 key={card.id}
                 type="button"
-                onClick={() => handleCardTap(i)}
+                onClick={() => handleCardClick(i)}
                 className={`px-3 py-1 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
                   activeCardIndex === i
                     ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm scale-105'
@@ -399,7 +392,6 @@ export const SummaryCards = ({
           >
             {/* Isometric Angled Deck Container */}
             <motion.div
-              animate={deckControls}
               style={{
                 transformStyle: 'preserve-3d',
                 rotateX: 16,
@@ -421,7 +413,7 @@ export const SummaryCards = ({
                 return (
                   <motion.div
                     key={card.id}
-                    onTap={() => handleCardTap(idx)}
+                    onTap={() => handleCardClick(idx)}
                     onPanEnd={handlePanEnd}
                     whileTap={{ scale: 0.985 }}
                     animate={{
@@ -453,7 +445,7 @@ export const SummaryCards = ({
                           : '0 10px 20px -6px rgba(15, 23, 42, 0.12)',
                       }}
                     >
-                      {/* Crisp Vector Typography Layer (No GPU Texture Blur) */}
+                      {/* Crisp Vector Typography Layer */}
                       <div 
                         style={{
                           transform: 'translateZ(1px)',
@@ -462,7 +454,7 @@ export const SummaryCards = ({
                           textRendering: 'geometricPrecision'
                         }}
                       >
-                        {/* Card Header */}
+                        {/* Header */}
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                             {card.label}
@@ -477,74 +469,105 @@ export const SummaryCards = ({
                           </div>
                         </div>
 
-                        {/* Card Amount */}
+                        {/* Amount with 3D Rolling Odometer */}
                         <div className="my-2">
-                          <div className={`text-3xl font-extrabold tracking-tight ${card.valueColor}`}>
-                            <span className="text-sm font-semibold mr-1.5 opacity-75">{displayCurrency}</span>
-                            {card.value}
-                          </div>
+                          <RollingOdometer
+                            value={card.value}
+                            prefix={displayCurrency}
+                            className={`text-3xl font-extrabold tracking-tight ${card.valueColor}`}
+                          />
                         </div>
 
-                        {/* Card Footer: Sub-note on Left & Active Badge with 3D Ball on Right */}
+                        {/* Footer with Active Badge & Bouncing Ball */}
                         <div className="mt-3 flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-700/60 relative">
                           <span className={`text-xs font-semibold flex items-center gap-1 ${card.noteColor}`}>
                             <span className="material-symbols-outlined text-xs">{card.noteIcon}</span>
                             <span>{card.note}</span>
                           </span>
 
-                          {/* ================= AT THE PLACE OF ACTIVE ================= */}
+                          {/* ================= ACTIVE BUTTON WITH CONTINUOUS BOUNCING BALL ================= */}
                           {isSelected ? (
-                            <div className="relative flex items-center">
-                              {/* Shockwave Ripple under Active Badge on Bounce Impact */}
+                            <div className="relative flex items-center z-20">
+                              {/* Shockwave Ripple */}
                               {showRipple && (
                                 <motion.div
                                   initial={{ opacity: 0.9, scale: 0.4 }}
                                   animate={{ opacity: 0, scale: 2 }}
-                                  transition={{ duration: 0.45, ease: 'easeOut' }}
+                                  transition={{ duration: 0.4, ease: 'easeOut' }}
                                   className={`pointer-events-none absolute -inset-2 rounded-full border-2 ${
                                     isSurplus ? 'border-emerald-400 bg-emerald-400/30' : 'border-rose-400 bg-rose-400/30'
                                   }`}
                                 />
                               )}
 
-                              {/* Interactive Badge + 3D Ball Resting Right At Active */}
+                              {/* Clickable Badge Trigger */}
                               <motion.button
                                 type="button"
-                                aria-label="Tap ball to bounce and switch cards"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  triggerBallBounce()
-                                }}
+                                aria-label="Advance Card"
                                 whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className={`group relative flex items-center gap-2 pl-3 pr-1.5 py-1 rounded-full border shadow-sm transition-all cursor-pointer ${
+                                whileTap={{ scale: 0.92 }}
+                                onTap={advanceToNextCard}
+                                onClick={advanceToNextCard}
+                                className={`group relative flex items-center gap-2 pl-3 pr-2 py-1 rounded-full border shadow-sm transition-all cursor-pointer pointer-events-auto select-none ${
                                   isSurplus
-                                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
-                                    : 'bg-rose-500/15 border-rose-500/40 text-rose-700 dark:text-rose-300'
+                                    ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25'
+                                    : 'bg-rose-500/15 border-rose-500/40 text-rose-700 dark:text-rose-300 hover:bg-rose-500/25'
                                 }`}
                               >
-                                <span className="text-xs font-extrabold flex items-center gap-1 select-none">
+                                <span className="text-xs font-extrabold flex items-center gap-1 pointer-events-none">
                                   <span className="text-[10px]">✦</span>
                                   <span>Active</span>
                                 </span>
 
-                                {/* 3D Glass Ball Embedded Right At Active Badge */}
-                                <motion.div
-                                  animate={ballControls}
-                                  className={`relative size-8 sm:size-9 rounded-full border border-white/90 shadow-lg backdrop-blur-md flex items-center justify-center ${
-                                    isSurplus
-                                      ? 'bg-gradient-to-tr from-white/40 via-emerald-200/70 to-white/95'
-                                      : 'bg-gradient-to-tr from-white/40 via-rose-200/70 to-white/95'
-                                  }`}
-                                  style={{
-                                    boxShadow: isSurplus
-                                      ? '0 6px 18px -2px rgba(16, 185, 129, 0.55), inset 0 2px 4px rgba(255,255,255,0.95)'
-                                      : '0 6px 18px -2px rgba(244, 63, 94, 0.55), inset 0 2px 4px rgba(255,255,255,0.95)',
-                                  }}
-                                >
-                                  <span className="absolute top-0.5 left-1 h-2 w-3 rounded-full bg-white/90 blur-[0.5px] transform -rotate-25 pointer-events-none" />
-                                  <span className={`absolute bottom-0.5 right-1 size-1.5 rounded-full blur-[0.5px] pointer-events-none ${isSurplus ? 'bg-emerald-400/80' : 'bg-rose-400/80'}`} />
-                                </motion.div>
+                                {/* Ball Housing */}
+                                <div className="relative size-8 flex items-center justify-center cursor-pointer pointer-events-auto">
+                                  {/* Shadow */}
+                                  {!shouldReduceMotion && (
+                                    <motion.span
+                                      animate={{
+                                        scale: [1, 0.45, 1],
+                                        opacity: [0.65, 0.15, 0.65],
+                                      }}
+                                      transition={{
+                                        duration: 0.85,
+                                        repeat: Infinity,
+                                        times: [0, 0.5, 1],
+                                        ease: 'easeInOut',
+                                      }}
+                                      className={`absolute bottom-0 inset-x-1 h-1.5 rounded-full blur-[1px] pointer-events-none ${
+                                        isSurplus ? 'bg-emerald-900/40' : 'bg-rose-900/40'
+                                      }`}
+                                    />
+                                  )}
+
+                                  {/* CONTINUOUS BOUNCING GLASS BALL */}
+                                  <motion.div
+                                    animate={shouldReduceMotion ? {} : {
+                                      y: [0, -18, 0],
+                                      scaleX: [1.22, 0.9, 1.22],
+                                      scaleY: [0.8, 1.14, 0.8],
+                                    }}
+                                    transition={{
+                                      duration: 0.85,
+                                      repeat: Infinity,
+                                      times: [0, 0.5, 1],
+                                      ease: ['easeOut', 'easeIn'],
+                                    }}
+                                    className={`relative size-7 rounded-full border border-white/90 shadow-md backdrop-blur-md flex items-center justify-center cursor-pointer pointer-events-auto ${
+                                      isSurplus
+                                        ? 'bg-gradient-to-tr from-white/40 via-emerald-200/70 to-white/95'
+                                        : 'bg-gradient-to-tr from-white/40 via-rose-200/70 to-white/95'
+                                    }`}
+                                    style={{
+                                      boxShadow: isSurplus
+                                        ? '0 6px 16px -2px rgba(16, 185, 129, 0.55), inset 0 2px 4px rgba(255,255,255,0.95)'
+                                        : '0 6px 16px -2px rgba(244, 63, 94, 0.55), inset 0 2px 4px rgba(255,255,255,0.95)',
+                                    }}
+                                  >
+                                    <span className="absolute top-0.5 left-1 h-1.5 w-2.5 rounded-full bg-white/90 blur-[0.5px] transform -rotate-25 pointer-events-none" />
+                                    <span className={`absolute bottom-0.5 right-1 size-1 rounded-full blur-[0.5px] pointer-events-none ${isSurplus ? 'bg-emerald-400/80' : 'bg-rose-400/80'}`} />
+                                  </motion.div>
+                                </div>
                               </motion.button>
                             </div>
                           ) : (
@@ -576,7 +599,7 @@ export const SummaryCards = ({
               }}
             >
               <div className="flex items-center justify-between mb-3">
-                <span className="text-slate-600 dark:text-slate-300 text-sm font-medium">
+                <span className="text-slate-600 dark:text-slate-300 text-sm font-medium leading-tight whitespace-pre-line">
                   {card.label}
                 </span>
                 <span className={`material-symbols-outlined text-xl ${card.iconColor}`}>
@@ -584,8 +607,12 @@ export const SummaryCards = ({
                 </span>
               </div>
 
-              <div className={`text-2xl font-bold tracking-tight select-all ${card.valueColor}`}>
-                {displayCurrency} {card.value}
+              <div className="my-1">
+                <RollingOdometer
+                  value={card.value}
+                  prefix={displayCurrency}
+                  className={`text-2xl font-bold tracking-tight select-all ${card.valueColor}`}
+                />
               </div>
 
               <div className={`mt-2 text-xs font-semibold flex items-center gap-1 ${card.noteColor}`}>

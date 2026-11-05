@@ -2,59 +2,82 @@ import React from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-const URDU_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹']
 
-/**
- * Individual 3D Mechanical Odometer Digit Drum Column
- */
-function OdometerDigit({
-  digit,
-  index,
-  totalDigits,
-  isUrduDigit = false,
-  shouldReduceMotion = false,
-}) {
-  const digitList = isUrduDigit ? URDU_DIGITS : DIGITS
-  const targetIndex = isUrduDigit
-    ? URDU_DIGITS.indexOf(digit)
-    : parseInt(digit, 10)
+function OdometerDigit({ char, delay = 0, shouldReduceMotion = false }) {
+  const num = parseInt(char, 10)
 
-  const safeTarget = targetIndex >= 0 ? targetIndex : 0
+  // Minus sign in drum slot
+  if (char === '-') {
+    return (
+      <span
+        className="relative inline-flex items-center justify-center h-[1.24em] w-[0.56em] mx-[0.5px] overflow-hidden align-baseline select-none rounded-[4px] bg-slate-100/90 dark:bg-slate-800/90 border border-slate-300/70 dark:border-slate-700 shadow-[inset_0_1px_3px_rgba(0,0,0,0.2),inset_0_-1px_2px_rgba(0,0,0,0.2)]"
+        style={{ verticalAlign: '-0.14em' }}
+      >
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-black/20 via-transparent to-black/20"
+        />
+        <span className="font-black leading-none">-</span>
+      </span>
+    )
+  }
 
-  // Staggered inertia: lower-place digits settle first, higher-place digits roll slightly longer
-  const staggerDelay = (totalDigits - 1 - index) * 0.035
+  // Comma separator
+  if (isNaN(num)) {
+    return (
+      <span className="inline-block px-[0.06em] select-none opacity-85 leading-none font-black">
+        {char}
+      </span>
+    )
+  }
+
+  if (shouldReduceMotion) {
+    return (
+      <span
+        className="relative inline-flex items-center justify-center h-[1.24em] w-[0.66em] mx-[0.5px] overflow-hidden align-baseline select-none rounded-[4px] bg-slate-100/90 dark:bg-slate-800/90 border border-slate-300/70 dark:border-slate-700 shadow-[inset_0_1px_3px_rgba(0,0,0,0.2),inset_0_-1px_2px_rgba(0,0,0,0.2)]"
+        style={{ verticalAlign: '-0.14em' }}
+      >
+        <span className="tabular-nums leading-none font-black">{num}</span>
+      </span>
+    )
+  }
 
   return (
     <span
-      className="relative inline-block overflow-hidden h-[1.18em] leading-[1.18em] align-top select-none font-mono"
+      className="relative inline-flex items-center justify-center h-[1.24em] w-[0.66em] mx-[0.5px] overflow-hidden align-baseline select-none rounded-[4px] bg-slate-100/90 dark:bg-slate-800/90 border border-slate-300/70 dark:border-slate-700 shadow-[inset_0_1px_3px_rgba(0,0,0,0.2),inset_0_-1px_2px_rgba(0,0,0,0.2)]"
       style={{
+        verticalAlign: '-0.14em',
         WebkitFontSmoothing: 'antialiased',
         MozOsxFontSmoothing: 'grayscale',
+        textRendering: 'geometricPrecision',
       }}
     >
-      {/* 3D Cylindrical Drum Vignette Gradient */}
+      {/* 3D Cylindrical Drum Highlight / Vignette */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-10 rounded-xs bg-gradient-to-b from-black/20 via-transparent to-black/20 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25),inset_0_-1px_2px_rgba(0,0,0,0.25)]"
+        className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-black/20 via-transparent to-black/20"
       />
 
-      {/* Vertical Rolling Drum Strip */}
       <motion.span
-        initial={shouldReduceMotion ? { y: `${-safeTarget * 10}%` } : { y: '0%' }}
-        animate={{ y: `${-safeTarget * 10}%` }}
+        className="absolute left-0 top-0 flex flex-col items-center w-full"
+        initial={{ y: 0 }}
+        animate={{ y: `-${num * 10}%` }}
         transition={{
           type: 'spring',
-          stiffness: 110,
-          damping: 15,
-          mass: 0.6,
-          delay: shouldReduceMotion ? 0 : staggerDelay,
+          stiffness: 240,
+          damping: 24,
+          mass: 0.45,
+          delay: delay,
         }}
-        className="flex flex-col will-change-transform"
+        style={{
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+        }}
       >
-        {digitList.map((d) => (
+        {DIGITS.map((d) => (
           <span
             key={d}
-            className="h-[1.18em] flex items-center justify-center leading-[1.18em] font-mono select-none"
+            className="h-[1.24em] flex items-center justify-center tabular-nums leading-none font-black"
           >
             {d}
           </span>
@@ -64,85 +87,56 @@ function OdometerDigit({
   )
 }
 
-/**
- * RollingOdometer Component
- * Animates numerical transitions with a 3D mechanical drum roll effect.
- */
 export const RollingOdometer = ({
-  value = 0,
+  value = '0',
   prefix = '',
   suffix = '',
   className = '',
 }) => {
   const shouldReduceMotion = useReducedMotion()
-  const strValue = String(value ?? '0')
-  const chars = strValue.split('')
+  const rawString = String(value ?? 0)
+  const characters = rawString.split('')
 
-  // Detect whether character is an English or Urdu digit
-  const isDigit = (c) => /\d/.test(c) || URDU_DIGITS.includes(c)
-
-  // Count total digits for inertia staggering
-  const totalDigits = chars.filter(isDigit).length
-
-  // Build digit positions from right to left for stable component keys
-  let digitCounter = 0
-  const charMeta = chars.map((char, index) => {
-    const isNum = isDigit(char)
-    const currentDigitIndex = isNum ? digitCounter++ : null
-    const placeFromRight = chars.length - 1 - index
-    return {
-      char,
-      isNum,
-      currentDigitIndex,
-      placeFromRight,
-      isUrduNum: URDU_DIGITS.includes(char),
-    }
-  })
+  let digitIndex = 0
 
   return (
-    <span
-      className={`inline-flex items-baseline font-mono tracking-tight ${className}`}
-      dir="ltr"
+    <div
+      className={`inline-flex items-baseline font-mono tracking-tight tabular-nums ${className}`}
+      style={{
+        WebkitFontSmoothing: 'antialiased',
+        MozOsxFontSmoothing: 'grayscale',
+        textRendering: 'geometricPrecision',
+        transform: 'translateZ(0)',
+      }}
     >
       {prefix && (
-        <span className="text-[0.55em] font-semibold mr-1.5 opacity-75 align-baseline select-none">
+        <span className="text-[0.72em] font-bold mr-1.5 opacity-80 font-sans select-none self-center">
           {prefix}
         </span>
       )}
 
-      <span className="inline-flex items-baseline">
-        {charMeta.map(({ char, isNum, currentDigitIndex, placeFromRight, isUrduNum }) => {
-          if (isNum) {
-            return (
-              <OdometerDigit
-                key={`odometer-col-${placeFromRight}`}
-                digit={char}
-                index={currentDigitIndex}
-                totalDigits={totalDigits}
-                isUrduDigit={isUrduNum}
-                shouldReduceMotion={shouldReduceMotion}
-              />
-            )
-          }
+      <div className="inline-flex items-baseline">
+        {characters.map((char, idx) => {
+          const isNum = !isNaN(parseInt(char, 10))
+          const delay = isNum ? digitIndex++ * 0.03 : 0
 
-          // Static characters (comma, minus, dot, currency symbols, spaces)
           return (
-            <span
-              key={`odometer-sep-${placeFromRight}-${char}`}
-              className="inline-block px-[0.03em] opacity-85 select-none font-mono"
-            >
-              {char}
-            </span>
+            <OdometerDigit
+              key={`${idx}-${char}`}
+              char={char}
+              delay={delay}
+              shouldReduceMotion={shouldReduceMotion}
+            />
           )
         })}
-      </span>
+      </div>
 
       {suffix && (
-        <span className="text-[0.55em] font-semibold ml-1.5 opacity-75 align-baseline select-none">
+        <span className="text-[0.72em] font-bold ml-1.5 opacity-80 font-sans select-none self-center">
           {suffix}
         </span>
       )}
-    </span>
+    </div>
   )
 }
 
