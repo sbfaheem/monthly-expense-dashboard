@@ -4,77 +4,107 @@ import {
   Shield,
   Zap,
   Trash2,
-  Droplets,
   Wrench,
   Sparkles,
   PieChart,
-  BarChart3,
   Layers,
-  Video
+  Video,
+  LayoutGrid
 } from 'lucide-react'
 import { useLanguage } from '../context/LanguageContext'
 import { soundEffects } from '../utils/soundEffects'
+import { getParentCategory, normalizeItem } from '../utils/normalizeExpense'
+import { translations, translateCategory, translateItemName, translateMonth } from '../utils/translations'
 import RollingOdometer from './RollingOdometer'
 
-// Category metadata with localized copy, icons, and theme accents
-const CATEGORY_META = {
-  security: {
-    icon: Shield,
-    en: 'Security Staff & Night Patrol',
-    ur: 'سیکیورٹی عملہ و گارڈز',
-    color: '#3b82f6',
-  },
-  electric: {
-    icon: Zap,
-    en: 'K-Electric Common Grid Bills',
-    ur: 'کے الیکٹرک بجلی بل (مشترکہ)',
-    color: '#f59e0b',
-  },
-  sanitation: {
-    icon: Trash2,
-    en: 'Waste & Garbage Disposal',
-    ur: 'صفائی و کچرا تلفی',
-    color: '#10b981',
-  },
-  water: {
-    icon: Droplets,
-    en: 'Water Supply Logistics & Valves',
-    ur: 'پانی سپلائی و موٹر اخراجات',
-    color: '#06b6d4',
-  },
-  maintenance: {
-    icon: Wrench,
-    en: 'General Maintenance & Repairs',
-    ur: 'مرمت و دیکھ بھال',
-    color: '#8b5cf6',
-  },
-  capex: {
-    icon: Video,
-    en: 'CCTV Surveillance & CapEx',
-    ur: 'سی سی ٹی وی کیمرے و اثاثہ جات',
-    color: '#ec4899',
-  },
-  other: {
+// Helper to resolve parent category and metadata matching Dashboard standards
+function getCategoryInfo(item, isUrdu = false) {
+  const normName = normalizeItem(item.name || '')
+  const parentCat = getParentCategory(normName, item.category)
+  
+  const lowerName = (item.name || '').toLowerCase()
+  const lowerCat = (item.category || '').toLowerCase()
+
+  // Specific check for dedicated sanitation & waste stream
+  if (
+    lowerName.includes('gutter') ||
+    lowerName.includes('kacha') ||
+    lowerName.includes('garbage') ||
+    lowerCat.includes('waste') ||
+    lowerCat.includes('sanitation')
+  ) {
+    return {
+      key: 'sanitation',
+      titleEn: 'Sanitation & Waste Disposal',
+      titleUr: 'صفائی اور کچرا تلفی',
+      icon: Trash2,
+      color: '#10b981',
+      defaultItemEn: 'Waste Disposal & Gutter Cleaning',
+      defaultItemUr: 'کچرا تلفی و گٹر صفائی'
+    }
+  }
+
+  if (parentCat === 'Salaries & Payroll') {
+    return {
+      key: 'salaries',
+      titleEn: 'Salaries & Payroll',
+      titleUr: 'عملہ اور تنخواہیں',
+      icon: Shield,
+      color: '#3b82f6',
+      defaultItemEn: 'Security Expense, Sweeper Salary',
+      defaultItemUr: 'سیکیورٹی گارڈز بل، خاکروب تنخواہ'
+    }
+  }
+
+  if (parentCat === 'Electrical & Infrastructure') {
+    return {
+      key: 'electrical',
+      titleEn: 'Electrical & Infrastructure',
+      titleUr: 'برقی و بجلی کا نظام',
+      icon: Zap,
+      color: '#f59e0b',
+      defaultItemEn: 'Electrical Accessories, Electrician Charges',
+      defaultItemUr: 'برقی آلات و سامان، الیکٹریشن چارجز'
+    }
+  }
+
+  if (parentCat === 'Capital Expenditures (CapEx)') {
+    return {
+      key: 'capex',
+      titleEn: 'Capital Expenditures (CapEx)',
+      titleUr: 'بڑے اثاثے (CapEx)',
+      icon: Video,
+      color: '#ec4899',
+      defaultItemEn: 'CCTV Security Cameras',
+      defaultItemUr: 'سی سی ٹی وی کیمرے'
+    }
+  }
+
+  if (parentCat === 'Supplies & Hardware') {
+    return {
+      key: 'supplies',
+      titleEn: 'Supplies & Hardware',
+      titleUr: 'صفائی اور ہارڈویئر سامان',
+      icon: Wrench,
+      color: '#06b6d4',
+      defaultItemEn: 'Staff Uniforms, Locks & Cleaning Tools',
+      defaultItemUr: 'اسٹاف یونیفارم، تالے و صفائی سامان'
+    }
+  }
+
+  // Community & Utilities (default)
+  return {
+    key: 'community',
+    titleEn: 'Community & Utilities',
+    titleUr: 'باغبانی، پانی اور تقریبات',
     icon: Sparkles,
-    en: 'Operational Contingencies',
-    ur: 'دیگر متفرق اخراجات',
-    color: '#64748b',
+    color: '#8b5cf6',
+    defaultItemEn: 'Water Tanker, Park & Event Expenses',
+    defaultItemUr: 'واٹر ٹینکر، پارک اور تقریبات'
   }
 }
 
-// Map expense items to standardized categories
-function classifyExpense(item) {
-  const str = `${item.category || ''} ${item.name || ''}`.toLowerCase()
-  if (str.includes('cctv') || str.includes('capex') || str.includes('camera') || str.includes('fan') || str.includes('furniture')) return 'capex'
-  if (str.includes('salary') || str.includes('payroll') || str.includes('security') || str.includes('guard')) return 'security'
-  if (str.includes('electric') || str.includes('bulb') || str.includes('light') || str.includes('generator')) return 'electric'
-  if (str.includes('water') || str.includes('tanker') || str.includes('hydrant')) return 'water'
-  if (str.includes('clean') || str.includes('sanitation') || str.includes('waste') || str.includes('jhado') || str.includes('sweeper')) return 'sanitation'
-  if (str.includes('maintenance') || str.includes('hardware') || str.includes('repair') || str.includes('supplies')) return 'maintenance'
-  return 'other'
-}
-
-// SVG Arc Math Helper
+// SVG Arc Math Helper for 3D Donut
 function describeDonutArc(cx, cy, rOuter, rInner, startAngle, endAngle) {
   const span = Math.min(359.99, Math.max(0.01, endAngle - startAngle))
   const sAngle = startAngle
@@ -106,6 +136,7 @@ function describeDonutArc(cx, cy, rOuter, rInner, startAngle, endAngle) {
 
 export const Charts = ({
   expenses = [],
+  selectedMonth = '',
   totalExpense = 297425,
   currency = 'PKR'
 }) => {
@@ -131,8 +162,9 @@ export const Charts = ({
 
   const isWide = containerWidth >= 680
 
-  const { lang, isRtl } = useLanguage ? useLanguage() : { lang: 'en', isRtl: false }
+  const { lang, t: contextT, isRtl } = useLanguage ? useLanguage() : { lang: 'en', t: {}, isRtl: false }
   const isUrdu = lang === 'ur'
+  const t = contextT && Object.keys(contextT).length > 0 ? contextT : (translations[lang] || translations.en)
   const displayCurrency = isUrdu ? 'روپے' : currency
   const shouldReduceMotion = useReducedMotion()
 
@@ -140,34 +172,100 @@ export const Charts = ({
   // View mode: 'donut' | 'split' | 'bars'
   const [viewMode, setViewMode] = useState('split')
 
-  // Aggregate category amounts
+  // Aggregate monthly expenses into standard categories from the Monthly Expense Dashboard
   const categoryData = useMemo(() => {
-    const defaultData = [
-      { key: 'security', amount: 125000, vendor: 'Falcon Guards Security Corp' },
-      { key: 'electric', amount: 83500, vendor: 'K-Electric Consumer Unit #882' },
-      { key: 'sanitation', amount: 45000, vendor: 'Town Municipal Waste Services' },
-      { key: 'water', amount: 26800, vendor: 'Hydrant Logistics & Tankers' },
-      { key: 'maintenance', amount: 17125, vendor: 'Street Lighting & Valve Repairs' },
-    ]
-
     const map = {}
+    
     if (Array.isArray(expenses) && expenses.length > 0) {
       expenses.forEach((item) => {
-        const catKey = classifyExpense(item)
+        const info = getCategoryInfo(item, isUrdu)
         const amt = Number(item.amount || item.cost || 0)
-        if (!map[catKey]) {
-          map[catKey] = {
-            key: catKey,
+        const normName = normalizeItem(item.name || '')
+        const translatedItemName = isUrdu ? translateItemName(normName, 'ur') : normName
+
+        if (!map[info.key]) {
+          map[info.key] = {
+            key: info.key,
+            title: isUrdu ? info.titleUr : info.titleEn,
+            titleEn: info.titleEn,
+            titleUr: info.titleUr,
+            icon: info.icon,
+            color: info.color,
             amount: 0,
-            vendor: item.vendor || item.recipient || 'Verified Contractor'
+            itemNames: [],
+            defaultSubtitle: isUrdu ? info.defaultItemUr : info.defaultItemEn
           }
         }
-        map[catKey].amount += amt
+        map[info.key].amount += amt
+        if (normName && !map[info.key].itemNames.includes(translatedItemName)) {
+          map[info.key].itemNames.push(translatedItemName)
+        }
       })
     }
 
-    const source = Object.keys(map).length > 0 ? Object.values(map) : defaultData
-    // Sort descending by amount so largest stream is first
+    let source = Object.values(map)
+    
+    // Fallback using official September 2026 expense figures if no items passed
+    if (source.length === 0) {
+      source = [
+        {
+          key: 'salaries',
+          title: isUrdu ? 'عملہ اور تنخواہیں' : 'Salaries & Payroll',
+          icon: Shield,
+          color: '#3b82f6',
+          amount: 257525,
+          defaultSubtitle: isUrdu ? 'سیکیورٹی گارڈز بل، خاکروب تنخواہ' : 'Security Expense, Sweeper Salary',
+          itemNames: [isUrdu ? 'سیکیورٹی گارڈز بل، خاکروب تنخواہ' : 'Security Expense, Sweeper Salary']
+        },
+        {
+          key: 'electrical',
+          title: isUrdu ? 'برقی و بجلی کا نظام' : 'Electrical & Infrastructure',
+          icon: Zap,
+          color: '#f59e0b',
+          amount: 17700,
+          defaultSubtitle: isUrdu ? 'برقی آلات و سامان، الیکٹریشن چارجز' : 'Electrical Accessories, Electrician Charges',
+          itemNames: [isUrdu ? 'برقی آلات و سامان، الیکٹریشن چارجز' : 'Electrical Accessories, Electrician Charges']
+        },
+        {
+          key: 'capex',
+          title: isUrdu ? 'بڑے اثاثے (CapEx)' : 'Capital Expenditures (CapEx)',
+          icon: Video,
+          color: '#ec4899',
+          amount: 9000,
+          defaultSubtitle: isUrdu ? 'سی سی ٹی وی کیمرے' : 'CCTV Security Cameras',
+          itemNames: [isUrdu ? 'سی سی ٹی وی کیمرے' : 'CCTV Security Cameras']
+        },
+        {
+          key: 'community',
+          title: isUrdu ? 'باغبانی، پانی اور تقریبات' : 'Community & Utilities',
+          icon: Sparkles,
+          color: '#8b5cf6',
+          amount: 7700,
+          defaultSubtitle: isUrdu ? 'متفرق اخراجات، واٹر ٹینکر' : 'Miscellaneous Expenses, Water Tanker',
+          itemNames: [isUrdu ? 'متفرق اخراجات، واٹر ٹینکر' : 'Miscellaneous Expenses, Water Tanker']
+        },
+        {
+          key: 'supplies',
+          title: isUrdu ? 'صفائی اور ہارڈویئر سامان' : 'Supplies & Hardware',
+          icon: Wrench,
+          color: '#06b6d4',
+          amount: 3500,
+          defaultSubtitle: isUrdu ? 'اسٹاف یونیفارم' : 'Staff Uniforms',
+          itemNames: [isUrdu ? 'اسٹاف یونیفارم' : 'Staff Uniforms']
+        },
+        {
+          key: 'sanitation',
+          title: isUrdu ? 'صفائی اور کچرا تلفی' : 'Sanitation & Waste Disposal',
+          icon: Trash2,
+          color: '#10b981',
+          amount: 2000,
+          defaultSubtitle: isUrdu ? 'گٹر صفائی' : 'Gutter Cleaning',
+          itemNames: [isUrdu ? 'گٹر صفائی' : 'Gutter Cleaning']
+        }
+      ]
+    }
+
+    // Sort descending by amount so the largest allocation leads
     source.sort((a, b) => b.amount - a.amount)
 
     const sum = source.reduce((acc, cur) => acc + cur.amount, 0) || totalExpense || 1
@@ -181,8 +279,10 @@ export const Charts = ({
       const midAngle = startAngle + sliceAngle / 2
       currentAngle = endAngle
 
-      const meta = CATEGORY_META[item.key] || CATEGORY_META.other
       const midRad = (midAngle - 90) * (Math.PI / 180)
+      const subtitle = (item.itemNames && item.itemNames.length > 0)
+        ? item.itemNames.slice(0, 3).join(isUrdu ? '، ' : ', ')
+        : item.defaultSubtitle
 
       return {
         ...item,
@@ -193,21 +293,23 @@ export const Charts = ({
         midAngle,
         explodeX: Math.cos(midRad) * 14,
         explodeY: Math.sin(midRad) * 14,
-        meta,
+        subtitle
       }
     })
-  }, [expenses, totalExpense])
+  }, [expenses, totalExpense, isUrdu])
 
   const totalCalculated = useMemo(() => {
     return categoryData.reduce((sum, item) => sum + item.amount, 0)
   }, [categoryData])
 
   const activeCategory = categoryData[activeCategoryIndex] || categoryData[0] || {
-    key: 'security',
+    key: 'salaries',
+    title: isUrdu ? 'عملہ اور تنخواہیں' : 'Salaries & Payroll',
+    subtitle: isUrdu ? 'سیکیورٹی گارڈز بل، خاکروب تنخواہ' : 'Security Expense, Sweeper Salary',
     percentage: '100',
     amount: totalCalculated,
-    vendor: 'Verified Contractor',
-    meta: CATEGORY_META.security
+    color: '#3b82f6',
+    icon: Shield
   }
 
   // 3D Perspective Tilt Physics
@@ -249,7 +351,7 @@ export const Charts = ({
 
   return (
     <div ref={containerRef} className="w-full my-6">
-      {/* ─── Header & Segmented View Controls ─── */}
+      {/* ─── Header & Segmented View Controls (Standard Dashboard Text) ─── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 px-1">
         <div className="flex items-center gap-3">
           <div className="size-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-500 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
@@ -258,7 +360,7 @@ export const Charts = ({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                {isUrdu ? 'اخراجات کی تفصیل (3D ڈونٹ)' : 'Expense Breakdown & Allocation'}
+                {t.expenseBreakdown || (isUrdu ? 'اخراجات کی تفصیل' : 'Expense Breakdown')}
               </h3>
               <span className="text-[10px] font-mono font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 shadow-xs">
                 3D EXPLODED VIEW
@@ -266,8 +368,8 @@ export const Charts = ({
             </div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
               {isUrdu
-                ? 'کسی بھی زمرے پر ٹیپ کر کے تفصیلی خرچ ملاحظہ کریں'
-                : 'Tap or hover any slice to explode category details and vendor allocation'}
+                ? 'کسی بھی شعبے پر ٹیپ یا ہوور کر کے 3D پاپ آؤٹ سلائس اور تفصیلات دیکھیں'
+                : 'Tap or hover on any sector or category item to pop out slices in 3D perspective'}
             </p>
           </div>
         </div>
@@ -307,8 +409,8 @@ export const Charts = ({
                 : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
             }`}
           >
-            <BarChart3 size={13} />
-            <span>{isUrdu ? 'بارز' : 'Progress Bars'}</span>
+            <LayoutGrid size={13} />
+            <span>{isUrdu ? 'شعبہ جات' : 'Categories'}</span>
           </button>
         </div>
       </div>
@@ -351,8 +453,8 @@ export const Charts = ({
                 <defs>
                   {categoryData.map((item) => (
                     <linearGradient key={`grad-${item.key}`} id={`grad-${item.key}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor={item.meta.color} stopOpacity="1" />
-                      <stop offset="100%" stopColor={item.meta.color} stopOpacity="0.84" />
+                      <stop offset="0%" stopColor={item.color} stopOpacity="1" />
+                      <stop offset="100%" stopColor={item.color} stopOpacity="0.84" />
                     </linearGradient>
                   ))}
                 </defs>
@@ -387,7 +489,7 @@ export const Charts = ({
                         className="transition-all duration-200 hover:brightness-110"
                         style={{
                           filter: isSelected
-                            ? `drop-shadow(0 10px 14px ${item.meta.color}66)`
+                            ? `drop-shadow(0 10px 14px ${item.color}66)`
                             : 'none',
                         }}
                       />
@@ -407,7 +509,7 @@ export const Charts = ({
                 className="absolute flex flex-col items-center justify-center size-[94px] sm:size-[102px] rounded-full bg-white/95 dark:bg-[#0b1222] border-2 border-slate-200/90 dark:border-slate-700 shadow-lg pointer-events-none text-center p-1.5"
               >
                 <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-slate-400">
-                  {isUrdu ? 'کل خرچ' : 'TOTAL SPEND'}
+                  {t.totalSpend || (isUrdu ? 'مجموعی خرچ' : 'TOTAL SPEND')}
                 </span>
                 <div className="my-0.5" dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }}>
                   <RollingOdometer
@@ -417,7 +519,7 @@ export const Charts = ({
                   />
                 </div>
                 <span className="text-[8px] font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.2 rounded-full border border-emerald-500/20">
-                  100% Settled
+                  {isUrdu ? translateMonth(selectedMonth || 'September 2026', 'ur') : (selectedMonth || 'September 2026')}
                 </span>
               </motion.div>
             </motion.div>
@@ -432,25 +534,23 @@ export const Charts = ({
                 transition={{ type: 'spring', stiffness: 320, damping: 24 }}
                 className="w-full max-w-[320px] bg-white/95 dark:bg-slate-800/95 backdrop-blur-md px-3.5 py-2.5 rounded-2xl border-2 border-slate-200/80 dark:border-slate-700/80 shadow-md flex items-center justify-between gap-3 mt-1"
                 style={{
-                  borderLeftColor: activeCategory.meta.color,
+                  borderLeftColor: activeCategory.color,
                   borderLeftWidth: '4px'
                 }}
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div
                     className="size-8 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0"
-                    style={{ backgroundColor: activeCategory.meta.color }}
+                    style={{ backgroundColor: activeCategory.color }}
                   >
-                    <activeCategory.meta.icon size={16} />
+                    <activeCategory.icon size={16} />
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
-                        {isUrdu ? activeCategory.meta.ur : activeCategory.meta.en}
-                      </span>
-                    </div>
+                    <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate block">
+                      {activeCategory.title}
+                    </span>
                     <p className="text-[11px] font-medium text-slate-400 truncate">
-                      {activeCategory.vendor}
+                      {activeCategory.subtitle}
                     </p>
                   </div>
                 </div>
@@ -458,11 +558,11 @@ export const Charts = ({
                   <span
                     className="inline-block text-[10px] font-mono font-black px-1.5 py-0.5 rounded"
                     style={{
-                      backgroundColor: `${activeCategory.meta.color}20`,
-                      color: activeCategory.meta.color,
+                      backgroundColor: `${activeCategory.color}20`,
+                      color: activeCategory.color,
                     }}
                   >
-                    {activeCategory.percentage}%
+                    {activeCategory.percentage}% {isUrdu ? 'حصہ' : 'share'}
                   </span>
                   <div className="text-xs sm:text-sm font-mono font-black text-slate-900 dark:text-white mt-0.5">
                     {displayCurrency} {activeCategory.amount.toLocaleString('en-PK')}
@@ -473,7 +573,7 @@ export const Charts = ({
           </div>
         )}
 
-        {/* ================= INTERACTIVE PROGRESS BARS ================= */}
+        {/* ================= CATEGORY BREAKDOWN CARDS ================= */}
         {viewMode !== 'donut' && (
           <div
             className={`space-y-3 w-full ${
@@ -483,16 +583,16 @@ export const Charts = ({
             {/* Header Row */}
             <div className="flex items-center justify-between gap-2 px-1 mb-1">
               <span className="text-xs font-black uppercase tracking-wider text-slate-400">
-                {isUrdu ? 'تفصیلی اخراجات بریک ڈاؤن' : 'Breakdown by Stream'}
+                {isUrdu ? 'شعبہ وار اخراجات کی تفصیل' : 'Expense Breakdown by Category'}
               </span>
               <span className="text-xs font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                {categoryData.length} {isUrdu ? 'اقسام' : 'Streams'}
+                {categoryData.length} {isUrdu ? 'شعبہ جات' : 'Categories'}
               </span>
             </div>
 
             {categoryData.map((item, idx) => {
               const isSelected = activeCategoryIndex === idx
-              const Icon = item.meta.icon
+              const Icon = item.icon
 
               return (
                 <motion.div
@@ -507,7 +607,7 @@ export const Charts = ({
                       : 'bg-white/70 dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700/80 hover:bg-white dark:hover:bg-slate-800'
                   }`}
                   style={{
-                    borderColor: isSelected ? item.meta.color : undefined,
+                    borderColor: isSelected ? item.color : undefined,
                   }}
                 >
                   {/* Active Indicator Line */}
@@ -515,7 +615,7 @@ export const Charts = ({
                     <motion.div
                       layoutId="activeBarIndicator"
                       className="absolute top-0 bottom-0 left-0 w-1.5 rounded-r-full"
-                      style={{ backgroundColor: item.meta.color }}
+                      style={{ backgroundColor: item.color }}
                     />
                   )}
 
@@ -524,16 +624,16 @@ export const Charts = ({
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <div
                         className="size-8 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0"
-                        style={{ backgroundColor: item.meta.color }}
+                        style={{ backgroundColor: item.color }}
                       >
                         <Icon size={16} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 block leading-tight truncate">
-                          {isUrdu ? item.meta.ur : item.meta.en}
+                          {item.title}
                         </span>
                         <span className="text-[11px] font-medium text-slate-400 block mt-0.5 truncate">
-                          {item.vendor}
+                          {item.subtitle}
                         </span>
                       </div>
                     </div>
@@ -546,8 +646,8 @@ export const Charts = ({
                       <span
                         className="inline-block text-[10px] font-mono font-black px-1.5 py-0.5 rounded mt-0.5 whitespace-nowrap"
                         style={{
-                          backgroundColor: `${item.meta.color}20`,
-                          color: item.meta.color,
+                          backgroundColor: `${item.color}20`,
+                          color: item.color,
                         }}
                       >
                         {item.percentage}% {isUrdu ? 'حصہ' : 'share'}
@@ -562,7 +662,7 @@ export const Charts = ({
                       animate={{ width: `${item.percentage}%` }}
                       transition={{ duration: 0.8, ease: 'easeOut', delay: idx * 0.06 }}
                       className="h-full rounded-full"
-                      style={{ backgroundColor: item.meta.color }}
+                      style={{ backgroundColor: item.color }}
                     />
                   </div>
                 </motion.div>
