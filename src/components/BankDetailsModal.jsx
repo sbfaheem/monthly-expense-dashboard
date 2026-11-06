@@ -9,8 +9,6 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
   const isUrdu = lang === 'ur'
   const shouldReduceMotion = useReducedMotion()
 
-  // Selected account state: 'easypaisa' (default) or 'meezan'
-  const [selectedAccount, setSelectedAccount] = useState('easypaisa')
   const [isFlipped, setIsFlipped] = useState(false)
   const [copiedKey, setCopiedKey] = useState('')
 
@@ -46,45 +44,18 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
     setIsFlipped(prev => !prev)
   }
 
-  // Multi-Account Credentials Dictionary
-  const ACCOUNTS = {
-    easypaisa: {
-      id: 'easypaisa',
-      bankName: isUrdu ? 'ایزی پیسہ بینک لمیٹڈ' : 'Easypaisa Bank Ltd',
-      shortName: 'Easypaisa',
-      accountTitle: 'Hanzala Muzaffar',
-      accountNumber: '03462650446',
-      formattedNumber: '0346 2650 446',
-      raastId: '03462650446',
-      formattedRaast: '0346-2650446',
-      whatsappNumber: '923462650446',
-      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40',
-      tagText: isUrdu ? 'ڈیجیٹل والٹ و برانچ لیس بینکنگ' : 'Digital Mobile Wallet / Raast P2P',
-      gradient: 'from-[#022c22] via-[#064e3b] to-[#0f172a]',
-      border: 'border-emerald-500/50',
-      glowColor: 'rgba(16, 185, 129, 0.35)',
-      isMobileWallet: true
-    },
-    meezan: {
-      id: 'meezan',
-      bankName: isUrdu ? 'میزان بینک لمیٹڈ' : 'Meezan Bank Ltd.',
-      shortName: 'Meezan Bank',
-      accountTitle: 'Sector 7D/1 Management',
-      accountNumber: 'PK00MEZN0001234567890101',
-      formattedNumber: 'PK00 MEZN 0001 2345 6789 0101',
-      raastId: '03013377675',
-      formattedRaast: '0301-3377675',
-      whatsappNumber: '923013377675',
-      badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-400/40',
-      tagText: isUrdu ? 'اسلامک بینکنگ و سوسائٹی فنڈ اکاؤنٹ' : 'Islamic Banking / Society Fund',
-      gradient: 'from-[#0f172a] via-[#1e293b] to-[#022c22]',
-      border: 'border-amber-400/40',
-      glowColor: 'rgba(245, 158, 11, 0.35)',
-      isMobileWallet: false
-    }
+  // Easypaisa Bank Ltd Account Credentials
+  const account = {
+    bankName: isUrdu ? 'ایزی پیسہ بینک لمیٹڈ' : 'Easypaisa Bank Ltd',
+    shortName: 'Easypaisa',
+    accountTitle: 'Hanzala Muzaffar',
+    accountNumber: '03462650446',
+    formattedNumber: '0346 2650 446',
+    raastId: '03462650446',
+    formattedRaast: '0346-2650446',
+    whatsappNumber: '923462650446',
+    tagText: isUrdu ? 'ڈیجیٹل والٹ و برانچ لیس بینکنگ' : 'Digital Mobile Wallet / Raast P2P',
   }
-
-  const currentAcc = ACCOUNTS[selectedAccount] || ACCOUNTS.easypaisa
 
   const copyToClipboard = async (text, key) => {
     try {
@@ -111,11 +82,11 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
   // Pre-filled WhatsApp payment proof message
   const whatsappMessage = encodeURIComponent(
     isUrdu
-      ? `السلام علیکم! میں نے سوسائٹی کے ماہانہ فنڈز منتقل کر دیے ہیں۔ ادائیگی کی رسید منسلک ہے۔\nبینک: ${currentAcc.bankName}\nاکاؤنٹ ٹائٹل: ${currentAcc.accountTitle}\nاکاؤنٹ نمبر / راست: ${currentAcc.accountNumber}`
-      : `Assalam o Alaikum! I have transferred the monthly society dues. Please find the payment receipt attached.\nBank: ${currentAcc.bankName}\nAccount Title: ${currentAcc.accountTitle}\nAccount / Raast: ${currentAcc.accountNumber}`
+      ? `السلام علیکم! میں نے سوسائٹی کے ماہانہ فنڈز منتقل کر دیے ہیں۔ ادائیگی کی رسید منسلک ہے۔\nبینک: ${account.bankName}\nاکاؤنٹ ٹائٹل: ${account.accountTitle}\nاکاؤنٹ نمبر / راست: ${account.accountNumber}`
+      : `Assalam o Alaikum! I have transferred the monthly society dues. Please find the payment receipt attached.\nBank: ${account.bankName}\nAccount Title: ${account.accountTitle}\nAccount / Raast: ${account.accountNumber}`
   )
 
-  const whatsappUrl = `https://wa.me/${currentAcc.whatsappNumber}?text=${whatsappMessage}`
+  const whatsappUrl = `https://wa.me/${account.whatsappNumber}?text=${whatsappMessage}`
 
   if (!isOpen) return null
 
@@ -144,7 +115,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
           <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
             <div className="flex items-center gap-3">
               <div className="size-10 rounded-2xl bg-emerald-600/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-xs">
-                <Landmark size={22} />
+                <Smartphone size={22} />
               </div>
               <div>
                 <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
@@ -152,8 +123,8 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {isUrdu
-                    ? 'ماہانہ فنڈز و سروسز کی تصدیق شدہ بینک ادائیگی (ایزی پیسہ اور میزان بینک)'
-                    : 'Official Easypaisa & Meezan Bank passbook for dues payment'}
+                    ? 'ماہانہ سوسائٹی فنڈز کی ادائیگی کے لیے باقاعدہ ایزی پیسہ اور راست اکاؤنٹ'
+                    : 'Official Easypaisa & Raast passbook for society dues payment'}
                 </p>
               </div>
             </div>
@@ -165,46 +136,6 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
               aria-label="Close Modal"
             >
               <X size={20} />
-            </button>
-          </div>
-
-          {/* ================= ACCOUNT SELECTOR TABS ================= */}
-          <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800/90 rounded-2xl mb-4">
-            {/* Easypaisa Tab */}
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedAccount('easypaisa')
-                setIsFlipped(false)
-                soundEffects.playBounce()
-              }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                selectedAccount === 'easypaisa'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.01]'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <Smartphone size={15} />
-              <span>{isUrdu ? 'ایزی پیسہ بینک' : 'Easypaisa Bank Ltd'}</span>
-              <span className="size-2 rounded-full bg-emerald-300 animate-pulse" />
-            </button>
-
-            {/* Meezan Bank Tab */}
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedAccount('meezan')
-                setIsFlipped(false)
-                soundEffects.playBounce()
-              }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                selectedAccount === 'meezan'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 scale-[1.01]'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <Landmark size={15} />
-              <span>{isUrdu ? 'میزان بینک لمیٹڈ' : 'Meezan Bank Ltd'}</span>
             </button>
           </div>
 
@@ -243,13 +174,13 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                   WebkitBackfaceVisibility: 'hidden',
                   transform: 'translateZ(1px)',
                 }}
-                className={`absolute inset-0 rounded-2xl sm:rounded-3xl p-5 sm:p-6 bg-gradient-to-tr ${currentAcc.gradient} ${currentAcc.border} border shadow-2xl flex flex-col justify-between overflow-hidden text-white`}
+                className="absolute inset-0 rounded-2xl sm:rounded-3xl p-5 sm:p-6 bg-gradient-to-tr from-[#022c22] via-[#064e3b] to-[#0f172a] border border-emerald-500/50 shadow-2xl flex flex-col justify-between overflow-hidden text-white"
               >
                 {/* Brushed Metal Sheen & Radial Light Effect */}
                 <div 
                   className="pointer-events-none absolute inset-0 opacity-25" 
                   style={{
-                    background: `radial-gradient(circle at 25% 25%, ${currentAcc.glowColor}, transparent 60%)`
+                    background: 'radial-gradient(circle at 25% 25%, rgba(16, 185, 129, 0.4), transparent 60%)'
                   }}
                 />
                 <div 
@@ -260,7 +191,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                   }}
                 />
 
-                {/* Top Row: EMV Chip, NFC Wave & Bank Branding */}
+                {/* Top Row: EMV Chip, NFC Wave & Easypaisa Branding */}
                 <div className="flex items-center justify-between z-10">
                   <div className="flex items-center gap-3">
                     {/* Embossed EMV Chip SVG */}
@@ -292,17 +223,17 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                     </svg>
                   </div>
 
-                  {/* Bank Badge */}
+                  {/* Easypaisa Bank Badge */}
                   <div className="flex items-center gap-2 bg-slate-950/70 border border-white/20 px-3 py-1.5 rounded-xl backdrop-blur-xs shadow-xs">
                     <div className="size-5 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center font-black text-[10px]">
-                      {currentAcc.isMobileWallet ? 'EP' : 'M'}
+                      EP
                     </div>
                     <div className="flex flex-col text-right">
                       <span className="text-xs font-black tracking-tight text-white leading-tight">
-                        {currentAcc.bankName}
+                        {account.bankName}
                       </span>
                       <span className="text-[8px] font-bold text-amber-300 uppercase tracking-widest leading-none">
-                        {currentAcc.tagText}
+                        {account.tagText}
                       </span>
                     </div>
                   </div>
@@ -311,20 +242,18 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                 {/* Middle Row: Formatted Account Number & Copy Button */}
                 <div className="my-auto py-1 z-10">
                   <div className="text-[10px] sm:text-xs font-semibold text-emerald-300 uppercase tracking-wider mb-0.5">
-                    {currentAcc.isMobileWallet
-                      ? (isUrdu ? 'ایزی پیسہ اکاؤنٹ نمبر' : 'Easypaisa Account Number')
-                      : (isUrdu ? 'اکاؤنٹ نمبر / IBAN' : 'Account Number / IBAN')}
+                    {isUrdu ? 'ایزی پیسہ اکاؤنٹ نمبر' : 'Easypaisa Account Number'}
                   </div>
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="font-mono text-base sm:text-xl font-black tracking-wider text-amber-100 drop-shadow-sm select-all">
-                      {currentAcc.formattedNumber}
+                      {account.formattedNumber}
                     </div>
 
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation()
-                        copyToClipboard(currentAcc.accountNumber, 'acc_num')
+                        copyToClipboard(account.accountNumber, 'acc_num')
                       }}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/25 hover:bg-emerald-500/40 border border-emerald-400/40 text-emerald-200 text-xs font-bold transition-all active:scale-95 shadow-sm cursor-pointer"
                     >
@@ -350,7 +279,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                       {t?.accountTitle || (isUrdu ? 'اکاؤنٹ ٹائٹل' : 'Account Title')}
                     </span>
                     <span className="text-xs sm:text-sm font-extrabold text-white tracking-wide uppercase">
-                      {currentAcc.accountTitle}
+                      {account.accountTitle}
                     </span>
                   </div>
 
@@ -440,14 +369,14 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                       {isUrdu ? 'راست آئی ڈی (فوری ٹرانسفر)' : 'Instant Raast Payment'}
                     </h4>
                     <div className="font-mono text-base sm:text-lg font-black text-amber-200 tracking-wider my-0.5 select-all">
-                      {currentAcc.formattedRaast}
+                      {account.formattedRaast}
                     </div>
 
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation()
-                        copyToClipboard(currentAcc.raastId, 'raast')
+                        copyToClipboard(account.raastId, 'raast')
                       }}
                       className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/25 hover:bg-emerald-500/40 border border-emerald-400/40 text-emerald-200 text-xs font-bold transition-all active:scale-95 cursor-pointer"
                     >
@@ -503,7 +432,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                 {t?.bankName || (isUrdu ? 'بینک کا نام' : 'Bank Name')}
               </span>
               <strong className="text-slate-800 dark:text-slate-200 font-bold">
-                {currentAcc.bankName}
+                {account.bankName}
               </strong>
             </div>
 
@@ -514,11 +443,11 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
               </span>
               <div className="flex items-center gap-2">
                 <strong className="text-slate-800 dark:text-slate-200 font-bold">
-                  {currentAcc.accountTitle}
+                  {account.accountTitle}
                 </strong>
                 <button
                   type="button"
-                  onClick={() => copyToClipboard(currentAcc.accountTitle, 'title_quick')}
+                  onClick={() => copyToClipboard(account.accountTitle, 'title_quick')}
                   className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
                   title="Copy Title"
                 >
@@ -527,20 +456,18 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
               </div>
             </div>
 
-            {/* Account Number / IBAN */}
+            {/* Account Number */}
             <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs">
               <span className="font-semibold text-slate-500 dark:text-slate-400">
-                {currentAcc.isMobileWallet
-                  ? (isUrdu ? 'ایزی پیسہ اکاؤنٹ نمبر' : 'Easypaisa Account Number')
-                  : (isUrdu ? 'اکاؤنٹ نمبر / IBAN' : 'IBAN')}
+                {isUrdu ? 'ایزی پیسہ اکاؤنٹ نمبر' : 'Easypaisa Account Number'}
               </span>
               <div className="flex items-center gap-2">
                 <strong className="font-mono text-slate-800 dark:text-slate-200 font-bold select-all">
-                  {currentAcc.accountNumber}
+                  {account.accountNumber}
                 </strong>
                 <button
                   type="button"
-                  onClick={() => copyToClipboard(currentAcc.accountNumber, 'num_quick')}
+                  onClick={() => copyToClipboard(account.accountNumber, 'num_quick')}
                   className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
                   title="Copy Account Number"
                 >
@@ -556,11 +483,11 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
               </span>
               <div className="flex items-center gap-2">
                 <strong className="font-mono text-slate-800 dark:text-slate-200 font-bold select-all">
-                  {currentAcc.raastId}
+                  {account.raastId}
                 </strong>
                 <button
                   type="button"
-                  onClick={() => copyToClipboard(currentAcc.raastId, 'raast_quick')}
+                  onClick={() => copyToClipboard(account.raastId, 'raast_quick')}
                   className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
                   title="Copy Raast ID"
                 >
