@@ -57,7 +57,6 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
     raastId: '03462650446',
     formattedRaast: '0346-2650446',
     iban: 'PK28TMFB0000003462650446',
-    formattedIban: 'PK28 TMFB 0000 0034 6265 0446',
     whatsappNumber: '923462650446',
     tagText: 'Branchless Banking / برانچ لیس بینکنگ',
   }
@@ -524,30 +523,6 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                   title="Copy Raast ID"
                 >
                   {copiedKey === 'raast_quick' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                </button>
-              </div>
-            </div>
-
-            {/* IBAN */}
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs">
-              <span className="font-semibold text-slate-500 dark:text-slate-400">
-                {isUrdu ? 'بین الاقوامی اکاؤنٹ نمبر (IBAN)' : 'IBAN (Raast Interoperable)'}
-              </span>
-              <div className="flex items-center gap-2">
-                <strong
-                  dir="ltr"
-                  style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                  className="font-mono text-slate-800 dark:text-slate-200 font-bold select-all text-[11px] sm:text-xs"
-                >
-                  {account.formattedIban}
-                </strong>
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(account.iban, 'iban_quick')}
-                  className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
-                  title="Copy IBAN"
-                >
-                  {copiedKey === 'iban_quick' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
                 </button>
               </div>
             </div>
