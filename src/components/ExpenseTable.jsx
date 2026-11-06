@@ -2,8 +2,10 @@ import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles, TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight,
-  Receipt, ShieldCheck, Copy, Check, ChevronDown
+  Receipt, ShieldCheck, Copy, Check, ChevronDown, CheckCircle2, FileText,
+  Building2, Hash, CreditCard, Clock, Stamp
 } from 'lucide-react'
+import { soundEffects } from '../utils/soundEffects'
 import { normalizeItem, getParentCategory } from '../utils/normalizeExpense'
 import { MONTH_NAMES } from '../utils/finance'
 import { useLanguage } from '../context/LanguageContext'
@@ -20,63 +22,65 @@ const CATEGORY_STYLES = {
 }
 
 // =========================================================================
-// 📄 3D ACCORDION PAPER RECEIPT COMPONENT (2-SEGMENT HINGE UNFOLD)
+// 📄 3D ACCORDION PAPER RECEIPT COMPONENT (REALISTIC 2-STAGE HINGE UNFOLD)
+// Stage 1 (Upper Leaf): rotateX: -90deg -> 0deg (unfolds downward from top)
+// Stage 2 (Lower Leaf): rotateX: -90deg -> 0deg (hinges from center fold)
 // =========================================================================
 function PaperReceiptAccordion({ row, displayCurrency, fmt, isUrdu, t, curMonthShort }) {
   const [copied, setCopied] = useState(false)
 
-  // Contextual audit details based on category
+  // Contextual audit details based on category and line item
   const auditDetails = useMemo(() => {
     const cat = row.category || ''
     const nameLower = (row.normName || row.name || '').toLowerCase()
 
     if (cat.includes('Salaries') || cat.includes('Payroll') || nameLower.includes('salary') || nameLower.includes('guard')) {
       return {
-        vendor: isUrdu ? 'سیکیورٹی اور صفائی اسٹاف روسٹر (ڈائریکٹ)' : 'Security & Sanitation Duty Roster',
-        voucherType: isUrdu ? 'اسٹاف تنخواہ واؤچر' : 'Payroll Disbursal Voucher',
-        method: isUrdu ? 'کیش سائنڈ پے رول شیٹ' : 'Cash Signed Attendance Roster',
-        auditStamp: isUrdu ? 'بایومیٹرک و فزیکل ڈیوٹی شیٹ سے تصدیق شدہ' : 'Verified via Duty Roster & Monthly Attendance',
-        auditNote: isUrdu ? 'سیکٹر 7D/1 کے تمام سیکیورٹی گارڈز اور سینٹری ورکرز کی مکمل ادائیگیاں تصدیق شدہ ہیں۔' : 'Cross-checked against physical guard attendance logs and supervisor sign-off sheets.',
+        vendor: isUrdu ? 'سیکیورٹی و صفائی اسٹاف روسٹر (ڈائریکٹ پے رول)' : 'Security & Sanitation Duty Roster (Direct Payroll)',
+        voucherType: isUrdu ? 'اسٹاف تنخواہ و معاوضہ واؤچر' : 'Payroll Disbursal Voucher',
+        method: isUrdu ? 'کیش سائنڈ پے رول شیٹ و بائیومیٹرک لاگ' : 'Cash Signed Attendance Roster & Biometric Log',
+        auditStamp: isUrdu ? 'بائیومیٹرک و فزیکل ڈیوٹی شیٹ سے تصدیق شدہ' : 'Verified via Duty Roster & Monthly Attendance',
+        auditNote: isUrdu ? 'سیکٹر 7D/1 کے تمام سیکیورٹی گارڈز اور سینٹری ورکرز کی مکمل ادائیگیاں تصدیق شدہ ہیں اور نگران کے دستخط کے بعد کلیئر کی گئیں۔' : 'Cross-checked against physical guard attendance logs, duty check-ins, and supervisor sign-off sheets.',
         codePrefix: 'PAY',
       }
     }
-    if (cat.includes('Electrical') || nameLower.includes('electric') || nameLower.includes('light') || nameLower.includes('generator')) {
+    if (cat.includes('Electrical') || nameLower.includes('electric') || nameLower.includes('light') || nameLower.includes('generator') || nameLower.includes('bulb')) {
       return {
         vendor: isUrdu ? 'الرحمٰن الیکٹریکل و مینٹیننس سروسز' : 'Al-Rehman Electrical Works & Services',
-        voucherType: isUrdu ? 'تکنیکی مرمت و سامان بل' : 'Technical Repair & Supplies Memo',
-        method: isUrdu ? 'آفیشل کنٹریکٹر کیش میمو' : 'Official Contractor Cash Invoice',
-        auditStamp: isUrdu ? 'سائٹ معائنہ و ٹیسٹنگ تصدیق شدہ' : 'On-Site Physical Inspection & Testing Verified',
-        auditNote: isUrdu ? 'اسٹریٹ لائٹس، جنریٹر ایندھن، اور مین ڈی بی باکس کا کام مکمل ہو گیا۔' : 'Verified work completion for phase-balancing, generator maintenance, and streetlights.',
+        voucherType: isUrdu ? 'تکنیکی مرمت و سامان کیش میمو' : 'Technical Repair & Supplies Memo',
+        method: isUrdu ? 'آفیشل کنٹریکٹر کیش میمو #4092' : 'Official Contractor Cash Invoice #4092',
+        auditStamp: isUrdu ? 'سائٹ معائنہ و فزیکل ٹیسٹنگ تصدیق شدہ' : 'On-Site Physical Inspection & Testing Verified',
+        auditNote: isUrdu ? 'اسٹریٹ لائٹس، بجلی کے آلات، بلب کی مرمت اور مین سوئچ گیئر کا کام مکمل طور پر ٹیسٹ اور چیک کیا گیا۔' : 'Verified work completion for phase-balancing, bulb repairs, streetlight fixtures, and electrical distribution.',
         codePrefix: 'ENG',
       }
     }
     if (cat.includes('Community') || cat.includes('Utilities') || nameLower.includes('water') || nameLower.includes('tanker')) {
       return {
         vendor: isUrdu ? 'میونسپل واٹر بورڈ و ویسٹ مینجمنٹ' : 'Municipal Water Board & Waste Services',
-        voucherType: isUrdu ? 'یوٹیلٹی چالان و ادائیگی سلپ' : 'Utility Challan & Payment Slip',
-        method: isUrdu ? 'آن لائن راست / بینک چالان' : 'Online Raast / Official Challan',
-        auditStamp: isUrdu ? 'بینک ٹرانسفر تصدیق نمبر منسلک ہے' : 'Direct Bank Reference & Meter Slip Attached',
-        auditNote: isUrdu ? 'واٹر والو آپریشنز اور سیکٹر صفائی سروسز کے فنڈز کی کٹوتی مکمل ہے۔' : 'Reconciled with municipal line schedule, bowser receipts, and sanitation log.',
+        voucherType: isUrdu ? 'یوٹیلٹی چالان و باؤزر ڈلیوری سلپ' : 'Utility Challan & Payment Slip',
+        method: isUrdu ? 'آن لائن راست / بینک سرکاری چالان' : 'Online Raast / Official Bank Challan',
+        auditStamp: isUrdu ? 'بینک ٹرانسفر تصدیق نمبر اور رسید منسلک ہے' : 'Direct Bank Reference & Meter Slip Attached',
+        auditNote: isUrdu ? 'واٹر والو آپریشنز، لائن سپلائی شیڈول اور باؤزر کی رسیدوں کے مطابق واؤچر کا مکمل موازنہ مکمل ہے۔' : 'Reconciled with municipal line schedule, bowser delivery slips, and sanitation care registry.',
         codePrefix: 'UTL',
       }
     }
-    if (cat.includes('Supplies') || cat.includes('Hardware') || nameLower.includes('lock') || nameLower.includes('chamber')) {
+    if (cat.includes('Supplies') || cat.includes('Hardware') || nameLower.includes('lock') || nameLower.includes('jharo') || nameLower.includes('chamber')) {
       return {
         vendor: isUrdu ? 'سیون اسٹار ہارڈویئر و سینیٹیشن اسٹور' : 'Seven Star Hardware & Sanitation Depot',
-        voucherType: isUrdu ? 'سامان خریداری کیش میمو' : 'Itemized Store Cash Memo',
-        method: isUrdu ? 'آئٹمائزڈ انوائس #4092' : 'Itemized Store Invoice #4092',
+        voucherType: isUrdu ? 'سامان خریداری کیش میمو و رسید' : 'Itemized Store Cash Memo',
+        method: isUrdu ? 'آئٹمائزڈ انوائس #4092 مع جی آر این' : 'Itemized Store Invoice #4092 with GRN',
         auditStamp: isUrdu ? 'سامان موصولی رسید (GRN) تصدیق شدہ' : 'Goods Received Note (GRN) Verified by Caretaker',
-        auditNote: isUrdu ? 'چیمبر ڈھکن، تالے، پارک دیکھ بھال کا سامان باقاعدہ اسٹاک میں شامل ہے۔' : 'Supplies verified into community stock registry with signed delivery receipts.',
+        auditNote: isUrdu ? 'جھاڑو، صفائی کا سامان، چیمبر ڈھکن اور ہارڈویئر کا سامان باقاعدہ اسٹاک رجسٹر میں درج کر کے تصدیق کیا گیا۔' : 'Supplies, cleaning tools, chamber covers, and hardware verified into community stock registry with signed delivery receipts.',
         codePrefix: 'SUP',
       }
     }
     if (cat.includes('Capital') || cat.includes('CapEx') || nameLower.includes('cctv')) {
       return {
         vendor: isUrdu ? 'ایپکس سیکیورٹی و کیمرہ سسٹمز' : 'Apex Security & Surveillance Systems Ltd',
-        voucherType: isUrdu ? 'کیپٹل اثاثہ انوائس و وارنٹی' : 'Capital Asset Invoice & Warranty',
-        method: isUrdu ? 'کراس چیک / پے آرڈر' : 'Crossed Cheque / Pay Order',
+        voucherType: isUrdu ? 'کیپٹل اثاثہ انوائس و سالانہ وارنٹی' : 'Capital Asset Invoice & Warranty',
+        method: isUrdu ? 'کراس چیک / پے آرڈر #CPX-701' : 'Crossed Cheque / Pay Order #CPX-701',
         auditStamp: isUrdu ? 'اثاثہ رجسٹر اندراج #AR-2026-7D1' : 'Asset Register Entry #AR-2026-7D1 with 1-Yr Warranty',
-        auditNote: isUrdu ? 'سی سی ٹی وی کیمرے اور این وی آر ریکارڈنگ سسٹم کمیٹی کے ریکارڈ میں محفوظ ہیں۔' : 'High-definition cameras and surveillance unit verified and logged in asset inventory.',
+        auditNote: isUrdu ? 'سی سی ٹی وی کیمرے اور این وی آر ریکارڈنگ سسٹم کمیٹی کے فکسڈ اثاثہ ریکارڈ میں درج ہیں۔' : 'High-definition cameras and surveillance unit verified, installed, and logged in community asset inventory.',
         codePrefix: 'CPX',
       }
     }
@@ -85,7 +89,7 @@ function PaperReceiptAccordion({ row, displayCurrency, fmt, isUrdu, t, curMonthS
       voucherType: isUrdu ? 'مجلسِ فلاح واؤچر رسید' : 'Welfare Committee Voucher Slip',
       method: isUrdu ? 'تصدیق شدہ آفیشل واؤچر' : 'Verified Official Receipt',
       auditStamp: isUrdu ? 'بینک و کھاتہ رجسٹر سے مطابقت شدہ' : 'Reconciled with Bank Statement & Physical Register',
-      auditNote: isUrdu ? 'کمیٹی خزانچی اور صدر کے دستخط کے بعد ادائیگی کلیئر کی گئی۔' : 'Cross-checked with ledger book and signed by Committee Treasurer.',
+      auditNote: isUrdu ? 'کمیٹی خزانچی اور صدر کے دستخط کے بعد ادائیگی باقاعدہ منظور اور جاری کی گئی۔' : 'Cross-checked with general ledger and signed by Welfare Committee Treasurer.',
       codePrefix: 'VCH',
     }
   }, [row.category, row.normName, row.name, isUrdu])
@@ -102,159 +106,221 @@ function PaperReceiptAccordion({ row, displayCurrency, fmt, isUrdu, t, curMonthS
   }
 
   return (
-    <div
-      style={{ perspective: 1200 }}
-      className="w-full my-3 px-1 sm:px-3 select-none"
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+      className="w-full overflow-hidden my-3 px-1 sm:px-3 select-none"
     >
-      {/* 2-SEGMENT PAPER ACCORDION CONTAINER */}
+      {/* 3D Perspective Stage Container */}
       <div
-        style={{ transformStyle: 'preserve-3d' }}
-        className="w-full max-w-4xl mx-auto shadow-2xl rounded-2xl overflow-hidden"
+        style={{ perspective: 1400 }}
+        className="w-full max-w-4xl mx-auto py-1"
       >
-        {/* ================= 1. TOP SEGMENT ================= */}
-        <motion.div
-          initial={{ rotateX: -90, opacity: 0 }}
-          animate={{ rotateX: 0, opacity: 1 }}
-          exit={{ rotateX: -90, opacity: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-          style={{
-            transformOrigin: 'top center',
-            transformStyle: 'preserve-3d',
-            backfaceVisibility: 'hidden',
-          }}
-          className="relative bg-amber-50/95 dark:bg-[#131b2e] border-x border-t border-amber-200/80 dark:border-slate-700/80 p-4 sm:p-5 text-slate-800 dark:text-slate-100"
+        <div
+          style={{ transformStyle: 'preserve-3d' }}
+          className="w-full shadow-2xl rounded-2xl overflow-hidden border border-amber-300/60 dark:border-slate-700/80 bg-amber-50/40 dark:bg-slate-900/40"
         >
-          {/* Faint Background Watermark */}
-          <div className="absolute right-4 top-2 text-[56px] sm:text-[64px] font-black tracking-widest text-slate-900/[0.03] dark:text-white/[0.02] pointer-events-none select-none uppercase font-mono">
-            RECEIPT
-          </div>
-
-          {/* Top Row: Official Welfare Header + Status Badge */}
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-dashed border-amber-300/80 dark:border-slate-700">
-            <div className="flex items-center gap-2">
-              <div className="size-8 rounded-xl bg-amber-500/15 dark:bg-cyan-500/15 text-amber-600 dark:text-cyan-400 flex items-center justify-center font-bold flex-shrink-0">
-                <Receipt size={17} />
-              </div>
-              <div>
-                <span className="text-xs font-black tracking-tight text-slate-900 dark:text-white uppercase">
-                  {isUrdu ? 'سیکٹر 7D/1 ویلفیئر کمیٹی • تصدیق شدہ واؤچر' : 'Sector 7D/1 Welfare Committee • Audit Receipt'}
-                </span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-mono">
-                  {auditDetails.voucherType}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                <ShieldCheck size={13} />
-                <span>{isUrdu ? 'آڈٹ تصدیق شدہ' : 'Audit Verified'}</span>
-              </span>
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-2xs"
-                title="Copy Voucher ID"
-              >
-                {copied ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
-                <span>{copied ? (isUrdu ? 'کاپی ہو گیا!' : 'Copied!') : voucherId}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Main Line-Item Banner */}
-          <div className="relative z-10 grid grid-cols-1 sm:grid-cols-12 gap-3.5 pt-3.5 items-center">
-            <div className="sm:col-span-7">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
-                {isUrdu ? 'مد کا نام اور زمرہ' : 'Line Item & Classification'}
-              </span>
-              <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
-                {isUrdu ? translateItemName(row.normName || row.name, 'ur') : (row.normName || row.name)}
-              </h4>
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5 block">
-                {isUrdu ? translateCategory(row.category, 'ur') : row.category}
-              </span>
-            </div>
-
-            {/* Voucher Amount Badge (Preserving Zero Font Blur) */}
-            <div className="sm:col-span-5 bg-white/80 dark:bg-slate-950/80 p-3 rounded-xl border border-amber-200/70 dark:border-slate-800 text-left sm:text-right shadow-2xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
-                {isUrdu ? 'واؤچر رقم (ماہانہ خرچ)' : 'Voucher Net Amount'}
-              </span>
-              <span className="text-xl sm:text-2xl font-black font-mono tabular-nums text-slate-900 dark:text-cyan-300 tracking-tight block">
-                {displayCurrency} {fmt(row.currentAmount)}
-              </span>
-              <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 block mt-0.5">
-                {translateMonth(curMonthShort, isUrdu ? 'ur' : 'en')} • Posted to General Ledger
-              </span>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ================= 2. HINGE CREASE & BOTTOM SEGMENT ================= */}
-        <div className="relative">
-          {/* Subtle Crease Shadow fading out as panel flattens to 0deg */}
+          {/* ========================================================================= */}
+          {/* 📄 STAGE 1: UPPER LEAF (Two-Stage Hinge: rotateX: -90deg -> 0deg)        */}
+          {/* Unfolds downward from the top table row into 3D space                    */}
+          {/* ========================================================================= */}
           <motion.div
-            initial={{ opacity: 0.7 }}
-            animate={{ opacity: 0 }}
-            transition={{ duration: 0.35, delay: 0.12 }}
-            className="pointer-events-none absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-black/25 via-black/10 to-transparent z-20"
-          />
-
-          <motion.div
-            initial={{ rotateX: 90, opacity: 0 }}
+            initial={{ rotateX: -90, opacity: 0 }}
             animate={{ rotateX: 0, opacity: 1 }}
-            exit={{ rotateX: 90, opacity: 0 }}
-            transition={{ duration: 0.35, delay: 0.12, ease: 'easeOut' }}
+            exit={{ rotateX: -90, opacity: 0 }}
+            transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
             style={{
               transformOrigin: 'top center',
               transformStyle: 'preserve-3d',
               backfaceVisibility: 'hidden',
             }}
-            className="relative bg-amber-50/70 dark:bg-[#0c1220] border-x border-b border-t border-slate-300 dark:border-slate-700/90 p-4 sm:p-5 shadow-inner text-slate-800 dark:text-slate-200 space-y-3"
+            className="relative bg-gradient-to-b from-[#fffefc] via-[#fffdf8] to-[#fbf7ee] dark:from-[#131b2e] dark:via-[#101728] dark:to-[#0c1220] border-x border-t border-amber-200/90 dark:border-slate-700/80 p-4 sm:p-6 text-slate-800 dark:text-slate-100"
           >
-            {/* Audit & Payee Breakdown Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
-              {/* Payee / Vendor Card */}
-              <div className="bg-white/90 dark:bg-slate-900/90 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  {isUrdu ? 'وصول کنندہ / وینڈر' : 'Payee / Contractor'}
-                </span>
-                <span className="font-bold text-slate-900 dark:text-slate-100 block truncate">
-                  {isUrdu ? 'سیکٹر 7D/1 مینجمنٹ' : 'Sector 7D/1 Management'}
-                </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">
-                  {auditDetails.method}
-                </span>
+            {/* Top Serrated Receipt Tear Pattern */}
+            <div className="flex items-center justify-between gap-1 pb-2 mb-2 border-b-2 border-dashed border-amber-200 dark:border-slate-800 text-[10px] font-mono font-bold tracking-widest text-slate-400 dark:text-slate-500 uppercase">
+              <span>✄ {isUrdu ? 'آڈٹ سلپ کٹوت' : 'TEAR HERE'}</span>
+              <span className="hidden sm:inline">・ ・ ・ ・ ・ ・ ・ ・ ・ ・ ・ ・ ・ ・ ・ ・ ・ ・ ・ ・ ・ ・ ・ ・</span>
+              <span>{isUrdu ? 'سرکاری ریکارڈ' : 'OFFICIAL LEDGER'}</span>
+            </div>
+
+            {/* Faint Background Watermark Stamp */}
+            <div className="absolute right-6 top-6 text-[52px] sm:text-[68px] font-black tracking-widest text-slate-900/[0.03] dark:text-white/[0.02] pointer-events-none select-none uppercase font-mono">
+              RECEIPT
+            </div>
+
+            {/* Top Row: Official Welfare Header + Status Badge */}
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3.5 border-b border-dashed border-amber-300/70 dark:border-slate-700">
+              <div className="flex items-center gap-2.5">
+                <div className="size-9 rounded-xl bg-amber-500/15 dark:bg-cyan-500/15 text-amber-600 dark:text-cyan-400 flex items-center justify-center font-bold flex-shrink-0 shadow-2xs">
+                  <Receipt size={18} />
+                </div>
+                <div>
+                  <span className="text-xs sm:text-sm font-black tracking-tight text-slate-900 dark:text-white uppercase block leading-tight">
+                    {isUrdu ? 'سیکٹر 7D/1 ویلفیئر کمیٹی • تصدیق شدہ واؤچر' : 'Sector 7D/1 Welfare Committee • Audit Receipt'}
+                  </span>
+                  <span className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 block font-mono font-bold mt-0.5">
+                    {auditDetails.voucherType}
+                  </span>
+                </div>
               </div>
 
-              {/* Verification & Audit Card */}
-              <div className="bg-white/90 dark:bg-slate-900/90 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                  {isUrdu ? 'آڈٹ تصدیق و اندراج' : 'Verification & Protocol'}
+              <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                {/* Audit Stamp Pill */}
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shadow-2xs">
+                  <ShieldCheck size={13} />
+                  <span>{isUrdu ? 'آڈٹ تصدیق شدہ' : 'Audit Verified'}</span>
                 </span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400 block truncate">
-                  {isUrdu ? 'سیکٹر 7D/1 مینجمنٹ۔' : 'Sector 7D/1 Management.'}
-                </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block">
-                  {isUrdu ? 'ویلفیئر کمیٹی تصدیق شدہ' : 'Welfare Committee Sign-off Verified'}
-                </span>
+
+                {/* Copy Receipt Number Button */}
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-mono font-bold bg-white dark:bg-slate-800 border border-amber-300/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-slate-700 transition-colors shadow-2xs cursor-pointer active:scale-95"
+                  title="Copy Voucher ID"
+                >
+                  {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} className="text-amber-500 dark:text-cyan-400" />}
+                  <span>{copied ? (isUrdu ? 'کاپی ہو گیا!' : 'Copied!') : voucherId}</span>
+                </button>
               </div>
             </div>
 
-            {/* Bottom Barcode Strip & Signature Footer */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-dashed border-slate-300 dark:border-slate-700 text-[10px] font-mono text-slate-400 dark:text-slate-500">
-              <div className="tracking-[3px] font-bold uppercase select-none opacity-60">
-                ||| | |||| | ||| ||||||| | ||||| | ||| {voucherId}
+            {/* Main Line-Item Banner */}
+            <div className="relative z-10 grid grid-cols-1 sm:grid-cols-12 gap-3.5 pt-3.5 items-center">
+              <div className="sm:col-span-7">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
+                  {isUrdu ? 'مد کا نام اور زمرہ' : 'Line Item & Classification'}
+                </span>
+                <h4 className="text-base sm:text-xl font-black text-slate-900 dark:text-white leading-tight">
+                  {isUrdu ? translateItemName(row.normName || row.name, 'ur') : (row.normName || row.name)}
+                </h4>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                    {isUrdu ? translateCategory(row.category, 'ur') : row.category}
+                  </span>
+                  <span className="text-slate-300 dark:text-slate-600">•</span>
+                  <span className="text-[11px] font-mono text-slate-400">
+                    ID: {voucherId}
+                  </span>
+                </div>
               </div>
-              <div className="text-center sm:text-right font-sans font-semibold text-slate-700 dark:text-slate-300">
-                {isUrdu ? 'تصدیق شدہ برائے خزانچی: سیکٹر 7D/1 مینجمنٹ' : 'Approved by Treasurer: Sector 7D/1 Management'}
+
+              {/* Voucher Net Amount Badge (Crisp, High-Contrast Typography) */}
+              <div className="sm:col-span-5 bg-white/90 dark:bg-slate-950/90 p-3 sm:p-4 rounded-xl border border-amber-200 dark:border-slate-800 text-left sm:text-right shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
+                  {isUrdu ? 'واؤچر رقم (ماہانہ خرچ)' : 'Voucher Net Amount'}
+                </span>
+                <span dir="ltr" style={{ direction: 'ltr', unicodeBidi: 'isolate' }} className="text-xl sm:text-2xl font-black font-mono tabular-nums text-slate-900 dark:text-cyan-300 tracking-tight block">
+                  {displayCurrency} {fmt(row.currentAmount)}
+                </span>
+                <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 block mt-0.5">
+                  {translateMonth(curMonthShort, isUrdu ? 'ur' : 'en')} • {isUrdu ? 'جنرل لیجر میں اندراج شدہ' : 'Posted to General Ledger'}
+                </span>
               </div>
             </div>
           </motion.div>
+
+          {/* ========================================================================= */}
+          {/* 📄 STAGE 2: HINGE CREASE & LOWER LEAF (rotateX: -90deg -> 0deg)          */}
+          {/* Second hinge drop: swings open with realistic paper spring settle         */}
+          {/* ========================================================================= */}
+          <div className="relative border-t-2 border-dashed border-amber-300/80 dark:border-slate-700">
+            {/* Folding Crease Shadow (fades out as paper flattens out) */}
+            <motion.div
+              initial={{ opacity: 0.8 }}
+              animate={{ opacity: 0 }}
+              exit={{ opacity: 0.8 }}
+              transition={{ duration: 0.35, delay: 0.1 }}
+              className="pointer-events-none absolute inset-x-0 top-0 h-4 bg-gradient-to-b from-black/25 via-black/5 to-transparent z-20"
+            />
+
+            <motion.div
+              initial={{ rotateX: -90, opacity: 0 }}
+              animate={{ rotateX: 0, opacity: 1 }}
+              exit={{ rotateX: -90, opacity: 0 }}
+              transition={{
+                duration: 0.44,
+                delay: 0.14,
+                type: 'spring',
+                damping: 22,
+                stiffness: 140
+              }}
+              style={{
+                transformOrigin: 'top center',
+                transformStyle: 'preserve-3d',
+                backfaceVisibility: 'hidden',
+              }}
+              className="relative bg-gradient-to-b from-[#fbf7ee] via-[#faf4e6] to-[#f6eee0] dark:from-[#0d1424] dark:via-[#0b101e] dark:to-[#080d18] border-x border-b border-amber-200/90 dark:border-slate-700/90 p-4 sm:p-6 text-slate-800 dark:text-slate-200 space-y-4"
+            >
+              {/* Audit & Payee Breakdown Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                {/* Payee / Vendor Card */}
+                <div className="bg-white/95 dark:bg-slate-900/95 p-3.5 rounded-xl border border-amber-200/70 dark:border-slate-800 shadow-2xs space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    {isUrdu ? 'وصول کنندہ / وینڈر' : 'Payee / Contractor'}
+                  </span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100 block text-sm leading-snug">
+                    {auditDetails.vendor}
+                  </span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block pt-1 border-t border-slate-100 dark:border-slate-800">
+                    <strong className="text-slate-600 dark:text-slate-300">{isUrdu ? 'طریقہ کار:' : 'Method:'}</strong> {auditDetails.method}
+                  </span>
+                </div>
+
+                {/* Verification & Protocol Card */}
+                <div className="bg-white/95 dark:bg-slate-900/95 p-3.5 rounded-xl border border-amber-200/70 dark:border-slate-800 shadow-2xs space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    {isUrdu ? 'آڈٹ تصدیق و دستاویز' : 'Verification & Protocol'}
+                  </span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 block text-sm leading-snug flex items-center gap-1.5">
+                    <CheckCircle2 size={15} />
+                    <span>{isUrdu ? 'سیکٹر 7D/1 مینجمنٹ تصدیق شدہ' : 'Sector 7D/1 Management Verified'}</span>
+                  </span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block pt-1 border-t border-slate-100 dark:border-slate-800">
+                    {auditDetails.auditStamp}
+                  </span>
+                </div>
+              </div>
+
+              {/* Vendor & Operational Notes Banner */}
+              <div className="bg-amber-100/40 dark:bg-slate-950/60 p-3.5 rounded-xl border border-amber-200/60 dark:border-slate-800 text-xs">
+                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider block mb-1">
+                  {isUrdu ? 'تفصیلی آڈٹ وینڈر نوٹس' : 'Audit & Operational Notes'}
+                </span>
+                <p className="text-slate-600 dark:text-slate-300 leading-relaxed font-sans text-xs sm:text-sm">
+                  {auditDetails.auditNote}
+                </p>
+              </div>
+
+              {/* Bottom Official Rubber Stamp + Barcode Strip */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-dashed border-amber-300 dark:border-slate-700 text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                {/* Barcode Visual */}
+                <div className="flex items-center gap-2 select-none">
+                  <div className="tracking-[3px] sm:tracking-[4px] font-bold uppercase opacity-75 text-slate-800 dark:text-slate-200 text-xs sm:text-sm">
+                    ||| | |||| | ||| ||||||| | ||||| | |||
+                  </div>
+                  <span className="text-[10px] font-mono font-bold bg-slate-200/70 dark:bg-slate-800 px-2 py-0.5 rounded">
+                    {voucherId}
+                  </span>
+                </div>
+
+                {/* Circular / Angled Verified Stamp */}
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border-2 border-dashed border-emerald-600/80 dark:border-emerald-400/80 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 rotate-[-2deg] text-[10px] sm:text-[11px] font-black uppercase tracking-wider shadow-2xs">
+                  <ShieldCheck size={14} />
+                  <span>{isUrdu ? 'تصدیق شدہ اور محفوظ ریکارڈ' : 'VERIFIED & SETTLED'}</span>
+                </div>
+
+                {/* Sign-off Signature line */}
+                <div className="text-center sm:text-right font-sans font-bold text-slate-700 dark:text-slate-300">
+                  {isUrdu ? 'دستخط خزانچی: سیکٹر 7D/1 مینجمنٹ' : 'Approved by Treasurer: Sector 7D/1 Management'}
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -277,7 +343,13 @@ const ExpenseTable = ({
   // Expandable Row State for 3D Accordion Paper Receipt
   const [expandedRowId, setExpandedRowId] = useState(null)
   const toggleRow = (id) => {
-    setExpandedRowId((prev) => (prev === id ? null : id))
+    setExpandedRowId((prev) => {
+      const isOpening = prev !== id
+      if (isOpening) {
+        soundEffects.playBounce()
+      }
+      return isOpening ? id : null
+    })
   }
 
   // Determine prior month
@@ -353,7 +425,7 @@ const ExpenseTable = ({
             </span>
             <span className="text-[10px] font-bold text-slate-400 hidden sm:inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-750 px-2 py-0.5 rounded-md">
               <Receipt size={11} className="text-amber-500" />
-              <span>{isUrdu ? 'رسید دیکھنے کے لیے کلک کریں' : 'Click row to unfold 3D receipt'}</span>
+              <span>{isUrdu ? 'رسید دیکھنے کے لیے قطار پر کلک کریں' : 'Click row to unfold 3D receipt'}</span>
             </span>
           </div>
           <div className="text-xs font-bold text-slate-500 dark:text-slate-400">
@@ -366,7 +438,7 @@ const ExpenseTable = ({
         </div>
 
         {/* ========================================================================= */}
-        {/* 📱 MOBILE VIEW: Layman-Friendly Vertically Stacked Cards */}
+        {/* 📱 MOBILE VIEW: Layman-Friendly Vertically Stacked Cards                 */}
         {/* ========================================================================= */}
         <div className="block md:hidden p-3.5 sm:p-5 space-y-3.5">
           {tableRows.length === 0 ? (
@@ -480,17 +552,17 @@ const ExpenseTable = ({
                   <button
                     type="button"
                     onClick={() => toggleRow(rowKey)}
-                    className="w-full flex items-center justify-between py-2 px-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-750 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-primary transition-colors cursor-pointer mt-1"
+                    className="w-full flex items-center justify-between py-2 px-3 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-750 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-primary transition-colors cursor-pointer mt-1 active:scale-[0.99]"
                   >
                     <span className="flex items-center gap-1.5">
                       <Receipt size={14} className="text-amber-500 dark:text-cyan-400" />
-                      <span>{isExpanded ? (isUrdu ? 'آڈٹ رسید بند کریں' : 'Hide Audit Receipt') : (isUrdu ? '3D آڈٹ رسید کھولیں' : 'Unfold 3D Audit Receipt')}</span>
+                      <span>{isExpanded ? (isUrdu ? 'آڈٹ رسید بند کریں' : 'Hide Audit Receipt') : (isUrdu ? '3D آڈٹ رسید کھولیں (Unfold)' : 'Unfold 3D Audit Receipt')}</span>
                     </span>
                     <ChevronDown size={15} className={`transition-transform duration-300 ${isExpanded ? 'rotate-180 text-primary' : 'text-slate-400'}`} />
                   </button>
 
                   {/* 3D Paper Accordion Unfold Container (Mobile) */}
-                  <AnimatePresence>
+                  <AnimatePresence initial={false}>
                     {isExpanded && (
                       <PaperReceiptAccordion
                         row={row}
@@ -509,7 +581,7 @@ const ExpenseTable = ({
         </div>
 
         {/* ========================================================================= */}
-        {/* 💻 DESKTOP / TABLET VIEW: Spacious 4-Column Table */}
+        {/* 💻 DESKTOP / TABLET VIEW: Spacious 4-Column Table with 3D Row Unfold      */}
         {/* ========================================================================= */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left">
@@ -544,7 +616,7 @@ const ExpenseTable = ({
                       <tr
                         onClick={() => toggleRow(rowKey)}
                         className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group ${
-                          isExpanded ? 'bg-amber-50/30 dark:bg-slate-800/40' : ''
+                          isExpanded ? 'bg-amber-50/40 dark:bg-slate-800/50' : ''
                         }`}
                       >
                         {/* Column 1: Line Item & Normalized Parent Category Tag */}
@@ -566,7 +638,7 @@ const ExpenseTable = ({
                                 {isUrdu ? translateCategory(row.category, 'ur') : row.category}
                               </span>
                               <span className="text-[10px] font-mono font-semibold text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">
-                                {isExpanded ? (isUrdu ? 'رسید بند کریں' : 'Click to fold') : (isUrdu ? 'آڈٹ رسید' : 'View receipt')}
+                                {isExpanded ? (isUrdu ? 'رسید بند کریں' : 'Click to fold') : (isUrdu ? '3D رسید دیکھیں' : 'Unfold 3D receipt')}
                               </span>
                             </div>
                           </div>
@@ -651,10 +723,10 @@ const ExpenseTable = ({
                       </tr>
 
                       {/* Expandable 3D Accordion Paper Receipt Row */}
-                      {isExpanded && (
-                        <tr className="bg-slate-100/40 dark:bg-slate-900/40">
-                          <td colSpan={isAdmin ? 5 : 4} className="p-0 border-b border-slate-200/90 dark:border-slate-800">
-                            <AnimatePresence>
+                      <AnimatePresence initial={false}>
+                        {isExpanded && (
+                          <tr key={`${rowKey}-receipt`} className="bg-slate-100/40 dark:bg-slate-900/40">
+                            <td colSpan={isAdmin ? 5 : 4} className="p-0 border-b border-slate-200/90 dark:border-slate-800">
                               <PaperReceiptAccordion
                                 row={row}
                                 displayCurrency={displayCurrency}
@@ -663,10 +735,10 @@ const ExpenseTable = ({
                                 t={t}
                                 curMonthShort={curMonthShort}
                               />
-                            </AnimatePresence>
-                          </td>
-                        </tr>
-                      )}
+                            </td>
+                          </tr>
+                        )}
+                      </AnimatePresence>
                     </React.Fragment>
                   )
                 })
