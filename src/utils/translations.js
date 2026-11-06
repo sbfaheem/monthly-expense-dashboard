@@ -424,12 +424,14 @@ export function translateCategory(category, lang = 'en') {
 export function translateItemName(name, lang = 'en') {
   if (lang !== 'ur' || !name) return name;
   const lower = name.toLowerCase().trim();
+  if (lower.includes('misc') || lower.includes('miscellaneous')) return 'متفرق اخراجات';
   if (lower.includes('security') || lower.includes('guard')) return translations.ur.itemSecurity;
   if (lower.includes('sweeper') || lower.includes('jamadar') || lower.includes('khakrob')) return translations.ur.itemSweeper;
   if (lower.includes('electrician') && (lower.includes('arham') || lower.includes('extra'))) return translations.ur.itemElectricianExtra;
   if (lower.includes('electrician')) return translations.ur.itemElectrician;
   if (lower.includes('electrical') || lower.includes('accessories') || lower.includes('wire')) return translations.ur.itemElectricalAcc;
-  if (lower.includes('bulb') || lower.includes('streetlight') || lower.includes('light')) return translations.ur.itemBulbRepair;
+  if (lower.includes('bulb') || lower.includes('blub') || lower.includes('streetlight') || lower.includes('light')) return translations.ur.itemBulbRepair;
+  if (lower.includes('uniform') && lower.includes('shoe')) return 'اسٹاف یونیفارم اور جوتے';
   if (lower.includes('uniform')) return translations.ur.itemUniforms;
   if (lower === 'jharo' || lower === 'jhado') return 'جھاڑو';
   if (lower.includes('cleaning') || lower.includes('jhado') || lower.includes('jharo') || lower.includes('bans') || lower.includes('broom')) return translations.ur.itemCleaning;
@@ -443,6 +445,19 @@ export function translateItemName(name, lang = 'en') {
   if (lower.includes('shoe')) return 'اسٹاف یونیفارم اور جوتے';
   if (lower.includes('welder') || lower.includes('axe') || lower.includes('kulhari')) return 'ویلڈر چارجز اور کلہاڑی';
   if (lower.includes('chamber') || lower.includes('dhakan') || lower.includes('cover')) return 'چیمبر ڈھکن';
+  if (lower.includes('gutter')) return 'گٹر کی صفائی';
+  if (lower.includes('balcha')) return 'بیلچہ';
+  if (lower.includes('chemical')) return 'کیمیکل واش';
+  if (lower.includes('chuna')) return 'چونا اور رکشہ کرایہ';
+  if (lower.includes('ghaneti')) return 'گھنٹی';
+  if (lower.includes('terpal') || lower.includes('tarpaulin')) return 'ترپال';
+  if (lower.includes('fan')) return 'پنکھے';
+  if (lower.includes('chair')) return 'کرسیاں';
+  if (lower.includes('shed')) return 'شیڈ تنصیب';
+  if (lower.includes('stair')) return 'لکڑی کی سیڑھی';
+  if (lower.includes('receipt') || lower.includes('stationery')) return 'رسید بکس و اسٹیشنری';
+  if (lower.includes('panaflex') || lower.includes('fare') || lower.includes('riksha') || lower.includes('rickshaw')) return 'پینافلیکس و رکشہ کرایہ';
+  if (lower.includes('previous committee')) return 'سابقہ کمیٹی بقایا جات';
   return name;
 }
 

@@ -48,7 +48,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
   const account = {
     bankName: isUrdu ? 'ایزی پیسہ بینک لمیٹڈ' : 'Easypaisa Bank Ltd',
     shortName: 'Easypaisa',
-    accountTitle: 'Hanzala Muzaffar',
+    accountTitle: isUrdu ? 'حنظلہ مظفر' : 'Hanzala Muzaffar',
     accountNumber: '03462650446',
     formattedNumber: '0346 2650 446',
     raastId: '03462650446',
@@ -245,7 +245,11 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                     {isUrdu ? 'ایزی پیسہ اکاؤنٹ نمبر' : 'Easypaisa Account Number'}
                   </div>
                   <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="font-mono text-base sm:text-xl font-black tracking-wider text-amber-100 drop-shadow-sm select-all">
+                    <div
+                      dir="ltr"
+                      style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+                      className="font-mono text-base sm:text-xl font-black tracking-wider text-amber-100 drop-shadow-sm select-all"
+                    >
                       {account.formattedNumber}
                     </div>
 
@@ -278,7 +282,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                     <span className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
                       {t?.accountTitle || (isUrdu ? 'اکاؤنٹ ٹائٹل' : 'Account Title')}
                     </span>
-                    <span className="text-xs sm:text-sm font-extrabold text-white tracking-wide uppercase">
+                    <span className={`text-xs sm:text-sm font-extrabold text-white tracking-wide ${isUrdu ? 'font-urdu' : 'uppercase'}`}>
                       {account.accountTitle}
                     </span>
                   </div>
@@ -309,7 +313,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                 {/* Magnetic Stripe with Sector 7D/1 Management branding */}
                 <div className="h-8 sm:h-10 w-[calc(100%+3rem)] -mx-6 -mt-6 bg-gradient-to-r from-neutral-900 via-black to-neutral-900 border-b border-white/10 flex items-center px-6">
                   <span className="text-[8px] tracking-widest text-slate-400 uppercase font-mono font-bold">
-                    SECTOR 7D/1 MANAGEMENT • OFFICIAL DEPOSIT PASSBOOK
+                    {isUrdu ? 'سیکٹر 7D/1 مینجمنٹ • آفیشل ڈپازٹ پاس بک' : 'SECTOR 7D/1 MANAGEMENT • OFFICIAL DEPOSIT PASSBOOK'}
                   </span>
                 </div>
 
@@ -363,12 +367,16 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                   {/* Raast Details & Copy Button */}
                   <div className="flex-1 min-w-0">
                     <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 mb-1">
-                      Raast P2P / Instant
+                      {isUrdu ? 'راست فوری ادائیگی' : 'Raast P2P / Instant'}
                     </span>
                     <h4 className="text-xs sm:text-sm font-extrabold text-white">
                       {isUrdu ? 'راست آئی ڈی (فوری ٹرانسفر)' : 'Instant Raast Payment'}
                     </h4>
-                    <div className="font-mono text-base sm:text-lg font-black text-amber-200 tracking-wider my-0.5 select-all">
+                    <div
+                      dir="ltr"
+                      style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+                      className="font-mono text-base sm:text-lg font-black text-amber-200 tracking-wider my-0.5 select-all"
+                    >
                       {account.formattedRaast}
                     </div>
 
@@ -442,7 +450,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                 {t?.accountTitle || (isUrdu ? 'اکاؤنٹ ٹائٹل' : 'Account Title')}
               </span>
               <div className="flex items-center gap-2">
-                <strong className="text-slate-800 dark:text-slate-200 font-bold">
+                <strong className={`text-slate-800 dark:text-slate-200 font-bold ${isUrdu ? 'font-urdu' : ''}`}>
                   {account.accountTitle}
                 </strong>
                 <button
@@ -462,7 +470,11 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                 {isUrdu ? 'ایزی پیسہ اکاؤنٹ نمبر' : 'Easypaisa Account Number'}
               </span>
               <div className="flex items-center gap-2">
-                <strong className="font-mono text-slate-800 dark:text-slate-200 font-bold select-all">
+                <strong
+                  dir="ltr"
+                  style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+                  className="font-mono text-slate-800 dark:text-slate-200 font-bold select-all"
+                >
                   {account.accountNumber}
                 </strong>
                 <button
@@ -482,7 +494,11 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                 {t?.raastId || (isUrdu ? 'راست آئی ڈی' : 'Raast ID')}
               </span>
               <div className="flex items-center gap-2">
-                <strong className="font-mono text-slate-800 dark:text-slate-200 font-bold select-all">
+                <strong
+                  dir="ltr"
+                  style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+                  className="font-mono text-slate-800 dark:text-slate-200 font-bold select-all"
+                >
                   {account.raastId}
                 </strong>
                 <button

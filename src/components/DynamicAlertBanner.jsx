@@ -235,26 +235,28 @@ export default function DynamicAlertBanner({
 
           {/* Right Side: Translation Notice */}
           <div
-            className={`border-t md:border-t-0 ${isUrdu ? 'md:border-r md:pr-6 text-left' : 'md:border-l md:pl-6 text-right'} ${
+            className={`border-t md:border-t-0 ${isUrdu ? 'md:border-r md:pr-6 text-right' : 'md:border-l md:pl-6 text-right'} ${
               isDeficit ? 'border-amber-200 dark:border-amber-800/60' : 'border-emerald-200 dark:border-emerald-800/60'
             } pt-3 md:pt-0 flex-1`}
           >
             <p
-              dir={isUrdu ? 'ltr' : 'rtl'}
+              dir={isUrdu ? 'rtl' : 'ltr'}
               className={`text-sm sm:text-base md:text-lg font-bold leading-relaxed ${
-                isUrdu ? 'font-sans' : 'font-urdu'
+                isUrdu ? 'font-urdu' : 'font-sans'
               } ${
                 isDeficit ? 'text-amber-900/80 dark:text-amber-200/80' : 'text-emerald-900/80 dark:text-emerald-200/80'
               }`}
             >
               {isUrdu
                 ? (isDeficit
+                    ? `ماہانہ خسارہ: روپے ${absFormatted} — محفوظ فنڈ سے کٹوتی۔`
+                    : `ماہانہ بچت: روپے ${absFormatted} — محفوظ فنڈ میں شامل۔`)
+                : (isDeficit
                     ? `Net Deficit: ${currency} ${absFormatted} — Operating gap recorded.`
-                    : `Net Surplus: ${currency} ${absFormatted} — Added to reserve fund.`)
-                : defaultUrdu}
+                    : `Net Surplus: ${currency} ${absFormatted} — Added to reserve fund.`)}
             </p>
             {customNote && customNote !== defaultUrdu && (
-              <p className="text-xs sm:text-sm md:text-base font-bold text-slate-700 dark:text-slate-200 mt-2 font-urdu leading-relaxed">
+              <p className={`text-xs sm:text-sm md:text-base font-bold text-slate-700 dark:text-slate-200 mt-2 leading-relaxed ${isUrdu ? 'font-urdu' : ''}`}>
                 {customNote}
               </p>
             )}

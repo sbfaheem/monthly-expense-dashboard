@@ -94,7 +94,7 @@ export const MonthComparison3D = ({
                 {isUrdu ? 'ماہانہ تقابلی جائزہ (3D موازنہ)' : 'Month-over-Month 3D Comparison'}
               </h3>
               <span className="text-[10px] font-mono font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 shadow-xs">
-                {translateMonth(prevName, lang).toUpperCase()} VS {translateMonth(currName, lang).toUpperCase()}
+                {translateMonth(prevName, lang).toUpperCase()} {isUrdu ? 'بمقابلہ' : 'VS'} {translateMonth(currName, lang).toUpperCase()}
               </span>
             </div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
@@ -127,7 +127,7 @@ export const MonthComparison3D = ({
                 : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
             }`}
           >
-            3D Split
+            {isUrdu ? '3D موازنہ' : '3D Split'}
           </button>
           <button
             type="button"
@@ -176,7 +176,7 @@ export const MonthComparison3D = ({
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                  Baseline
+                  {isUrdu ? 'بنیادی موازنہ' : 'Baseline'}
                 </span>
                 <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${
                   isPrevSurplus
@@ -252,7 +252,7 @@ export const MonthComparison3D = ({
                 <ShieldCheck size={14} className="text-emerald-500" />
                 <span>{isUrdu ? 'مکمل تصدیق شدہ ریکارڈ' : 'Reconciled Audit Record'}</span>
               </span>
-              <span className="font-mono text-[11px] text-slate-500 font-bold">100% Settled</span>
+              <span className="font-mono text-[11px] text-slate-500 font-bold">{isUrdu ? '100% حساب مکمل' : '100% Settled'}</span>
             </div>
           </motion.div>
 
@@ -264,7 +264,7 @@ export const MonthComparison3D = ({
             {/* Top Pill Icon */}
             <div className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-cyan-400 mb-3">
               <Sparkles size={13} className="text-cyan-400 animate-pulse" />
-              <span>Variance / Delta</span>
+              <span>{isUrdu ? 'فرق / تبدیلی' : 'Variance / Delta'}</span>
             </div>
 
             {/* Collection Shift */}
@@ -338,7 +338,7 @@ export const MonthComparison3D = ({
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-600 text-white shadow-xs">
-                  Live Active
+                  {isUrdu ? 'موجودہ فعال' : 'Live Active'}
                 </span>
                 <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${
                   isCurrSurplus
