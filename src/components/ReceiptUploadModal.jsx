@@ -81,6 +81,15 @@ export default function ReceiptUploadModal({
     }
   }
 
+  const handleClose = () => {
+    setFile(null)
+    setPreviewUrl(null)
+    setSubmittedId(null)
+    setError('')
+    setOcrDetected(null)
+    onClose()
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!file) {
@@ -101,7 +110,7 @@ export default function ReceiptUploadModal({
         (progress) => setUploadProgress(progress)
       )
 
-      // 2. Save in Firestore with sanitized path
+      // 2. Save in Firestore with sanitized path and Paid Resident status
       const recId = await submitPaymentReceipt({
         residentId: currentUser.id,
         residentName: currentUser.name,
@@ -116,8 +125,21 @@ export default function ReceiptUploadModal({
         receiptStoragePath: storagePath
       })
 
+      // Dispatch real-time event so Super Admin Table updates immediately
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('receipt-updated', {
+            detail: {
+              receiptId: recId,
+              houseNumber: currentUser.houseNumber,
+              amount: Number(amount),
+              status: 'verified'
+            }
+          })
+        )
+      }
+
       setSubmittedId(recId)
-      if (onSuccess) onSuccess(recId)
     } catch (err) {
       setError(err.message || 'Failed to upload receipt. Please try again.')
     } finally {
@@ -145,7 +167,7 @@ export default function ReceiptUploadModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="size-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer"
           >
             <X size={16} />
@@ -154,22 +176,63 @@ export default function ReceiptUploadModal({
 
         {submittedId ? (
           <div className="p-6 text-center space-y-4">
-            <div className="size-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
-              <CheckCircle2 size={36} />
+            <div className="size-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center ring-8 ring-emerald-50 dark:ring-emerald-950/30">
+              <CheckCircle2 size={38} />
             </div>
-            <h4 className="text-xl font-black text-slate-900 dark:text-white">
-              Receipt Submitted!
-            </h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-              Your payment receipt has been linked to <strong>{currentUser.houseNumber}</strong>. Status will update to <strong>Paid Resident</strong> upon admin review.
+
+            <div className="space-y-1">
+              <h4 className="text-xl font-black text-slate-900 dark:text-white">
+                Your Receipt Has Been Updated
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {currentMonth} {currentYear} • Sector 7D/1
+              </p>
+            </div>
+
+            {/* Paid Resident Status Badge */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 font-black text-xs border border-emerald-300/60 shadow-xs">
+              <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400" />
+              <span>Status: Paid Resident</span>
+            </div>
+
+            {/* Receipt Summary Card */}
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700 text-left space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-bold">House / Unit</span>
+                <span className="font-black text-slate-800 dark:text-slate-200">{currentUser.houseNumber}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-bold">Amount Paid</span>
+                <span className="font-mono font-black text-emerald-600 dark:text-emerald-400">
+                  PKR {Number(amount).toLocaleString('en-PK')}
+                </span>
+              </div>
+              {transactionRef && (
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-bold">Transaction TID</span>
+                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{transactionRef}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-700/80">
+                <span className="text-slate-400 text-[11px]">Super Admin Ledger</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">Logged in Receipt Tab</span>
+              </div>
+              <div className="font-mono text-[10px] text-slate-400 truncate pt-1">
+                Ref: {submittedId}
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Your payment receipt and verification have been logged directly into the Super Admin Panel.
             </p>
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200/80 dark:border-slate-700 font-mono text-xs font-bold text-slate-600 dark:text-slate-300">
-              Receipt ID: {submittedId}
-            </div>
+
             <button
               type="button"
-              onClick={onClose}
-              className="w-full py-3 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-sm shadow-md cursor-pointer"
+              onClick={() => {
+                if (onSuccess) onSuccess(submittedId)
+                handleClose()
+              }}
+              className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-md transition-colors cursor-pointer"
             >
               Done
             </button>

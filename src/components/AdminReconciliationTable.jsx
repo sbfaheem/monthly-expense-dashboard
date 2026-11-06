@@ -49,6 +49,9 @@ export default function AdminReconciliationTable({
 
   useEffect(() => {
     loadData()
+    const handleUpdate = () => loadData()
+    window.addEventListener('receipt-updated', handleUpdate)
+    return () => window.removeEventListener('receipt-updated', handleUpdate)
   }, [cycleKey])
 
   const handleStatusChange = async (receiptId, residentId, newStatus) => {
@@ -71,7 +74,7 @@ export default function AdminReconciliationTable({
   // ─── Financial Calculations ───
   const currentMonthVerifiedTotal = useMemo(() => {
     return receipts
-      .filter((r) => r.status === 'verified')
+      .filter((r) => r.status === 'verified' || r.status === 'paid')
       .reduce((sum, r) => sum + (Number(r.amountPaid) || 0), 0)
   }, [receipts])
 
@@ -80,7 +83,7 @@ export default function AdminReconciliationTable({
   }, [receipts])
 
   const verifiedCount = useMemo(() => {
-    return receipts.filter((r) => r.status === 'verified').length
+    return receipts.filter((r) => r.status === 'verified' || r.status === 'paid').length
   }, [receipts])
 
   const momDelta = previousMonthRevenue
@@ -95,7 +98,12 @@ export default function AdminReconciliationTable({
         r.contactNumber?.includes(searchTerm) ||
         r.transactionRef?.toLowerCase().includes(searchTerm.toLowerCase())
 
-      const matchesFilter = statusFilter === 'all' || r.status === statusFilter
+      const matchesFilter =
+        statusFilter === 'all'
+          ? true
+          : statusFilter === 'verified'
+          ? (r.status === 'verified' || r.status === 'paid')
+          : r.status === statusFilter
       return matchesSearch && matchesFilter
     })
   }, [receipts, searchTerm, statusFilter])
@@ -179,9 +187,9 @@ export default function AdminReconciliationTable({
 
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
           {[
-            { key: 'all', en: 'All Records', ur: 'تمام' },
+            { key: 'all', en: 'All Receipts', ur: 'تمام رسیدیں' },
             { key: 'pending', en: 'Pending', ur: 'زیر التواء' },
-            { key: 'verified', en: 'Paid Residents', ur: 'ادائیگی شدہ' },
+            { key: 'verified', en: 'Paid Residents', ur: 'ادائیگی شدہ رہائشی' },
             { key: 'rejected', en: 'Rejected', ur: 'مسترد شدہ' }
           ].map((tab) => (
             <button
@@ -263,7 +271,7 @@ export default function AdminReconciliationTable({
 
                     {/* Status Badge */}
                     <td className="p-4 whitespace-nowrap">
-                      {row.status === 'verified' && (
+                      {(row.status === 'verified' || row.status === 'paid') && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 font-black text-[11px] border border-emerald-300/50">
                           <CheckCircle2 size={12} /> {isUrdu ? 'ادائیگی شدہ رہائشی' : 'Paid Resident'}
                         </span>
@@ -298,7 +306,7 @@ export default function AdminReconciliationTable({
 
                     {/* Quick Approve / Reject Actions */}
                     <td className="p-4 text-right space-x-2 whitespace-nowrap">
-                      {row.status !== 'verified' && (
+                      {row.status !== 'verified' && row.status !== 'paid' && (
                         <button
                           type="button"
                           disabled={actionInProgress === row.id}

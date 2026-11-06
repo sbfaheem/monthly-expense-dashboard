@@ -76,7 +76,7 @@ export async function uploadReceiptFile(file, cycleKey, residentId, onProgress) 
 }
 
 /**
- * Saves receipt document into Firestore
+ * Saves receipt document into Firestore and immediately logs with Paid Resident status
  */
 export async function submitPaymentReceipt({
   residentId,
@@ -91,7 +91,7 @@ export async function submitPaymentReceipt({
   receiptUrl,
   receiptStoragePath
 }) {
-  const cycleKey = `${billingYear}-${String(billingMonth).padStart(2, '0')}`
+  const cycleKey = `${billingYear}-${billingMonth}`
   const cleanHouse = (houseNumber || 'UNIT')
     .replace(/[^a-zA-Z0-9]/g, '-')
     .replace(/-+/g, '-')
@@ -115,15 +115,15 @@ export async function submitPaymentReceipt({
     transactionRef,
     receiptUrl, // Stores compressed Base64 string directly
     receiptStoragePath: receiptStoragePath || 'firestore_embedded',
-    status: 'pending', // 'pending' | 'verified' | 'rejected'
+    status: 'verified', // Directly confirmed as verified Paid Resident
     submittedAt: serverTimestamp(),
-    verifiedAt: null,
-    verifiedBy: null
+    verifiedAt: serverTimestamp(),
+    verifiedBy: 'Auto-Verified (Receipt Upload)'
   }
 
   await setDoc(receiptRef, payload)
 
-  // Update billing status index
+  // Update billing status index to Paid Resident
   const billingIndexRef = doc(db, 'residents_billing_status', `${cleanResidentId}_${cycleKey}`)
   await setDoc(billingIndexRef, {
     residentId,
@@ -132,7 +132,7 @@ export async function submitPaymentReceipt({
     contactNumber,
     cycleKey,
     amountPaid: Number(amountPaid),
-    status: 'pending',
+    status: 'paid', // Status: Paid Resident
     receiptId,
     receiptUrl,
     updatedAt: serverTimestamp()
@@ -162,13 +162,34 @@ export async function updateReceiptStatus(receiptId, residentId, cycleKey, statu
 
 /**
  * Fetches all receipts for a billing cycle (for Admin Reconciliation)
+ * Includes robust fallback for missing composite indexes in Firestore
  */
 export async function fetchCycleReceipts(cycleKey) {
-  const q = query(
-    collection(db, 'payment_receipts'),
-    where('cycleKey', '==', cycleKey),
-    orderBy('submittedAt', 'desc')
-  )
-  const snap = await getDocs(q)
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+  try {
+    const q = query(
+      collection(db, 'payment_receipts'),
+      where('cycleKey', '==', cycleKey),
+      orderBy('submittedAt', 'desc')
+    )
+    const snap = await getDocs(q)
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+  } catch (err) {
+    console.warn('Index notice, fetching with cycleKey filter:', err)
+    try {
+      const q2 = query(
+        collection(db, 'payment_receipts'),
+        where('cycleKey', '==', cycleKey)
+      )
+      const snap2 = await getDocs(q2)
+      const list = snap2.docs.map((d) => ({ id: d.id, ...d.data() }))
+      return list.sort((a, b) => {
+        const tA = a.submittedAt?.toMillis ? a.submittedAt.toMillis() : (a.submittedAt?.seconds || 0)
+        const tB = b.submittedAt?.toMillis ? b.submittedAt.toMillis() : (b.submittedAt?.seconds || 0)
+        return tB - tA
+      })
+    } catch (err2) {
+      console.error('Failed to load receipts fallback:', err2)
+      return []
+    }
+  }
 }
