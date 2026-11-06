@@ -17,19 +17,18 @@ const computeCrc16 = (payload) => {
   return crc.toString(16).toUpperCase().padStart(4, '0')
 }
 
-// SBP-compliant Raast P2P payload strictly encoding Beneficiary Name & Easypaisa Account / Raast ID (Zero IBAN)
-const buildRaastP2pPayload = (accountNumber, accountTitle = 'HANZALA MUZAFFAR') => {
-  const cleanNumber = accountNumber.replace(/\D/g, '')
-  const lenStr = String(cleanNumber.length).padStart(2, '0')
+// SBP-compliant Raast P2P payload using official 24-char Pakistani IBAN with Beneficiary Name for full interoperability
+const buildRaastP2pPayload = (iban, accountTitle = 'HANZALA MUZAFFAR') => {
+  const cleanIban = iban.trim().toUpperCase().replace(/\s+/g, '')
   const cleanTitle = (accountTitle || 'HANZALA MUZAFFAR').trim().toUpperCase()
   const titleLen = String(cleanTitle.length).padStart(2, '0')
   // Tag 00: Version 02
   // Tag 01: Initiation 11 (Static open-amount)
-  // Tag 02: Account Type 01 (Raast ID / Mobile Alias)
-  // Tag 03: Account Title / Beneficiary Name (HANZALA MUZAFFAR)
-  // Tag 04: Identifier (03462650446)
+  // Tag 02: Scheme 00 (IBAN)
+  // Tag 03: Beneficiary Name (HANZALA MUZAFFAR)
+  // Tag 04: Official IBAN (24 chars)
   // Tag 10: Checksum
-  const base = `00020201021102020103${titleLen}${cleanTitle}04${lenStr}${cleanNumber}1004`
+  const base = `00020201021102020003${titleLen}${cleanTitle}0424${cleanIban}1004`
   return base + computeCrc16(base)
 }
 
@@ -84,14 +83,16 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
     formattedNumber: '0346 2650 446',
     raastId: '03462650446',
     formattedRaast: '0346-2650446',
+    iban: 'PK60TMFB0000000039676234',
+    formattedIban: 'PK60 TMFB 0000 0000 3967 6234',
     whatsappNumber: '923462650446',
     tagText: 'Branchless Banking / برانچ لیس بینکنگ',
   }
 
-  // Generate official SBP Raast P2P QR Code strictly targeting Easypaisa Account with Beneficiary Name (Zero IBAN)
+  // Generate official SBP Raast P2P QR Code targeting Easypaisa official IBAN with Beneficiary Name
   useEffect(() => {
     let isMounted = true
-    const payload = buildRaastP2pPayload(account.accountNumber, account.cardholderName)
+    const payload = buildRaastP2pPayload(account.iban, account.cardholderName)
     QRCode.toDataURL(payload, {
       width: 320,
       margin: 2,
@@ -110,7 +111,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
     return () => {
       isMounted = false
     }
-  }, [account.accountNumber, account.cardholderName])
+  }, [account.iban, account.cardholderName])
 
   const copyToClipboard = async (text, key) => {
     try {
@@ -137,8 +138,8 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
   // Pre-filled WhatsApp payment proof message
   const whatsappMessage = encodeURIComponent(
     isUrdu
-      ? `السلام علیکم! میں نے سوسائٹی کے ماہانہ فنڈز منتقل کر دیے ہیں۔ ادائیگی کی رسید منسلک ہے۔\nبینک: ${account.bankName}\nاکاؤنٹ ٹائٹل: ${account.accountTitle}\nاکاؤنٹ نمبر / راست: ${account.accountNumber}`
-      : `Assalam o Alaikum! I have transferred the monthly society dues. Please find the payment receipt attached.\nBank: ${account.bankName}\nAccount Title: ${account.accountTitle}\nAccount / Raast: ${account.accountNumber}`
+      ? `السلام علیکم! میں نے سوسائٹی کے ماہانہ فنڈز منتقل کر دیے ہیں۔ ادائیگی کی رسید منسلک ہے۔\nبینک: ${account.bankName}\nاکاؤنٹ ٹائٹل: ${account.accountTitle}\nاکاؤنٹ نمبر / راست: ${account.accountNumber}\nIBAN: ${account.formattedIban}`
+      : `Assalam o Alaikum! I have transferred the monthly society dues. Please find the payment receipt attached.\nBank: ${account.bankName}\nAccount Title: ${account.accountTitle}\nAccount / Raast: ${account.accountNumber}\nIBAN: ${account.formattedIban}`
   )
 
   const whatsappUrl = `https://wa.me/${account.whatsappNumber}?text=${whatsappMessage}`
@@ -548,6 +549,30 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                   title="Copy Raast ID"
                 >
                   {copiedKey === 'raast_quick' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Official IBAN */}
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs">
+              <span className="font-semibold text-slate-500 dark:text-slate-400">
+                {isUrdu ? 'بین الاقوامی اکاؤنٹ نمبر (IBAN)' : 'Official IBAN'}
+              </span>
+              <div className="flex items-center gap-2">
+                <strong
+                  dir="ltr"
+                  style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+                  className="font-mono text-slate-800 dark:text-slate-200 font-bold select-all text-[11px] sm:text-xs"
+                >
+                  {account.formattedIban}
+                </strong>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(account.iban, 'iban_quick')}
+                  className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
+                  title="Copy IBAN"
+                >
+                  {copiedKey === 'iban_quick' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
                 </button>
               </div>
             </div>
