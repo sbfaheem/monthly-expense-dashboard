@@ -1,9 +1,34 @@
 import React, { useState, useEffect } from 'react'
-import { createRaastQrDataUrl } from 'sendkardo-qr'
+import QRCode from 'qrcode'
 import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion'
 import { useLanguage } from '../context/LanguageContext'
 import { Copy, Check, X, RotateCw, Landmark, QrCode, MessageCircle, ExternalLink, ShieldCheck, Smartphone, Wallet } from 'lucide-react'
 import { soundEffects } from '../utils/soundEffects'
+
+// Cyclic Redundancy Check (CRC-16 / CCITT-FALSE) as mandated by State Bank of Pakistan (SBP)
+const computeCrc16 = (payload) => {
+  let crc = 0xFFFF
+  for (let i = 0; i < payload.length; i += 1) {
+    crc ^= payload.charCodeAt(i) << 8
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc & 0x8000) ? (((crc << 1) ^ 0x1021) & 0xFFFF) : ((crc << 1) & 0xFFFF)
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0')
+}
+
+// SBP-compliant Raast P2P payload strictly targeting Easypaisa Account Number / Raast ID (no IBAN)
+const buildRaastP2pPayload = (accountNumber) => {
+  const cleanNumber = accountNumber.replace(/\D/g, '')
+  const lenStr = String(cleanNumber.length).padStart(2, '0')
+  // Tag 00: Version 02
+  // Tag 01: Initiation 11 (Static open-amount)
+  // Tag 02: Account Type 01 (Raast ID / Mobile Alias)
+  // Tag 04: Identifier (03462650446)
+  // Tag 10: Checksum
+  const base = `00020201021102020104${lenStr}${cleanNumber}1004`
+  return base + computeCrc16(base)
+}
 
 export const BankDetailsModal = ({ isOpen, onClose }) => {
   const { lang, t, isRtl } = useLanguage ? useLanguage() : { lang: 'en', t: {}, isRtl: false }
@@ -56,26 +81,23 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
     formattedNumber: '0346 2650 446',
     raastId: '03462650446',
     formattedRaast: '0346-2650446',
-    iban: 'PK28TMFB0000003462650446',
     whatsappNumber: '923462650446',
     tagText: 'Branchless Banking / برانچ لیس بینکنگ',
   }
 
-  // Generate official SBP Raast P2P EMV-compliant QR Code for all Pakistani banking apps
+  // Generate official SBP Raast P2P QR Code strictly targeting Easypaisa Account / Raast ID (Zero IBAN)
   useEffect(() => {
     let isMounted = true
-    createRaastQrDataUrl(
-      { iban: account.iban },
-      {
-        width: 320,
-        margin: 2,
-        errorCorrectionLevel: 'H',
-        color: {
-          dark: '#064e3b',
-          light: '#ffffff'
-        }
+    const payload = buildRaastP2pPayload(account.accountNumber)
+    QRCode.toDataURL(payload, {
+      width: 320,
+      margin: 2,
+      errorCorrectionLevel: 'H',
+      color: {
+        dark: '#064e3b',
+        light: '#ffffff'
       }
-    )
+    })
       .then(url => {
         if (isMounted) setQrDataUrl(url)
       })
@@ -85,7 +107,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
     return () => {
       isMounted = false
     }
-  }, [account.iban])
+  }, [account.accountNumber])
 
   const copyToClipboard = async (text, key) => {
     try {
