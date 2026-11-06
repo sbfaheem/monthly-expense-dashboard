@@ -752,6 +752,14 @@ export default function ViewerDashboard() {
           isNoData={totals?.record?.isNoData ?? false}
         />
 
+        {/* 3D Expense Breakdown & Category Allocation */}
+        <Charts
+          expenses={monthlyExpenses}
+          allExpenses={data.expenses}
+          monthlyRecords={data.monthlyRecords}
+          selectedMonth={currentMonthKey}
+        />
+
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
           {/* Table Section */}
@@ -768,13 +776,6 @@ export default function ViewerDashboard() {
 
           {/* Sidebar Content */}
           <div className="xl:col-span-4 space-y-6">
-            <Charts
-              expenses={monthlyExpenses}
-              allExpenses={data.expenses}
-              monthlyRecords={data.monthlyRecords}
-              selectedMonth={currentMonthKey}
-            />
-            
             {/* Card 2: Report Governance & Audit */}
             <div className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-2xl border border-primary/10 shadow-sm space-y-4">
               <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-3">

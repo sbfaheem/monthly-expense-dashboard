@@ -352,18 +352,18 @@ export const Charts = ({
   return (
     <div ref={containerRef} className="w-full my-6">
       {/* ─── Header & Segmented View Controls (Standard Dashboard Text) ─── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 px-1">
+      <div className={`flex flex-col ${isWide ? 'sm:flex-row sm:items-center justify-between' : ''} gap-3.5 mb-5 px-1`}>
         <div className="flex items-center gap-3">
           <div className="size-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-500 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
             <PieChart size={20} className="stroke-[2.5]" />
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+              <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight whitespace-nowrap">
                 {t.expenseBreakdown || (isUrdu ? 'اخراجات کی تفصیل' : 'Expense Breakdown')}
               </h3>
-              <span className="text-[10px] font-mono font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 shadow-xs">
-                3D EXPLODED VIEW
+              <span className="text-[10px] font-mono font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60 shadow-xs whitespace-nowrap">
+                {isUrdu ? '3D تفصیلی منظر' : '3D EXPLODED VIEW'}
               </span>
             </div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
@@ -375,7 +375,7 @@ export const Charts = ({
         </div>
 
         {/* Responsive Mode Switcher */}
-        <div className="inline-flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-inner self-start sm:self-auto shrink-0">
+        <div className="inline-flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-inner self-start sm:self-auto shrink-0 flex-wrap max-w-full">
           <button
             type="button"
             onClick={() => setViewMode('donut')}
@@ -386,7 +386,7 @@ export const Charts = ({
             }`}
           >
             <Layers size={13} />
-            <span>{isUrdu ? '3D ڈونٹ' : '3D Donut'}</span>
+            <span className="whitespace-nowrap">{isUrdu ? '3D ڈونٹ' : '3D Donut'}</span>
           </button>
           <button
             type="button"
@@ -398,7 +398,7 @@ export const Charts = ({
             }`}
           >
             <span>☷</span>
-            <span>{isUrdu ? 'مشترکہ' : 'Split'}</span>
+            <span className="whitespace-nowrap">{isUrdu ? 'مشترکہ' : 'Split'}</span>
           </button>
           <button
             type="button"
@@ -410,7 +410,7 @@ export const Charts = ({
             }`}
           >
             <LayoutGrid size={13} />
-            <span>{isUrdu ? 'شعبہ جات' : 'Categories'}</span>
+            <span className="whitespace-nowrap">{isUrdu ? 'شعبہ جات' : 'Categories'}</span>
           </button>
         </div>
       </div>
