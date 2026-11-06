@@ -12,13 +12,14 @@ import DynamicAlertBanner from '../components/DynamicAlertBanner'
 import WhatsAppSnapshotModal from '../components/WhatsAppSnapshotModal'
 import BankDetailsModal from '../components/BankDetailsModal'
 import ExitIntentFeedbackModal from '../components/ExitIntentFeedbackModal'
+import AdminReconciliationTable from '../components/AdminReconciliationTable'
 import { FEATURE_FLAGS } from '../config/features'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useLanguage } from '../context/LanguageContext'
 import { translateMonth } from '../utils/translations'
 import { exportToCSV, printReport } from '../utils/export'
 import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
-import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2, Calendar, Landmark } from 'lucide-react'
+import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2, Calendar, Landmark, ClipboardCheck } from 'lucide-react'
 
 const QUICK_TAGS_EN = [
   '💎 100% Transparent',
@@ -43,7 +44,7 @@ const QUICK_TAGS_UR = [
 // Helper to normalize phone numbers for robust matching (last 10 digits)
 const normalizePhone = (p) => (p || '').replace(/[^0-9]/g, '').slice(-10)
 
-// Security helper: Obfuscate/mask phone numbers in public viewer to prevent scrapers & exploit bots from harvesting contacts
+// Security helper: Obfuscate/mask phone numbers in public viewer
 const maskPhone = (p) => {
   if (!p) return ''
   const digits = p.replace(/[^0-9]/g, '')
@@ -80,6 +81,15 @@ export default function ViewerDashboard() {
   const [loading, setLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+
+  // Admin Mode detection from URL (?admin=true) or LocalStorage
+  const [isAdmin, setIsAdmin] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      return params.get('admin') === 'true' || params.get('role') === 'admin' || localStorage.getItem('is_admin_mode') === 'true'
+    }
+    return false
+  })
 
   const lastLoggedRef = useRef({})
 
@@ -141,13 +151,11 @@ export default function ViewerDashboard() {
         }
       }
 
-      // Check queryName if no contact matched by phone
       if (!matched && queryName && freshData.contacts?.length) {
         const lowerName = queryName.toLowerCase().trim()
         matched = freshData.contacts.find(c => c.name?.toLowerCase().trim() === lowerName)
       }
 
-      // If URL explicitly provides name and/or phone, create or enrich profile directly from WhatsApp link
       if (!matched && (queryName || queryUser)) {
         matched = {
           name: queryName || queryUser || 'Resident',
@@ -190,7 +198,6 @@ export default function ViewerDashboard() {
         localStorage.setItem('resident_checked_in', 'true')
         setShowCheckInModal(false)
       } else {
-        // Prompt check-in modal ONLY for first-time visitors who have never checked in
         const alreadyCheckedIn = localStorage.getItem('resident_checked_in') === 'true' || !!localStorage.getItem('resident_identity')
         if (!alreadyCheckedIn) {
           setTimeout(() => {
@@ -209,7 +216,25 @@ export default function ViewerDashboard() {
   const monthlyExpenses = data.expenses.filter(e => e.month === currentMonthKey)
   const totals = calculateTotals(data.expenses, data.settings, data.monthlyRecords, currentMonthKey)
 
-  // Derive previous and current month comparison data for MonthComparison3D
+  // Current resident context mapped for BankDetailsModal and receipt upload
+  const currentResidentProfile = useMemo(() => {
+    if (resident) {
+      return {
+        id: normalizePhone(resident.phone) || resident.name?.toLowerCase().replace(/\s+/g, '_') || 'res_identified',
+        name: resident.name || 'Resident',
+        houseNumber: resident.houseAddress || resident.houseNo || 'Sector 7D/1',
+        phoneNumber: resident.phone || ''
+      }
+    }
+    return {
+      id: 'res_guest',
+      name: 'Community Resident',
+      houseNumber: 'Sector 7D/1',
+      phoneNumber: ''
+    }
+  }, [resident])
+
+  // Derive previous and current month comparison data
   const { previousMonthData, currentMonthData } = useMemo(() => {
     if (!currentMonthKey) {
       return {
@@ -291,14 +316,13 @@ export default function ViewerDashboard() {
     return (total / feedbackList.length).toFixed(1)
   }, [feedbackList])
 
-  // Log visit to Firestore whenever resident is identified and views statement
+  // Log visit to Firestore
   useEffect(() => {
     if (loading || !selectedMonth || !resident) return
 
     const residentKey = normalizePhone(resident.phone) || (resident.name || 'resident').toLowerCase().replace(/\s+/g, '_')
     const now = Date.now()
 
-    // Debounce within 30 seconds for active viewing session to avoid redundant updates
     if (lastLoggedRef.current[residentKey] && (now - lastLoggedRef.current[residentKey] < 30000)) {
       return
     }
@@ -319,7 +343,6 @@ export default function ViewerDashboard() {
     logVisitor(logPayload).catch(err => console.warn('Visitor log failed:', err))
   }, [loading, currentMonthKey, resident, detectedGroup])
 
-  // Filter contacts for check-in modal based on group & search query
   const filteredDirectoryContacts = useMemo(() => {
     if (!data.contacts) return []
     let list = data.contacts
@@ -343,7 +366,6 @@ export default function ViewerDashboard() {
       group: c.group || selectedModalGroup || detectedGroup || 'Direct Resident (No WhatsApp Group)'
     }
 
-    // Clear previous session lock so this specific resident check-in logs immediately once via useEffect
     const residentKey = normalizePhone(fullContact.phone) || (fullContact.name || 'resident').toLowerCase().replace(/\s+/g, '_')
     sessionStorage.removeItem(`visit_logged_${residentKey}_${currentMonthKey}`)
     localStorage.removeItem(`last_visit_time_${residentKey}_${currentMonthKey}`)
@@ -352,7 +374,6 @@ export default function ViewerDashboard() {
     localStorage.setItem('resident_identity', JSON.stringify(fullContact))
     localStorage.setItem('resident_checked_in', 'true')
     setShowCheckInModal(false)
-    // Visit is logged once by the useEffect when resident state updates
   }
 
   const handleManualCheckIn = async (e) => {
@@ -367,7 +388,6 @@ export default function ViewerDashboard() {
       group: selectedModalGroup || detectedGroup || 'Direct Resident (No WhatsApp Group)'
     }
 
-    // Persist new resident to backend contacts database so record is permanently maintained for analytics
     const cleanPhone = normalizePhone(customResident.phone)
     const existing = (data.contacts || []).find(c => normalizePhone(c.phone) === cleanPhone)
     if (!existing) {
@@ -477,7 +497,6 @@ export default function ViewerDashboard() {
         }))
       }
 
-      // If resident wasn't set, remember them as a resident profile
       if (!resident) {
         const fullProfile = {
           name: payload.name,
@@ -518,6 +537,14 @@ export default function ViewerDashboard() {
     setResident(null)
   }
 
+  const toggleAdminMode = () => {
+    const next = !isAdmin
+    setIsAdmin(next)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('is_admin_mode', String(next))
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen flex-col gap-4 bg-background-light">
@@ -541,26 +568,36 @@ export default function ViewerDashboard() {
                 {isUrdu ? (t.appTitle || 'ماہانہ اخراجات ڈیش بورڈ') : 'ExpensePro'}
               </h2>
               <span className="text-primary text-[10px] sm:text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
-                {isUrdu ? 'مشاہدہ موڈ' : 'Viewer Mode'}
+                {isAdmin ? (isUrdu ? 'سپر ایڈمن موڈ' : 'Super Admin Mode') : (isUrdu ? 'مشاہدہ موڈ' : 'Viewer Mode')}
               </span>
             </div>
           </div>
           
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <LanguageSwitcher />
-            <div className="hidden md:flex items-center gap-2 bg-slate-100 dark:bg-primary/10 px-3 py-1.5 rounded-full flex-shrink-0">
-              <span className="material-symbols-outlined text-sm text-primary">visibility</span>
-              <span className="text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                {isUrdu ? 'صرف پڑھنے کی اجازت' : 'Read-only Access'}
-              </span>
-            </div>
+
+            {/* Quick Super Admin Mode Switcher */}
+            <button
+              type="button"
+              onClick={toggleAdminMode}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold border transition-all cursor-pointer ${
+                isAdmin
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-sm animate-pulse'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+              }`}
+              title="Toggle Super Admin Reconciliation Ledger"
+            >
+              <ShieldCheck size={14} />
+              <span>{isAdmin ? (isUrdu ? 'ایڈمن موڈ آن' : 'Admin Active') : (isUrdu ? 'ایڈمن موڈ' : 'Admin Mode')}</span>
+            </button>
+
             <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               {/* Bank & Raast Details Button */}
               {FEATURE_FLAGS.SHOW_BANK_DETAILS_MODAL && (
                 <button
                   type="button"
                   onClick={() => setShowBankDetailsModal(true)}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs sm:text-sm font-black shadow-sm transition-all active:scale-95 flex-shrink-0 whitespace-nowrap"
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs sm:text-sm font-black shadow-sm transition-all active:scale-95 flex-shrink-0 whitespace-nowrap cursor-pointer"
                   title={isUrdu ? 'سوسائٹی بینک اکاؤنٹ و راست تفصیلات' : 'Community Bank Account & Raast Details'}
                 >
                   <Landmark size={16} />
@@ -569,17 +606,17 @@ export default function ViewerDashboard() {
               )}
               <button
                 onClick={() => setShowWhatsAppSnapshotModal(true)}
-                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-black shadow-sm transition-all active:scale-95 flex-shrink-0 whitespace-nowrap"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-black shadow-sm transition-all active:scale-95 flex-shrink-0 whitespace-nowrap cursor-pointer"
                 title="Download 1080px WhatsApp Card Summary"
               >
                 <Share2 size={16} />
                 <span className="hidden sm:inline">{t.exportWhatsApp || 'Download WhatsApp Summary'}</span>
                 <span className="sm:hidden">{isUrdu ? 'واٹس ایپ سمری' : 'WhatsApp Card'}</span>
               </button>
-              <button onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)} className="flex items-center justify-center rounded-xl h-9 w-9 sm:h-10 sm:w-10 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex-shrink-0" title="Export CSV">
+              <button onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)} className="flex items-center justify-center rounded-xl h-9 w-9 sm:h-10 sm:w-10 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex-shrink-0 cursor-pointer" title="Export CSV">
                 <span className="material-symbols-outlined text-sm sm:text-base">download</span>
               </button>
-              <button onClick={printReport} className="flex items-center justify-center rounded-xl h-9 w-9 sm:h-10 sm:w-10 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex-shrink-0" title="Print Report">
+              <button onClick={printReport} className="flex items-center justify-center rounded-xl h-9 w-9 sm:h-10 sm:w-10 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors flex-shrink-0 cursor-pointer" title="Print Report">
                 <span className="material-symbols-outlined text-sm sm:text-base">print</span>
               </button>
             </div>
@@ -622,14 +659,14 @@ export default function ViewerDashboard() {
             <div className="flex items-center gap-3 self-end sm:self-auto flex-wrap">
               <button
                 onClick={() => setShowCheckInModal(true)}
-                className="text-xs font-bold text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 hover:underline"
+                className="text-xs font-bold text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 hover:underline cursor-pointer"
               >
                 {isUrdu ? 'پروفائل تبدیل کریں' : 'Switch Profile'}
               </button>
               <span className="text-emerald-300 dark:text-emerald-700 hidden sm:inline">•</span>
               <button
                 onClick={handleClearIdentity}
-                className="text-xs text-slate-500 hover:text-red-600"
+                className="text-xs text-slate-500 hover:text-red-600 cursor-pointer"
                 title="Forget saved profile on this device"
               >
                 {isUrdu ? 'لاگ آؤٹ' : 'Logout'}
@@ -659,7 +696,7 @@ export default function ViewerDashboard() {
             <div className="flex items-center gap-2 self-start sm:self-auto">
               <button
                 onClick={() => setShowCheckInModal(true)}
-                className="bg-primary hover:bg-primary-hover text-white text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 active:scale-98"
+                className="bg-primary hover:bg-primary-hover text-white text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
               >
                 <UserCheck size={15} /> {isUrdu ? 'شناخت درج کریں' : 'Identify Yourself'}
               </button>
@@ -683,7 +720,7 @@ export default function ViewerDashboard() {
             <div className="flex items-center gap-2 self-start sm:self-auto">
               <button
                 onClick={() => setShowCheckInModal(true)}
-                className="bg-primary hover:bg-primary-hover text-white text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 active:scale-98"
+                className="bg-primary hover:bg-primary-hover text-white text-xs font-extrabold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
               >
                 <UserCheck size={15} /> {isUrdu ? 'شناخت درج کریں' : 'Identify Yourself'}
               </button>
@@ -697,17 +734,37 @@ export default function ViewerDashboard() {
           selectedYear={selectedYear}
           onMonthChange={setSelectedMonth}
           onYearChange={setSelectedYear}
-          isAdmin={false}
+          isAdmin={isAdmin}
         />
+
+        {/* ================= SUPER ADMIN RECONCILIATION ENGINE ================= */}
+        {isAdmin && (
+          <section className="bg-slate-50/80 dark:bg-slate-900/60 p-4 sm:p-6 rounded-3xl border-2 border-amber-500/40 shadow-lg">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
+                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">
+                  {isUrdu ? 'سپر ایڈمن وصولی و مصدقہ فنڈز جائزہ' : 'Super Admin Payment Reconciliation & Resident Ledger'}
+                </h3>
+              </div>
+              <span className="text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/70 px-2.5 py-0.5 rounded-full border border-amber-300/60">
+                {isUrdu ? 'سپر ایڈمن لاگ ان' : 'Super Admin Active'}
+              </span>
+            </div>
+            <AdminReconciliationTable
+              currentMonth={selectedMonth}
+              currentYear={selectedYear}
+              previousMonthRevenue={previousMonthData?.collection || 282250}
+            />
+          </section>
+        )}
 
         {/* What Changed This Month? Headline Variance Banner */}
         <MonthlyVarianceBanner
           selectedMonth={currentMonthKey}
           allExpenses={data.expenses || []}
           currency={data.settings?.currency || 'PKR'}
-      />
-
-      
+        />
 
         {/* Water Supply Tracker */}
         <WaterSupplyTracker 
@@ -719,7 +776,7 @@ export default function ViewerDashboard() {
             return []
           })()} 
           allWaterSupply={data.waterSupply || []}
-          isAdmin={false}
+          isAdmin={isAdmin}
         />
 
         {/* Summary Cards */}
@@ -770,7 +827,7 @@ export default function ViewerDashboard() {
               settings={data.settings}
               selectedMonth={currentMonthKey}
               totals={totals}
-              isAdmin={false}
+              isAdmin={isAdmin}
             />
           </div>
 
@@ -790,7 +847,6 @@ export default function ViewerDashboard() {
                 </span>
               </div>
 
-              {/* Compact Metadata Chips */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/70 dark:border-slate-700/60 space-y-0.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1">
@@ -810,7 +866,6 @@ export default function ViewerDashboard() {
                 </div>
               </div>
 
-              {/* Scope & Purpose Summary Bullets */}
               <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 pt-1 border-t border-slate-100 dark:border-slate-700/60 leading-relaxed">
                 <li className="flex items-start gap-2">
                   <span className="size-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
@@ -823,7 +878,7 @@ export default function ViewerDashboard() {
               </ul>
             </div>
 
-            {/* Card 3: Management & Inquiries (Interactive WhatsApp + Call) */}
+            {/* Card 3: Management Contacts */}
             <div className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-2xl border border-primary/10 shadow-sm space-y-4">
               <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-3">
                 <h4 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm sm:text-base">
@@ -931,7 +986,6 @@ export default function ViewerDashboard() {
               </div>
 
               <div className="space-y-3">
-                {/* Contact: Mr. Syed Bilal Faheem */}
                 <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 space-y-3 shadow-2xs">
                   <div className="flex items-center gap-3">
                     <div className="size-11 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 flex items-center justify-center font-black text-base flex-shrink-0 shadow-xs border border-blue-200/60">
@@ -973,11 +1027,9 @@ export default function ViewerDashboard() {
 
         {/* ─── Resident Reviews & Community Feedback Section ─── */}
         <section className="relative overflow-hidden bg-gradient-to-br from-blue-600/10 via-indigo-600/5 to-purple-600/10 dark:from-slate-800/90 dark:to-slate-900/90 rounded-2xl sm:rounded-3xl p-5 sm:p-7 lg:p-9 border border-blue-500/20 dark:border-slate-700 shadow-sm space-y-6">
-          {/* Subtle glow decorative background */}
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Section Header */}
           <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-primary/10 dark:border-slate-700/60 pb-5">
             <div>
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -1014,10 +1066,9 @@ export default function ViewerDashboard() {
                 </div>
               )}
 
-              {/* Single ONLY Review Button */}
               <button
                 onClick={handleOpenFeedback}
-                className="inline-flex items-center gap-2 px-4 py-2 sm:py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-extrabold rounded-2xl shadow-sm shadow-primary/25 transition-all active:scale-95 whitespace-nowrap"
+                className="inline-flex items-center gap-2 px-4 py-2 sm:py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-extrabold rounded-2xl shadow-sm shadow-primary/25 transition-all active:scale-95 whitespace-nowrap cursor-pointer"
               >
                 <Star size={14} className="fill-white" />
                 <span>{t.btnLeaveReview}</span>
@@ -1025,7 +1076,6 @@ export default function ViewerDashboard() {
             </div>
           </div>
 
-          {/* Cards Grid or Empty State */}
           {feedbackList.length === 0 ? (
             <div className="relative z-10 text-center py-10 px-4 bg-white/70 dark:bg-slate-800/70 rounded-2xl sm:rounded-3xl border border-dashed border-slate-200 dark:border-slate-700 max-w-lg mx-auto space-y-3">
               <div className="size-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto">
@@ -1038,7 +1088,6 @@ export default function ViewerDashboard() {
                 {t.noReviewsDesc}
               </p>
 
-              {/* Direct 1-Tap Quick Rating Stars */}
               <div className="flex items-center justify-center gap-2 pt-2">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
@@ -1048,7 +1097,7 @@ export default function ViewerDashboard() {
                       setFeedbackRating(star)
                       handleOpenFeedback()
                     }}
-                    className="p-1.5 rounded-xl hover:bg-amber-100/60 dark:hover:bg-amber-950/40 hover:scale-125 transition-transform"
+                    className="p-1.5 rounded-xl hover:bg-amber-100/60 dark:hover:bg-amber-950/40 hover:scale-125 transition-transform cursor-pointer"
                     title={`Rate ${star} Stars`}
                   >
                     <Star size={28} className="fill-amber-400 text-amber-400 drop-shadow-sm" />
@@ -1060,7 +1109,7 @@ export default function ViewerDashboard() {
                 <button
                   type="button"
                   onClick={handleOpenFeedback}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-black rounded-xl shadow-md shadow-primary/20 transition-all active:scale-95"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-black rounded-xl shadow-md shadow-primary/20 transition-all active:scale-95 cursor-pointer"
                 >
                   <Star size={14} className="fill-white" />
                   <span>{isUrdu ? 'ابھی اپنی رائے اور ریٹنگ درج کریں' : 'Rate & Leave Your Review Now'}</span>
@@ -1078,10 +1127,8 @@ export default function ViewerDashboard() {
                     className="bg-white dark:bg-slate-800 rounded-2xl sm:rounded-3xl p-5 border border-slate-200/80 dark:border-slate-700 shadow-md shadow-blue-500/5 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
                   >
                     <div>
-                      {/* Card Top: Avatar, Name, House Address & Verified Badge */}
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div className="flex items-center gap-3 min-w-0 flex-1">
-                          {/* Avatar with Blue Verified Checkmark Overlay */}
                           <div className="relative size-10 sm:size-11 rounded-full bg-gradient-to-tr from-primary to-indigo-600 text-white font-black text-sm flex items-center justify-center shadow-md shadow-primary/20 flex-shrink-0">
                             {initials}
                             <div
@@ -1108,7 +1155,6 @@ export default function ViewerDashboard() {
                           </div>
                         </div>
 
-                        {/* Verified Shield Icon */}
                         <div
                           className="size-7 sm:size-8 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/60 flex items-center justify-center text-blue-600 dark:text-blue-400 flex-shrink-0"
                           title={isUrdu ? "تصدیق شدہ جائزہ" : "Verified Community Review"}
@@ -1117,7 +1163,6 @@ export default function ViewerDashboard() {
                         </div>
                       </div>
 
-                      {/* Star Rating & Relative Time */}
                       <div className="flex items-center gap-2 my-2.5">
                         <div className="flex items-center gap-0.5">
                           {[...Array(5)].map((_, sIdx) => (
@@ -1133,13 +1178,11 @@ export default function ViewerDashboard() {
                         </span>
                       </div>
 
-                      {/* Review Text / Quote */}
                       <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-normal mt-2">
                         &ldquo;{f.comment || t.defaultReviewComment}&rdquo;
                       </p>
                     </div>
 
-                    {/* Card Bottom Meta */}
                     <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-[11px]">
                       <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-800/40">
                         <CheckCircle2 size={11} /> {t.verifiedReviewBadge}
@@ -1183,23 +1226,20 @@ export default function ViewerDashboard() {
               </div>
               <button
                 onClick={handleDismissModal}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                 title={t.closeBtn}
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Scrollable Modal Content */}
             <div className="flex-1 overflow-y-auto py-3 space-y-4 pr-1">
-              {/* Non-Coercive Reassurance Notice */}
               <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl">
                 <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-200 leading-relaxed">
                   ℹ️ <strong>{t.checkInNoticeBold}</strong> {t.checkInNoticeText}
                 </p>
               </div>
 
-              {/* Group Selector */}
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5">
                   {t.selectGroupLabel}
@@ -1208,7 +1248,7 @@ export default function ViewerDashboard() {
                   <button
                     type="button"
                     onClick={() => setSelectedModalGroup('NTRG 2 Asad Hanzalla street')}
-                    className={`py-2 px-2 rounded-lg text-[11px] font-bold transition-all ${
+                    className={`py-2 px-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                       selectedModalGroup === 'NTRG 2 Asad Hanzalla street'
                         ? 'bg-emerald-600 text-white shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -1219,7 +1259,7 @@ export default function ViewerDashboard() {
                   <button
                     type="button"
                     onClick={() => setSelectedModalGroup('N.T.R.C Sector 7D/1')}
-                    className={`py-2 px-2 rounded-lg text-[11px] font-bold transition-all ${
+                    className={`py-2 px-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                       selectedModalGroup === 'N.T.R.C Sector 7D/1'
                         ? 'bg-blue-600 text-white shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -1230,7 +1270,7 @@ export default function ViewerDashboard() {
                   <button
                     type="button"
                     onClick={() => setSelectedModalGroup('Direct Resident (No WhatsApp Group)')}
-                    className={`py-2 px-2 rounded-lg text-[11px] font-bold transition-all ${
+                    className={`py-2 px-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
                       selectedModalGroup === 'Direct Resident (No WhatsApp Group)'
                         ? 'bg-purple-600 text-white shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -1241,7 +1281,6 @@ export default function ViewerDashboard() {
                 </div>
               </div>
 
-              {/* Fast 1-Click Directory Pick */}
               {selectedModalGroup !== 'Direct Resident (No WhatsApp Group)' && data.contacts?.length > 0 && (
                 <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-700 space-y-2">
                   <div className="flex items-center justify-between">
@@ -1273,7 +1312,7 @@ export default function ViewerDashboard() {
                           key={c.id || c.phone}
                           type="button"
                           onClick={() => handleSelectResident(c)}
-                          className="w-full p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:border-emerald-400 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-all text-left flex items-center justify-between group shadow-2xs"
+                          className="w-full p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:border-emerald-400 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-all text-left flex items-center justify-between group shadow-2xs cursor-pointer"
                         >
                           <div>
                             <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-300">
@@ -1293,7 +1332,6 @@ export default function ViewerDashboard() {
                 </div>
               )}
 
-              {/* Manual Household Entry Form */}
               <div>
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
                   {t.manualEntryHeading}
@@ -1354,7 +1392,7 @@ export default function ViewerDashboard() {
 
                   <button
                     type="submit"
-                    className="w-full py-2.5 bg-primary text-white text-xs font-extrabold rounded-xl hover:bg-primary-hover shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-98"
+                    className="w-full py-2.5 bg-primary text-white text-xs font-extrabold rounded-xl hover:bg-primary-hover shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
                   >
                     <Check size={14} /> {t.saveProfileBtn}
                   </button>
@@ -1362,13 +1400,12 @@ export default function ViewerDashboard() {
               </div>
             </div>
 
-            {/* Modal Footer with Dismiss */}
             <div className="pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs flex-shrink-0">
               <span className="text-[11px] text-slate-400">{t.statementLabel} <strong>{translateMonth(currentMonthKey, lang)}</strong></span>
               <button
                 type="button"
                 onClick={handleDismissModal}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-semibold hover:underline transition-colors text-[11px]"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-semibold hover:underline transition-colors text-[11px] cursor-pointer"
               >
                 {t.closeBtn}
               </button>
@@ -1381,7 +1418,6 @@ export default function ViewerDashboard() {
       {showFeedbackModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
           <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 max-h-[92vh] flex flex-col">
-            {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
               <div className="flex items-center gap-2.5">
                 <div className="size-9 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-sm shadow-amber-500/20">
@@ -1394,7 +1430,7 @@ export default function ViewerDashboard() {
               </div>
               <button
                 onClick={() => setShowFeedbackModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100"
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -1416,7 +1452,7 @@ export default function ViewerDashboard() {
                 <div className="pt-2">
                   <button
                     onClick={() => setShowFeedbackModal(false)}
-                    className="px-6 py-2.5 bg-primary text-white text-xs font-extrabold rounded-xl hover:bg-primary-hover shadow-sm transition-all"
+                    className="px-6 py-2.5 bg-primary text-white text-xs font-extrabold rounded-xl hover:bg-primary-hover shadow-sm transition-all cursor-pointer"
                   >
                     {t.doneReturnBtn}
                   </button>
@@ -1424,7 +1460,6 @@ export default function ViewerDashboard() {
               </div>
             ) : (
               <form onSubmit={handleSubmitFeedback} className="flex-1 overflow-y-auto py-3 space-y-4 pr-1">
-                {/* Interactive Star Rating */}
                 <div className="bg-amber-50/70 dark:bg-slate-900/60 p-4 rounded-2xl border border-amber-200/60 dark:border-slate-700 text-center space-y-2">
                   <label className="block text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
                     {t.overallSatisfaction}
@@ -1440,7 +1475,7 @@ export default function ViewerDashboard() {
                           onClick={() => setFeedbackRating(starVal)}
                           onMouseEnter={() => setFeedbackHoverRating(starVal)}
                           onMouseLeave={() => setFeedbackHoverRating(0)}
-                          className="p-1 transition-transform hover:scale-125 active:scale-95 outline-none"
+                          className="p-1 transition-transform hover:scale-125 active:scale-95 outline-none cursor-pointer"
                           title={`${starVal} Star${starVal > 1 ? 's' : ''}`}
                         >
                           <Star
@@ -1465,7 +1500,6 @@ export default function ViewerDashboard() {
                   </p>
                 </div>
 
-                {/* Resident Details Fields */}
                 <div className="space-y-3">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
@@ -1519,7 +1553,6 @@ export default function ViewerDashboard() {
                     </div>
                   </div>
 
-                  {/* Quick Impressions (Tap to add) */}
                   <div>
                     <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
                       {isUrdu ? 'فوری تاثرات (ایک یا زائد منتخب کریں):' : 'Quick Impressions (Tap to add):'}
@@ -1532,7 +1565,7 @@ export default function ViewerDashboard() {
                             key={tag}
                             type="button"
                             onClick={() => handleToggleFeedbackTag(tag)}
-                            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
+                            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                               isSelected
                                 ? 'bg-amber-500 text-white shadow-xs font-black scale-102'
                                 : 'bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700'
@@ -1545,7 +1578,6 @@ export default function ViewerDashboard() {
                     </div>
                   </div>
 
-                  {/* Feedback / Comments textarea */}
                   <div>
                     <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
                       {t.commentsSuggestions}
@@ -1569,7 +1601,7 @@ export default function ViewerDashboard() {
                   <button
                     type="submit"
                     disabled={feedbackSubmitting}
-                    className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
+                    className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98 cursor-pointer"
                   >
                     {feedbackSubmitting ? (
                       <div className="size-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1595,10 +1627,13 @@ export default function ViewerDashboard() {
         currency={data.settings?.currency || 'PKR'}
       />
 
-      {/* 3D Metal Bank & Raast Passbook Details Modal */}
+      {/* 3D Metal Bank & Raast Passbook Details Modal with Receipt Upload Engine */}
       <BankDetailsModal
         isOpen={showBankDetailsModal}
         onClose={() => setShowBankDetailsModal(false)}
+        currentUser={currentResidentProfile}
+        currentMonth={selectedMonth || 'September'}
+        currentYear={selectedYear || 2026}
       />
 
       {/* Smart Pre-Exit Rating & Review Prompt (Desktop & Mobile) */}
@@ -1606,7 +1641,7 @@ export default function ViewerDashboard() {
         resident={resident}
         currentMonthKey={currentMonthKey}
         onSubmitFeedback={handleExitFeedbackSubmit}
-        isAdmin={false}
+        isAdmin={isAdmin}
       />
     </div>
   )

@@ -2,8 +2,18 @@ import React, { useState, useEffect } from 'react'
 import QRCode from 'qrcode'
 import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion'
 import { useLanguage } from '../context/LanguageContext'
-import { Copy, Check, X, RotateCw, Landmark, QrCode, MessageCircle, ExternalLink, ShieldCheck, Smartphone, Wallet } from 'lucide-react'
+import {
+  Copy,
+  Check,
+  X,
+  RotateCw,
+  MessageCircle,
+  ExternalLink,
+  Smartphone,
+  UploadCloud
+} from 'lucide-react'
 import { soundEffects } from '../utils/soundEffects'
+import ReceiptUploadModal from './ReceiptUploadModal'
 
 // Cyclic Redundancy Check (CRC-16 / CCITT-FALSE) as mandated by State Bank of Pakistan (SBP)
 const computeCrc16 = (payload) => {
@@ -32,7 +42,18 @@ const buildRaastP2pPayload = (iban, accountTitle = 'HANZALA MUZAFFAR') => {
   return base + computeCrc16(base)
 }
 
-export const BankDetailsModal = ({ isOpen, onClose }) => {
+export const BankDetailsModal = ({
+  isOpen,
+  onClose,
+  currentUser = {
+    id: 'res-7d-42',
+    name: 'Syed Bilal Faheem',
+    houseNumber: 'Sector 7D/1 - House 42',
+    phoneNumber: '0346-2650446'
+  },
+  currentMonth = 'September',
+  currentYear = 2026
+}) => {
   const { lang, t, isRtl } = useLanguage ? useLanguage() : { lang: 'en', t: {}, isRtl: false }
   const isUrdu = lang === 'ur'
   const shouldReduceMotion = useReducedMotion()
@@ -40,6 +61,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
   const [isFlipped, setIsFlipped] = useState(false)
   const [copiedKey, setCopiedKey] = useState('')
   const [qrDataUrl, setQrDataUrl] = useState('')
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
 
   // Interactive 3D tilt springs
   const mouseX = useMotionValue(0)
@@ -70,7 +92,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
 
   const handleToggleFlip = () => {
     soundEffects.playBounce()
-    setIsFlipped(prev => !prev)
+    setIsFlipped((prev) => !prev)
   }
 
   // Easypaisa Bank Ltd Account Credentials
@@ -102,10 +124,10 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
         light: '#ffffff'
       }
     })
-      .then(url => {
+      .then((url) => {
         if (isMounted) setQrDataUrl(url)
       })
-      .catch(err => {
+      .catch((err) => {
         console.error('Failed to generate Raast QR code', err)
       })
     return () => {
@@ -138,8 +160,8 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
   // Pre-filled WhatsApp payment proof message
   const whatsappMessage = encodeURIComponent(
     isUrdu
-      ? `السلام علیکم! میں نے سوسائٹی کے ماہانہ فنڈز منتقل کر دیے ہیں۔ ادائیگی کی رسید منسلک ہے۔\nبینک: ${account.bankName}\nاکاؤنٹ ٹائٹل: ${account.accountTitle}\nاکاؤنٹ نمبر / راست: ${account.accountNumber}\nIBAN: ${account.formattedIban}`
-      : `Assalam o Alaikum! I have transferred the monthly society dues. Please find the payment receipt attached.\nBank: ${account.bankName}\nAccount Title: ${account.accountTitle}\nAccount / Raast: ${account.accountNumber}\nIBAN: ${account.formattedIban}`
+      ? `السلام علیکم! میں نے سوسائٹی کے ماہانہ فنڈز منتقل کر دیے ہیں۔ ادائیگی کی رسید منسلک ہے۔\nرہائشی: ${currentUser?.name || ''} (${currentUser?.houseNumber || ''})\nبینک: ${account.bankName}\nاکاؤنٹ ٹائٹل: ${account.accountTitle}\nاکاؤنٹ نمبر / راست: ${account.accountNumber}\nIBAN: ${account.formattedIban}`
+      : `Assalam o Alaikum! I have transferred the monthly society dues. Please find the payment receipt attached.\nResident: ${currentUser?.name || ''} (${currentUser?.houseNumber || ''})\nBank: ${account.bankName}\nAccount Title: ${account.accountTitle}\nAccount / Raast: ${account.accountNumber}\nIBAN: ${account.formattedIban}`
   )
 
   const whatsappUrl = `https://wa.me/${account.whatsappNumber}?text=${whatsappMessage}`
@@ -355,7 +377,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                       e.stopPropagation()
                       handleToggleFlip()
                     }}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-slate-950 text-xs font-black shadow-lg transition-all active:scale-95 flex-shrink-0 cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-slate-950 text-xs font-black shadow-lg transition-all active:scale-95 shrink-0 cursor-pointer"
                   >
                     <RotateCw size={14} />
                     <span>{isUrdu ? 'راست کیو آر کوڈ دیکھیں ↺' : 'Flip to Raast QR ↺'}</span>
@@ -381,8 +403,8 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
 
                 {/* Raast QR Preview Area */}
                 <div className="flex items-center gap-4 my-auto py-1">
-                  {/* High Contrast Clean Scannable Raast QR Container (Unobstructed for 100% optical readability) */}
-                  <div className="bg-white p-2 rounded-2xl shadow-lg border-2 border-emerald-400/50 flex-shrink-0 flex items-center justify-center">
+                  {/* High Contrast Clean Scannable Raast QR Container */}
+                  <div className="bg-white p-2 rounded-2xl shadow-lg border-2 border-emerald-400/50 shrink-0 flex items-center justify-center">
                     {qrDataUrl ? (
                       <img
                         src={qrDataUrl}
@@ -399,7 +421,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                   {/* Raast Details & Copy Button */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-1">
-                      <div className="size-4 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-black text-[9px] shadow-xs flex-shrink-0">
+                      <div className="size-4 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-black text-[9px] shadow-xs shrink-0">
                         R
                       </div>
                       <span className="inline-flex items-center text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-400 text-slate-950">
@@ -583,34 +605,60 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
             <span className="text-amber-600 dark:text-amber-400 text-base mt-0.5">ℹ️</span>
             <p className="text-xs text-amber-900 dark:text-amber-200/90 leading-relaxed">
               {isUrdu
-                ? 'رقم منتقل کرنے کے بعد رسید کا اسکرین شاٹ واٹس ایپ پر انتظامیہ کو ضرور بھیجیں۔'
-                : 'Kindly share a screenshot of your transfer/receipt with management on WhatsApp for instant confirmation.'}
+                ? 'رقم منتقل کرنے کے بعد ایپ میں رسید اپلوڈ کریں یا واٹس ایپ پر انتظامیہ کو اسکرین شاٹ بھیجیں۔'
+                : 'After transferring dues, upload your receipt directly or share a screenshot on WhatsApp for instant confirmation.'}
             </p>
           </div>
 
-          {/* Direct WhatsApp Submission Button */}
-          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+          {/* ================= DUAL-CTA ACTION BAR ================= */}
+          <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row items-center justify-between gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer text-center"
             >
               {isUrdu ? 'بند کریں' : 'Close'}
             </button>
 
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 transition-all active:scale-95"
-            >
-              <MessageCircle size={16} />
-              <span>{isUrdu ? 'ادائیگی رسید واٹس ایپ کریں' : 'Submit Receipt on WhatsApp'}</span>
-              <ExternalLink size={14} />
-            </a>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+              {/* 1. PRIMARY IN-APP ACTION: UPLOAD RECEIPT */}
+              <button
+                type="button"
+                onClick={() => setIsUploadModalOpen(true)}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer text-center"
+              >
+                <UploadCloud size={16} />
+                <span>{isUrdu ? 'رسید اپلوڈ کریں' : 'Upload Receipt'}</span>
+              </button>
+
+              {/* 2. SECONDARY EXTERNAL ACTION: SUBMIT ON WHATSAPP */}
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-black shadow-md transition-all active:scale-95 text-center"
+              >
+                <MessageCircle size={16} />
+                <span>{isUrdu ? 'رسید واٹس ایپ کریں' : 'Submit on WhatsApp'}</span>
+                <ExternalLink size={13} className="opacity-80" />
+              </a>
+            </div>
           </div>
         </motion.div>
       </div>
+
+      {/* Render the In-App Receipt Upload Modal */}
+      <ReceiptUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        currentUser={currentUser}
+        currentMonth={currentMonth}
+        currentYear={currentYear}
+        onSuccess={() => {
+          setIsUploadModalOpen(false)
+          onClose()
+        }}
+      />
     </AnimatePresence>
   )
 }
