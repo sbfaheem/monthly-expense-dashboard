@@ -17,16 +17,18 @@ const computeCrc16 = (payload) => {
   return crc.toString(16).toUpperCase().padStart(4, '0')
 }
 
-// SBP-compliant Raast P2P payload strictly targeting Easypaisa Account Number / Raast ID (no IBAN)
-const buildRaastP2pPayload = (accountNumber) => {
+// SBP-compliant Raast P2P payload with receivingBankImd for 1LINK / JS Bank Zindagi interoperability (Zero IBAN)
+const buildRaastP2pPayload = (accountNumber, bankImd = '639390') => {
   const cleanNumber = accountNumber.replace(/\D/g, '')
   const lenStr = String(cleanNumber.length).padStart(2, '0')
+  const imdLen = String(bankImd.length).padStart(2, '0')
   // Tag 00: Version 02
   // Tag 01: Initiation 11 (Static open-amount)
   // Tag 02: Account Type 01 (Raast ID / Mobile Alias)
+  // Tag 03: receivingBankImd (639390 for Easypaisa / Telenor Microfinance Bank)
   // Tag 04: Identifier (03462650446)
   // Tag 10: Checksum
-  const base = `00020201021102020104${lenStr}${cleanNumber}1004`
+  const base = `00020201021102020103${imdLen}${bankImd}04${lenStr}${cleanNumber}1004`
   return base + computeCrc16(base)
 }
 
@@ -81,14 +83,15 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
     formattedNumber: '0346 2650 446',
     raastId: '03462650446',
     formattedRaast: '0346-2650446',
+    bankImd: '639390',
     whatsappNumber: '923462650446',
     tagText: 'Branchless Banking / برانچ لیس بینکنگ',
   }
 
-  // Generate official SBP Raast P2P QR Code strictly targeting Easypaisa Account / Raast ID (Zero IBAN)
+  // Generate official SBP Raast P2P QR Code strictly targeting Easypaisa Account / Raast ID with receivingBankImd (Zero IBAN)
   useEffect(() => {
     let isMounted = true
-    const payload = buildRaastP2pPayload(account.accountNumber)
+    const payload = buildRaastP2pPayload(account.accountNumber, account.bankImd)
     QRCode.toDataURL(payload, {
       width: 320,
       margin: 2,
@@ -107,7 +110,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
     return () => {
       isMounted = false
     }
-  }, [account.accountNumber])
+  }, [account.accountNumber, account.bankImd])
 
   const copyToClipboard = async (text, key) => {
     try {
