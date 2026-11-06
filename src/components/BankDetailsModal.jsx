@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import QRCode from 'qrcode'
+import { createRaastQrDataUrl } from 'sendkardo-qr'
 import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion'
 import { useLanguage } from '../context/LanguageContext'
 import { Copy, Check, X, RotateCw, Landmark, QrCode, MessageCircle, ExternalLink, ShieldCheck, Smartphone, Wallet } from 'lucide-react'
@@ -56,22 +56,27 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
     formattedNumber: '0346 2650 446',
     raastId: '03462650446',
     formattedRaast: '0346-2650446',
+    iban: 'PK28TMFB0000003462650446',
+    formattedIban: 'PK28 TMFB 0000 0034 6265 0446',
     whatsappNumber: '923462650446',
     tagText: 'Branchless Banking / برانچ لیس بینکنگ',
   }
 
-  // Generate genuine scannable QR Code for Raast ID
+  // Generate official SBP Raast P2P EMV-compliant QR Code for all Pakistani banking apps
   useEffect(() => {
     let isMounted = true
-    QRCode.toDataURL(account.raastId, {
-      width: 256,
-      margin: 1,
-      errorCorrectionLevel: 'H',
-      color: {
-        dark: '#064e3b',
-        light: '#ffffff'
+    createRaastQrDataUrl(
+      { iban: account.iban },
+      {
+        width: 320,
+        margin: 2,
+        errorCorrectionLevel: 'H',
+        color: {
+          dark: '#064e3b',
+          light: '#ffffff'
+        }
       }
-    })
+    )
       .then(url => {
         if (isMounted) setQrDataUrl(url)
       })
@@ -81,7 +86,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
     return () => {
       isMounted = false
     }
-  }, [account.raastId])
+  }, [account.iban])
 
   const copyToClipboard = async (text, key) => {
     try {
@@ -351,12 +356,12 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
 
                 {/* Raast QR Preview Area */}
                 <div className="flex items-center gap-4 my-auto py-1">
-                  {/* High Contrast Genuine Scannable Raast QR Container */}
-                  <div className="relative bg-white p-2 sm:p-2.5 rounded-2xl shadow-lg border-2 border-emerald-400/50 flex-shrink-0 flex items-center justify-center">
+                  {/* High Contrast Clean Scannable Raast QR Container (Unobstructed for 100% optical readability) */}
+                  <div className="bg-white p-2 rounded-2xl shadow-lg border-2 border-emerald-400/50 flex-shrink-0 flex items-center justify-center">
                     {qrDataUrl ? (
                       <img
                         src={qrDataUrl}
-                        alt="Raast QR Code"
+                        alt="Official SBP Raast QR Code"
                         className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-contain block"
                       />
                     ) : (
@@ -364,17 +369,18 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                         QR Loading...
                       </div>
                     )}
-                    {/* Center Raast 'R' Badge */}
-                    <div className="absolute inset-0 m-auto size-5 sm:size-6 rounded-full bg-amber-400 border-2 border-white shadow-md flex items-center justify-center pointer-events-none">
-                      <span className="font-black text-[10px] sm:text-xs text-slate-950 leading-none">R</span>
-                    </div>
                   </div>
 
                   {/* Raast Details & Copy Button */}
                   <div className="flex-1 min-w-0">
-                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 mb-1">
-                      {isUrdu ? 'راست فوری ادائیگی' : 'Raast P2P / Instant'}
-                    </span>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div className="size-4 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-black text-[9px] shadow-xs flex-shrink-0">
+                        R
+                      </div>
+                      <span className="inline-flex items-center text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-400 text-slate-950">
+                        {isUrdu ? 'راست فوری ادائیگی (P2P)' : 'Raast P2P / Instant'}
+                      </span>
+                    </div>
                     <h4 className="text-xs sm:text-sm font-extrabold text-white">
                       {isUrdu ? 'راست آئی ڈی (فوری ٹرانسفر)' : 'Instant Raast Payment'}
                     </h4>
@@ -518,6 +524,30 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                   title="Copy Raast ID"
                 >
                   {copiedKey === 'raast_quick' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                </button>
+              </div>
+            </div>
+
+            {/* IBAN */}
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs">
+              <span className="font-semibold text-slate-500 dark:text-slate-400">
+                {isUrdu ? 'بین الاقوامی اکاؤنٹ نمبر (IBAN)' : 'IBAN (Raast Interoperable)'}
+              </span>
+              <div className="flex items-center gap-2">
+                <strong
+                  dir="ltr"
+                  style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+                  className="font-mono text-slate-800 dark:text-slate-200 font-bold select-all text-[11px] sm:text-xs"
+                >
+                  {account.formattedIban}
+                </strong>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(account.iban, 'iban_quick')}
+                  className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
+                  title="Copy IBAN"
+                >
+                  {copiedKey === 'iban_quick' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
                 </button>
               </div>
             </div>
