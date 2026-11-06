@@ -29,72 +29,7 @@ const CATEGORY_STYLES = {
 function PaperReceiptAccordion({ row, displayCurrency, fmt, isUrdu, t, curMonthShort }) {
   const [copied, setCopied] = useState(false)
 
-  // Contextual audit details based on category and line item
-  const auditDetails = useMemo(() => {
-    const cat = row.category || ''
-    const nameLower = (row.normName || row.name || '').toLowerCase()
-
-    if (cat.includes('Salaries') || cat.includes('Payroll') || nameLower.includes('salary') || nameLower.includes('guard')) {
-      return {
-        vendor: isUrdu ? 'سیکیورٹی و صفائی اسٹاف روسٹر (ڈائریکٹ پے رول)' : 'Security & Sanitation Duty Roster (Direct Payroll)',
-        voucherType: isUrdu ? 'اسٹاف تنخواہ و معاوضہ واؤچر' : 'Payroll Disbursal Voucher',
-        method: isUrdu ? 'کیش سائنڈ پے رول شیٹ و بائیومیٹرک لاگ' : 'Cash Signed Attendance Roster & Biometric Log',
-        auditStamp: isUrdu ? 'بائیومیٹرک و فزیکل ڈیوٹی شیٹ سے تصدیق شدہ' : 'Verified via Duty Roster & Monthly Attendance',
-        auditNote: isUrdu ? 'سیکٹر 7D/1 کے تمام سیکیورٹی گارڈز اور سینٹری ورکرز کی مکمل ادائیگیاں تصدیق شدہ ہیں اور نگران کے دستخط کے بعد کلیئر کی گئیں۔' : 'Cross-checked against physical guard attendance logs, duty check-ins, and supervisor sign-off sheets.',
-        codePrefix: 'PAY',
-      }
-    }
-    if (cat.includes('Electrical') || nameLower.includes('electric') || nameLower.includes('light') || nameLower.includes('generator') || nameLower.includes('bulb')) {
-      return {
-        vendor: isUrdu ? 'الرحمٰن الیکٹریکل و مینٹیننس سروسز' : 'Al-Rehman Electrical Works & Services',
-        voucherType: isUrdu ? 'تکنیکی مرمت و سامان کیش میمو' : 'Technical Repair & Supplies Memo',
-        method: isUrdu ? 'آفیشل کنٹریکٹر کیش میمو #4092' : 'Official Contractor Cash Invoice #4092',
-        auditStamp: isUrdu ? 'سائٹ معائنہ و فزیکل ٹیسٹنگ تصدیق شدہ' : 'On-Site Physical Inspection & Testing Verified',
-        auditNote: isUrdu ? 'اسٹریٹ لائٹس، بجلی کے آلات، بلب کی مرمت اور مین سوئچ گیئر کا کام مکمل طور پر ٹیسٹ اور چیک کیا گیا۔' : 'Verified work completion for phase-balancing, bulb repairs, streetlight fixtures, and electrical distribution.',
-        codePrefix: 'ENG',
-      }
-    }
-    if (cat.includes('Community') || cat.includes('Utilities') || nameLower.includes('water') || nameLower.includes('tanker')) {
-      return {
-        vendor: isUrdu ? 'میونسپل واٹر بورڈ و ویسٹ مینجمنٹ' : 'Municipal Water Board & Waste Services',
-        voucherType: isUrdu ? 'یوٹیلٹی چالان و باؤزر ڈلیوری سلپ' : 'Utility Challan & Payment Slip',
-        method: isUrdu ? 'آن لائن راست / بینک سرکاری چالان' : 'Online Raast / Official Bank Challan',
-        auditStamp: isUrdu ? 'بینک ٹرانسفر تصدیق نمبر اور رسید منسلک ہے' : 'Direct Bank Reference & Meter Slip Attached',
-        auditNote: isUrdu ? 'واٹر والو آپریشنز، لائن سپلائی شیڈول اور باؤزر کی رسیدوں کے مطابق واؤچر کا مکمل موازنہ مکمل ہے۔' : 'Reconciled with municipal line schedule, bowser delivery slips, and sanitation care registry.',
-        codePrefix: 'UTL',
-      }
-    }
-    if (cat.includes('Supplies') || cat.includes('Hardware') || nameLower.includes('lock') || nameLower.includes('jharo') || nameLower.includes('chamber')) {
-      return {
-        vendor: isUrdu ? 'سیون اسٹار ہارڈویئر و سینیٹیشن اسٹور' : 'Seven Star Hardware & Sanitation Depot',
-        voucherType: isUrdu ? 'سامان خریداری کیش میمو و رسید' : 'Itemized Store Cash Memo',
-        method: isUrdu ? 'آئٹمائزڈ انوائس #4092 مع جی آر این' : 'Itemized Store Invoice #4092 with GRN',
-        auditStamp: isUrdu ? 'سامان موصولی رسید (GRN) تصدیق شدہ' : 'Goods Received Note (GRN) Verified by Caretaker',
-        auditNote: isUrdu ? 'جھاڑو، صفائی کا سامان، چیمبر ڈھکن اور ہارڈویئر کا سامان باقاعدہ اسٹاک رجسٹر میں درج کر کے تصدیق کیا گیا۔' : 'Supplies, cleaning tools, chamber covers, and hardware verified into community stock registry with signed delivery receipts.',
-        codePrefix: 'SUP',
-      }
-    }
-    if (cat.includes('Capital') || cat.includes('CapEx') || nameLower.includes('cctv')) {
-      return {
-        vendor: isUrdu ? 'ایپکس سیکیورٹی و کیمرہ سسٹمز' : 'Apex Security & Surveillance Systems Ltd',
-        voucherType: isUrdu ? 'کیپٹل اثاثہ انوائس و سالانہ وارنٹی' : 'Capital Asset Invoice & Warranty',
-        method: isUrdu ? 'کراس چیک / پے آرڈر #CPX-701' : 'Crossed Cheque / Pay Order #CPX-701',
-        auditStamp: isUrdu ? 'اثاثہ رجسٹر اندراج #AR-2026-7D1' : 'Asset Register Entry #AR-2026-7D1 with 1-Yr Warranty',
-        auditNote: isUrdu ? 'سی سی ٹی وی کیمرے اور این وی آر ریکارڈنگ سسٹم کمیٹی کے فکسڈ اثاثہ ریکارڈ میں درج ہیں۔' : 'High-definition cameras and surveillance unit verified, installed, and logged in community asset inventory.',
-        codePrefix: 'CPX',
-      }
-    }
-    return {
-      vendor: isUrdu ? 'مجاز وینڈر و سروس پرووائیڈر' : 'Authorized Vendor & Service Provider',
-      voucherType: isUrdu ? 'مجلسِ فلاح واؤچر رسید' : 'Welfare Committee Voucher Slip',
-      method: isUrdu ? 'تصدیق شدہ آفیشل واؤچر' : 'Verified Official Receipt',
-      auditStamp: isUrdu ? 'بینک و کھاتہ رجسٹر سے مطابقت شدہ' : 'Reconciled with Bank Statement & Physical Register',
-      auditNote: isUrdu ? 'کمیٹی خزانچی اور صدر کے دستخط کے بعد ادائیگی باقاعدہ منظور اور جاری کی گئی۔' : 'Cross-checked with general ledger and signed by Welfare Committee Treasurer.',
-      codePrefix: 'VCH',
-    }
-  }, [row.category, row.normName, row.name, isUrdu])
-
-  const voucherId = `${auditDetails.codePrefix}-2026-${(row.id || row.name).toString().replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() || '7D01'}`
+  const voucherId = `EXP-2026-${(row.id || row.name).toString().replace(/[^a-zA-Z0-9]/g, '').slice(-4).toUpperCase() || '7D01'}`
 
   const handleCopy = (e) => {
     e.stopPropagation()
@@ -146,11 +81,11 @@ function PaperReceiptAccordion({ row, displayCurrency, fmt, isUrdu, t, curMonthS
             </div>
 
             {/* Faint Background Watermark Stamp */}
-            <div className="absolute right-6 top-6 text-[52px] sm:text-[68px] font-black tracking-widest text-slate-900/[0.03] dark:text-white/[0.02] pointer-events-none select-none uppercase font-mono">
-              RECEIPT
+            <div className="absolute right-6 top-6 text-[48px] sm:text-[64px] font-black tracking-widest text-slate-900/[0.03] dark:text-white/[0.02] pointer-events-none select-none uppercase font-mono">
+              7D/1 RECORD
             </div>
 
-            {/* Top Row: Official Welfare Header + Status Badge */}
+            {/* Top Row: Sector 7D/1 Management Header + Status Badge */}
             <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3.5 border-b border-dashed border-amber-300/70 dark:border-slate-700">
               <div className="flex items-center gap-2.5">
                 <div className="size-9 rounded-xl bg-amber-500/15 dark:bg-cyan-500/15 text-amber-600 dark:text-cyan-400 flex items-center justify-center font-bold flex-shrink-0 shadow-2xs">
@@ -158,10 +93,10 @@ function PaperReceiptAccordion({ row, displayCurrency, fmt, isUrdu, t, curMonthS
                 </div>
                 <div>
                   <span className="text-xs sm:text-sm font-black tracking-tight text-slate-900 dark:text-white uppercase block leading-tight">
-                    {isUrdu ? 'سیکٹر 7D/1 ویلفیئر کمیٹی • تصدیق شدہ واؤچر' : 'Sector 7D/1 Welfare Committee • Audit Receipt'}
+                    {isUrdu ? 'سیکٹر 7D/1 مینجمنٹ' : 'Sector 7D/1 Management'}
                   </span>
                   <span className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 block font-mono font-bold mt-0.5">
-                    {auditDetails.voucherType}
+                    {isUrdu ? 'ماہانہ اخراجات گوشوارہ • تصدیق شدہ ریکارڈ' : 'Monthly Expense Sheet • Audit Record'}
                   </span>
                 </div>
               </div>
@@ -170,7 +105,7 @@ function PaperReceiptAccordion({ row, displayCurrency, fmt, isUrdu, t, curMonthS
                 {/* Audit Stamp Pill */}
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shadow-2xs">
                   <ShieldCheck size={13} />
-                  <span>{isUrdu ? 'آڈٹ تصدیق شدہ' : 'Audit Verified'}</span>
+                  <span>{isUrdu ? 'سیکٹر 7D/1 مینجمنٹ تصدیق شدہ' : 'Sector 7D/1 Management Verified'}</span>
                 </span>
 
                 {/* Copy Receipt Number Button */}
@@ -253,44 +188,17 @@ function PaperReceiptAccordion({ row, displayCurrency, fmt, isUrdu, t, curMonthS
               }}
               className="relative bg-gradient-to-b from-[#fbf7ee] via-[#faf4e6] to-[#f6eee0] dark:from-[#0d1424] dark:via-[#0b101e] dark:to-[#080d18] border-x border-b border-amber-200/90 dark:border-slate-700/90 p-4 sm:p-6 text-slate-800 dark:text-slate-200 space-y-4"
             >
-              {/* Audit & Payee Breakdown Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
-                {/* Payee / Vendor Card */}
-                <div className="bg-white/95 dark:bg-slate-900/95 p-3.5 rounded-xl border border-amber-200/70 dark:border-slate-800 shadow-2xs space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    {isUrdu ? 'وصول کنندہ / وینڈر' : 'Payee / Contractor'}
-                  </span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100 block text-sm leading-snug">
-                    {auditDetails.vendor}
-                  </span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block pt-1 border-t border-slate-100 dark:border-slate-800">
-                    <strong className="text-slate-600 dark:text-slate-300">{isUrdu ? 'طریقہ کار:' : 'Method:'}</strong> {auditDetails.method}
-                  </span>
-                </div>
-
-                {/* Verification & Protocol Card */}
-                <div className="bg-white/95 dark:bg-slate-900/95 p-3.5 rounded-xl border border-amber-200/70 dark:border-slate-800 shadow-2xs space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                    {isUrdu ? 'آڈٹ تصدیق و دستاویز' : 'Verification & Protocol'}
-                  </span>
-                  <span className="font-bold text-emerald-600 dark:text-emerald-400 block text-sm leading-snug flex items-center gap-1.5">
-                    <CheckCircle2 size={15} />
-                    <span>{isUrdu ? 'سیکٹر 7D/1 مینجمنٹ تصدیق شدہ' : 'Sector 7D/1 Management Verified'}</span>
-                  </span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block pt-1 border-t border-slate-100 dark:border-slate-800">
-                    {auditDetails.auditStamp}
-                  </span>
-                </div>
-              </div>
-
-              {/* Vendor & Operational Notes Banner */}
-              <div className="bg-amber-100/40 dark:bg-slate-950/60 p-3.5 rounded-xl border border-amber-200/60 dark:border-slate-800 text-xs">
-                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider block mb-1">
-                  {isUrdu ? 'تفصیلی آڈٹ وینڈر نوٹس' : 'Audit & Operational Notes'}
+              {/* Verification & Protocol Card (Only Sector 7D/1 Management Verified) */}
+              <div className="bg-white/95 dark:bg-slate-900/95 p-4 rounded-xl border border-amber-200/70 dark:border-slate-800 shadow-2xs">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                  {isUrdu ? 'تصدیق و دستاویز' : 'VERIFICATION & PROTOCOL'}
                 </span>
-                <p className="text-slate-600 dark:text-slate-300 leading-relaxed font-sans text-xs sm:text-sm">
-                  {auditDetails.auditNote}
-                </p>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm sm:text-base leading-snug">
+                    {isUrdu ? 'سیکٹر 7D/1 مینجمنٹ تصدیق شدہ' : 'Sector 7D/1 Management Verified'}
+                  </span>
+                </div>
               </div>
 
               {/* Bottom Official Rubber Stamp + Barcode Strip */}
@@ -308,12 +216,12 @@ function PaperReceiptAccordion({ row, displayCurrency, fmt, isUrdu, t, curMonthS
                 {/* Circular / Angled Verified Stamp */}
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl border-2 border-dashed border-emerald-600/80 dark:border-emerald-400/80 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 rotate-[-2deg] text-[10px] sm:text-[11px] font-black uppercase tracking-wider shadow-2xs">
                   <ShieldCheck size={14} />
-                  <span>{isUrdu ? 'تصدیق شدہ اور محفوظ ریکارڈ' : 'VERIFIED & SETTLED'}</span>
+                  <span>{isUrdu ? 'سیکٹر 7D/1 مینجمنٹ تصدیق شدہ' : 'Sector 7D/1 Management Verified'}</span>
                 </div>
 
                 {/* Sign-off Signature line */}
                 <div className="text-center sm:text-right font-sans font-bold text-slate-700 dark:text-slate-300">
-                  {isUrdu ? 'دستخط خزانچی: سیکٹر 7D/1 مینجمنٹ' : 'Approved by Treasurer: Sector 7D/1 Management'}
+                  {isUrdu ? 'سیکٹر 7D/1 مینجمنٹ' : 'Sector 7D/1 Management'}
                 </div>
               </div>
             </motion.div>
