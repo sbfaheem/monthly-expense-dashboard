@@ -45,6 +45,8 @@ export default function ExitIntentFeedbackModal({
   const [selectedTags, setSelectedTags] = useState([])
   const [residentName, setResidentName] = useState('')
   const [houseAddress, setHouseAddress] = useState('')
+  const [validationError, setValidationError] = useState('')
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
 
@@ -167,6 +169,22 @@ export default function ExitIntentFeedbackModal({
   // Submit Feedback
   const handleSubmit = async (e) => {
     if (e) e.preventDefault()
+    setHasAttemptedSubmit(true)
+
+    const finalName = residentName.trim() || resident?.name || ''
+    const finalAddress = houseAddress.trim() || resident?.houseAddress || resident?.houseNo || ''
+
+    if (!finalName) {
+      setValidationError(isUrdu ? 'براہ کرم اپنا نام درج کریں (لازمی)' : 'Name is mandatory. Please enter your name.')
+      return
+    }
+
+    if (!finalAddress) {
+      setValidationError(isUrdu ? 'براہ کرم مکان / فلیٹ نمبر درج کریں (لازمی)' : 'House / Flat # is mandatory. Please enter your address.')
+      return
+    }
+
+    setValidationError('')
     setIsSubmitting(true)
 
     // Build comment body
@@ -177,9 +195,9 @@ export default function ExitIntentFeedbackModal({
     }
 
     const payload = {
-      name: residentName.trim() || resident?.name || (isUrdu ? 'تصدیق شدہ رہائشی' : 'Verified Resident'),
+      name: finalName,
       phone: resident?.phone || '',
-      houseAddress: houseAddress.trim() || resident?.houseAddress || resident?.houseNo || 'Sector 7D/1',
+      houseAddress: finalAddress,
       rating: Number(rating || 5),
       comment: combinedComment || (isUrdu ? 'اکاؤنٹس مکمل شفاف اور تسلی بخش ہیں۔' : 'Accounts are clear and well managed. Complete financial transparency.'),
       monthViewed: currentMonthKey
@@ -491,12 +509,12 @@ export default function ExitIntentFeedbackModal({
                   </div>
 
                   {/* Resident Signature */}
-                  {resident ? (
+                  {resident && resident.name && (resident.houseAddress || resident.houseNo) ? (
                     <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                         <User size={14} className="text-primary flex-shrink-0" />
                         <span className="font-bold truncate">
-                          {resident.name} {resident.houseAddress ? `(${resident.houseAddress})` : ''}
+                          {resident.name} {resident.houseAddress || resident.houseNo ? `(${resident.houseAddress || resident.houseNo})` : ''}
                         </span>
                       </div>
                       <span className="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200/40 flex-shrink-0">
@@ -504,21 +522,48 @@ export default function ExitIntentFeedbackModal({
                       </span>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        value={residentName}
-                        onChange={(e) => setResidentName(e.target.value)}
-                        placeholder={isUrdu ? 'آپ کا نام (اختیاری)' : 'Your Name (Optional)'}
-                        className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-primary"
-                      />
-                      <input
-                        type="text"
-                        value={houseAddress}
-                        onChange={(e) => setHouseAddress(e.target.value)}
-                        placeholder={isUrdu ? 'مکان / فلیٹ نمبر' : 'House / Flat #'}
-                        className="px-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-primary"
-                      />
+                    <div className="space-y-1.5">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <input
+                            type="text"
+                            value={residentName}
+                            onChange={(e) => {
+                              setResidentName(e.target.value)
+                              if (validationError) setValidationError('')
+                            }}
+                            placeholder={isUrdu ? 'آپ کا نام (لازمی) *' : 'Your Name (Required) *'}
+                            className={`w-full px-3 py-1.5 text-xs rounded-xl border ${
+                              hasAttemptedSubmit && !residentName.trim()
+                                ? 'border-rose-500 bg-rose-50/30 dark:bg-rose-950/20'
+                                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                            } text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-primary`}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="text"
+                            value={houseAddress}
+                            onChange={(e) => {
+                              setHouseAddress(e.target.value)
+                              if (validationError) setValidationError('')
+                            }}
+                            placeholder={isUrdu ? 'مکان / فلیٹ نمبر (لازمی) *' : 'House / Flat # (Required) *'}
+                            className={`w-full px-3 py-1.5 text-xs rounded-xl border ${
+                              hasAttemptedSubmit && !houseAddress.trim()
+                                ? 'border-rose-500 bg-rose-50/30 dark:bg-rose-950/20'
+                                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                            } text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-primary`}
+                            required
+                          />
+                        </div>
+                      </div>
+                      {validationError && (
+                        <p className="text-[11px] font-bold text-rose-500 dark:text-rose-400 px-1">
+                          ⚠️ {validationError}
+                        </p>
+                      )}
                     </div>
                   )}
 

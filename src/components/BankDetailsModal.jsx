@@ -48,7 +48,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
   const account = {
     bankName: isUrdu ? 'ایزی پیسہ بینک لمیٹڈ' : 'Easypaisa Bank Ltd',
     shortName: 'Easypaisa',
-    accountTitle: isUrdu ? 'حنظلہ مظفر' : 'Hanzala Muzaffar',
+    accountTitle: 'Hanzala Muzaffar',
     accountNumber: '03462650446',
     formattedNumber: '0346 2650 446',
     raastId: '03462650446',
@@ -282,7 +282,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                     <span className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
                       {t?.accountTitle || (isUrdu ? 'اکاؤنٹ ٹائٹل' : 'Account Title')}
                     </span>
-                    <span className={`text-xs sm:text-sm font-extrabold text-white tracking-wide ${isUrdu ? 'font-urdu' : 'uppercase'}`}>
+                    <span className="text-xs sm:text-sm font-extrabold text-white tracking-wide uppercase font-mono select-all">
                       {account.accountTitle}
                     </span>
                   </div>
@@ -450,7 +450,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                 {t?.accountTitle || (isUrdu ? 'اکاؤنٹ ٹائٹل' : 'Account Title')}
               </span>
               <div className="flex items-center gap-2">
-                <strong className={`text-slate-800 dark:text-slate-200 font-bold ${isUrdu ? 'font-urdu' : ''}`}>
+                <strong className="text-slate-800 dark:text-slate-200 font-bold select-all">
                   {account.accountTitle}
                 </strong>
                 <button
