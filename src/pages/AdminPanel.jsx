@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, ListChecks, Camera, FileBarChart2, Settings, LogOut,
   Plus, Trash2, Pencil, Check, Eye, Save, Droplet, Clock, KeyRound, EyeOff, Sparkles, MessageSquare, BarChart3, Star, Share2,
-  ShieldCheck, Database, Download, Calendar, Lock, Menu, X, Landmark
+  ShieldCheck, Database, Download, Calendar, Lock, Menu, X, Landmark, Receipt
 } from 'lucide-react'
 import {
   loadData, addExpense, updateExpense, deleteExpense,
@@ -26,6 +26,7 @@ import WhatsAppSnapshotModal from '../components/WhatsAppSnapshotModal'
 import BankDetailsModal from '../components/BankDetailsModal'
 import WhatsAppBroadcastHub from '../components/WhatsAppBroadcastHub'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
+import AdminReconciliationTable from '../components/AdminReconciliationTable'
 import { exportToCSV, printReport } from '../utils/export'
 import { predictNextWaterSupply } from '../utils/waterPrediction'
 import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
@@ -88,6 +89,10 @@ export default function AdminPanel() {
       } finally { setLoading(false) }
     }
     init()
+    if (typeof window !== 'undefined') {
+      const tabParam = new URLSearchParams(window.location.search).get('tab')
+      if (tabParam) setActiveTab(tabParam)
+    }
   }, [])
 
   const currentMonthKey = `${selectedMonth} ${selectedYear}`
@@ -407,6 +412,7 @@ export default function AdminPanel() {
 
   const navItems = [
     { id: 'dashboard', icon: <LayoutDashboard size={18}/>, label: 'Dashboard' },
+    { id: 'receipts',  icon: <Receipt size={18}/>,         label: 'All Receipts' },
     { id: 'records',   icon: <FileBarChart2  size={18}/>, label: 'Records' },
     { id: 'expenses',  icon: <ListChecks     size={18}/>, label: 'Expenses' },
     { id: 'capital',   icon: <Camera         size={18}/>, label: 'Capital' },
@@ -678,6 +684,31 @@ export default function AdminPanel() {
               isNoData={totals.record?.isNoData}
             />
 
+            {/* Quick Access to Resident Receipts & Ledger */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-primary/10 border border-emerald-500/30">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shrink-0">
+                  <Receipt size={20} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900 dark:text-white">
+                    Resident Payment Receipts & Reconciliation
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Review uploaded Easypaisa & Raast transfer receipts, verified Paid Residents, and incoming payment proofs for {selectedMonth} {selectedYear}.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('receipts')}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition shadow-sm flex items-center gap-2 shrink-0 cursor-pointer"
+              >
+                <span>Open All Receipts</span>
+                <span className="text-base leading-none">→</span>
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-6">
                 <ExpenseTable
@@ -699,6 +730,36 @@ export default function AdminPanel() {
                   selectedMonth={currentMonthKey}
                 />
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'receipts' && (
+          <div className="space-y-6">
+            <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-2xl shadow-sm border border-primary/10">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 mb-4 border-b border-slate-100 dark:border-slate-700/60">
+                <div>
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <Receipt className="text-primary" size={24} />
+                    <span>Resident Payment Receipts & Reconciliation Ledger</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Live verification ledger of Easypaisa, Raast and bank transfer payment receipts for {selectedMonth} {selectedYear}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/70 px-3 py-1 rounded-full border border-emerald-300/60 flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Live Firestore Ledger
+                  </span>
+                </div>
+              </div>
+
+              <AdminReconciliationTable
+                currentMonth={selectedMonth}
+                currentYear={selectedYear}
+                previousMonthRevenue={previousMonthData?.collection || 282250}
+              />
             </div>
           </div>
         )}
