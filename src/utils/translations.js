@@ -361,7 +361,7 @@ export const translations = {
     saveProfileBtn: "پروفائل محفوظ کریں اور ڈیش بورڈ دیکھیں",
     payDuesBtn: "بینک تفصیلات و ادائیگی",
     bankDetailsTitle: "سوسائٹی بینک اکاؤنٹ کی تفصیلات",
-    bankDetailsSubtitle: "ماہانہ سوسائٹی فنڈز و یوٹیلیٹی چارجز کی ادائیگی کے لیے سرکاری میزان بینک اور راست اکاؤنٹ",
+    bankDetailsSubtitle: "ماہانہ سوسائٹی فنڈز کی ادائیگی کے لیے باقاعدہ ایزی پیسہ اور راست اکاؤنٹ",
     bankName: "بینک کا نام",
     accountTitle: "اکاؤنٹ ٹائٹل",
     accountNumber: "اکاؤنٹ نمبر / IBAN",

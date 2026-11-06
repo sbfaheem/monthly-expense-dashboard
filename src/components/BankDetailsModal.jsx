@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import QRCode from 'qrcode'
 import { motion, AnimatePresence, useMotionValue, useSpring, useReducedMotion } from 'framer-motion'
 import { useLanguage } from '../context/LanguageContext'
 import { Copy, Check, X, RotateCw, Landmark, QrCode, MessageCircle, ExternalLink, ShieldCheck, Smartphone, Wallet } from 'lucide-react'
@@ -11,6 +12,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
 
   const [isFlipped, setIsFlipped] = useState(false)
   const [copiedKey, setCopiedKey] = useState('')
+  const [qrDataUrl, setQrDataUrl] = useState('')
 
   // Interactive 3D tilt springs
   const mouseX = useMotionValue(0)
@@ -46,16 +48,40 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
 
   // Easypaisa Bank Ltd Account Credentials
   const account = {
-    bankName: isUrdu ? 'ایزی پیسہ بینک لمیٹڈ' : 'Easypaisa Bank Ltd',
+    bankName: isUrdu ? 'ایزی پیسہ (Easypaisa / Telenor Bank)' : 'Easypaisa (Telenor Microfinance Bank)',
     shortName: 'Easypaisa',
     accountTitle: 'Hanzala Muzaffar',
+    cardholderName: 'HANZALA MUZAFFAR',
     accountNumber: '03462650446',
     formattedNumber: '0346 2650 446',
     raastId: '03462650446',
     formattedRaast: '0346-2650446',
     whatsappNumber: '923462650446',
-    tagText: isUrdu ? 'ڈیجیٹل والٹ و برانچ لیس بینکنگ' : 'Digital Mobile Wallet / Raast P2P',
+    tagText: 'Branchless Banking / برانچ لیس بینکنگ',
   }
+
+  // Generate genuine scannable QR Code for Raast ID
+  useEffect(() => {
+    let isMounted = true
+    QRCode.toDataURL(account.raastId, {
+      width: 256,
+      margin: 1,
+      errorCorrectionLevel: 'H',
+      color: {
+        dark: '#064e3b',
+        light: '#ffffff'
+      }
+    })
+      .then(url => {
+        if (isMounted) setQrDataUrl(url)
+      })
+      .catch(err => {
+        console.error('Failed to generate Raast QR code', err)
+      })
+    return () => {
+      isMounted = false
+    }
+  }, [account.raastId])
 
   const copyToClipboard = async (text, key) => {
     try {
@@ -191,9 +217,34 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                   }}
                 />
 
-                {/* Top Row: EMV Chip, NFC Wave & Easypaisa Branding */}
-                <div className="flex items-center justify-between z-10">
-                  <div className="flex items-center gap-3">
+                {/* Top Row: Official Easypaisa Branding & Contactless / EMV Chip */}
+                <div className="flex items-center justify-between z-10" dir="ltr">
+                  {/* Official Easypaisa Branding (Top-Left) */}
+                  <div className="flex items-center gap-2.5 bg-slate-950/80 border border-emerald-500/30 px-3 py-1.5 rounded-2xl backdrop-blur-sm shadow-md">
+                    <div className="size-6 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center font-black text-[11px] shadow-xs flex-shrink-0">
+                      EP
+                    </div>
+                    <div className="flex flex-col text-left">
+                      <span className="text-sm font-black tracking-tight text-white leading-none font-sans flex items-center gap-0.5">
+                        <span className="text-emerald-400 font-black">easy</span>
+                        <span className="text-white font-extrabold">paisa</span>
+                      </span>
+                      <span className="text-[8.5px] font-bold text-emerald-200/90 tracking-tight leading-tight mt-0.5 font-sans">
+                        Branchless Banking / برانچ لیس بینکنگ
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Top-Right: Contactless Wave & Embossed EMV Chip */}
+                  <div className="flex items-center gap-2.5">
+                    {/* Contactless Wave Icon */}
+                    <svg className="w-5 h-5 text-amber-200/80 -rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                      <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+                      <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+                      <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+                      <line x1="12" y1="20" x2="12.01" y2="20" strokeWidth="3" />
+                    </svg>
+
                     {/* Embossed EMV Chip SVG */}
                     <svg
                       className="w-10 h-8 sm:w-12 sm:h-9 rounded-md shadow-inner"
@@ -213,29 +264,6 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                         </linearGradient>
                       </defs>
                     </svg>
-
-                    {/* Contactless Wave Icon */}
-                    <svg className="w-5 h-5 text-amber-200/80 -rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                      <path d="M5 12.55a11 11 0 0 1 14.08 0" />
-                      <path d="M1.42 9a16 16 0 0 1 21.16 0" />
-                      <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-                      <line x1="12" y1="20" x2="12.01" y2="20" strokeWidth="3" />
-                    </svg>
-                  </div>
-
-                  {/* Easypaisa Bank Badge */}
-                  <div className="flex items-center gap-2 bg-slate-950/70 border border-white/20 px-3 py-1.5 rounded-xl backdrop-blur-xs shadow-xs">
-                    <div className="size-5 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center font-black text-[10px]">
-                      EP
-                    </div>
-                    <div className="flex flex-col text-right">
-                      <span className="text-xs font-black tracking-tight text-white leading-tight">
-                        {account.bankName}
-                      </span>
-                      <span className="text-[8px] font-bold text-amber-300 uppercase tracking-widest leading-none">
-                        {account.tagText}
-                      </span>
-                    </div>
                   </div>
                 </div>
 
@@ -278,12 +306,16 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
 
                 {/* Bottom Row: Account Title & Flip to Raast Button */}
                 <div className="flex items-end justify-between gap-3 pt-2 border-t border-emerald-800/60 z-10">
-                  <div>
+                  <div className={isUrdu ? 'text-right' : 'text-left'}>
                     <span className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-                      {t?.accountTitle || (isUrdu ? 'اکاؤنٹ ٹائٹل' : 'Account Title')}
+                      {isUrdu ? 'اکاؤنٹ ٹائٹل' : 'Account Title'}
                     </span>
-                    <span className="text-xs sm:text-sm font-extrabold text-white tracking-wide uppercase font-mono select-all">
-                      {account.accountTitle}
+                    <span
+                      dir="ltr"
+                      style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+                      className="text-xs sm:text-sm font-extrabold text-white tracking-wide uppercase font-mono select-all block"
+                    >
+                      {account.cardholderName}
                     </span>
                   </div>
 
@@ -296,7 +328,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-slate-950 text-xs font-black shadow-lg transition-all active:scale-95 flex-shrink-0 cursor-pointer"
                   >
                     <RotateCw size={14} />
-                    <span>{t?.flipToRaast || (isUrdu ? 'راست کیو آر کوڈ دیکھیں ↺' : 'Flip to Raast QR ↺')}</span>
+                    <span>{isUrdu ? 'راست کیو آر کوڈ دیکھیں ↺' : 'Flip to Raast QR ↺'}</span>
                   </button>
                 </div>
               </div>
@@ -319,49 +351,23 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
 
                 {/* Raast QR Preview Area */}
                 <div className="flex items-center gap-4 my-auto py-1">
-                  {/* High Contrast Raast QR Container */}
-                  <div className="bg-white p-2 sm:p-2.5 rounded-2xl shadow-lg border-2 border-emerald-400/40 flex-shrink-0">
-                    <svg className="w-20 h-20 sm:w-24 sm:h-24" viewBox="0 0 100 100" fill="none">
-                      {/* Outer boundary */}
-                      <rect width="100" height="100" fill="white" />
-                      {/* Top-Left Finder */}
-                      <rect x="8" y="8" width="28" height="28" rx="4" fill="#064e3b" />
-                      <rect x="14" y="14" width="16" height="16" rx="2" fill="white" />
-                      <rect x="18" y="18" width="8" height="8" rx="1.5" fill="#064e3b" />
-                      {/* Top-Right Finder */}
-                      <rect x="64" y="8" width="28" height="28" rx="4" fill="#064e3b" />
-                      <rect x="70" y="14" width="16" height="16" rx="2" fill="white" />
-                      <rect x="74" y="18" width="8" height="8" rx="1.5" fill="#064e3b" />
-                      {/* Bottom-Left Finder */}
-                      <rect x="8" y="64" width="28" height="28" rx="4" fill="#064e3b" />
-                      <rect x="14" y="70" width="16" height="16" rx="2" fill="white" />
-                      <rect x="18" y="74" width="8" height="8" rx="1.5" fill="#064e3b" />
-                      {/* QR Matrix Bits */}
-                      <rect x="42" y="10" width="6" height="6" fill="#047857" />
-                      <rect x="52" y="16" width="6" height="6" fill="#064e3b" />
-                      <rect x="42" y="24" width="6" height="6" fill="#047857" />
-                      <rect x="52" y="32" width="6" height="6" fill="#064e3b" />
-                      <rect x="12" y="44" width="6" height="6" fill="#064e3b" />
-                      <rect x="24" y="44" width="6" height="6" fill="#047857" />
-                      <rect x="36" y="44" width="6" height="6" fill="#064e3b" />
-                      <rect x="48" y="44" width="6" height="6" fill="#047857" />
-                      <rect x="60" y="44" width="6" height="6" fill="#064e3b" />
-                      <rect x="72" y="44" width="6" height="6" fill="#047857" />
-                      <rect x="84" y="44" width="6" height="6" fill="#064e3b" />
-                      <rect x="44" y="56" width="6" height="6" fill="#064e3b" />
-                      <rect x="56" y="56" width="6" height="6" fill="#047857" />
-                      <rect x="44" y="68" width="6" height="6" fill="#047857" />
-                      <rect x="56" y="68" width="6" height="6" fill="#064e3b" />
-                      <rect x="68" y="68" width="6" height="6" fill="#047857" />
-                      <rect x="80" y="68" width="6" height="6" fill="#064e3b" />
-                      <rect x="44" y="80" width="6" height="6" fill="#064e3b" />
-                      <rect x="56" y="80" width="6" height="6" fill="#047857" />
-                      <rect x="68" y="80" width="6" height="6" fill="#064e3b" />
-                      <rect x="80" y="80" width="6" height="6" fill="#047857" />
-                      {/* Center Raast Badge */}
-                      <circle cx="50" cy="50" r="10" fill="#f59e0b" />
-                      <text x="50" y="54" fontSize="11" fontWeight="bold" textAnchor="middle" fill="#0f172a">R</text>
-                    </svg>
+                  {/* High Contrast Genuine Scannable Raast QR Container */}
+                  <div className="relative bg-white p-2 sm:p-2.5 rounded-2xl shadow-lg border-2 border-emerald-400/50 flex-shrink-0 flex items-center justify-center">
+                    {qrDataUrl ? (
+                      <img
+                        src={qrDataUrl}
+                        alt="Raast QR Code"
+                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-contain block"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center bg-slate-100 rounded-lg text-slate-400 text-[10px]">
+                        QR Loading...
+                      </div>
+                    )}
+                    {/* Center Raast 'R' Badge */}
+                    <div className="absolute inset-0 m-auto size-5 sm:size-6 rounded-full bg-amber-400 border-2 border-white shadow-md flex items-center justify-center pointer-events-none">
+                      <span className="font-black text-[10px] sm:text-xs text-slate-950 leading-none">R</span>
+                    </div>
                   </div>
 
                   {/* Raast Details & Copy Button */}
@@ -391,12 +397,12 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                       {copiedKey === 'raast' ? (
                         <>
                           <Check size={13} className="text-emerald-400" />
-                          <span>{t?.copySuccess || (isUrdu ? 'کاپی ہو گیا!' : 'Copied!')}</span>
+                          <span>{isUrdu ? 'کاپی ہو گیا!' : 'Copied!'}</span>
                         </>
                       ) : (
                         <>
                           <Copy size={13} />
-                          <span>{t?.copyBtn || (isUrdu ? 'کاپی' : 'Copy Raast ID')}</span>
+                          <span>{isUrdu ? 'کاپی' : 'Copy Raast ID'}</span>
                         </>
                       )}
                     </button>
@@ -413,7 +419,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all active:scale-95"
                   >
                     <MessageCircle size={15} />
-                    <span>{t?.sendProofWa || (isUrdu ? 'رسید واٹس ایپ کریں' : 'Send Proof on WhatsApp')}</span>
+                    <span>{isUrdu ? 'رسید واٹس ایپ کریں' : 'Send Proof on WhatsApp'}</span>
                   </a>
 
                   <button
@@ -425,7 +431,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold shadow-sm transition-all active:scale-95 cursor-pointer"
                   >
                     <RotateCw size={13} />
-                    <span>{t?.flipToBank || (isUrdu ? '↺ اکاؤنٹ تفصیلات' : '↺ Account Details')}</span>
+                    <span>{isUrdu ? '↺ اکاؤنٹ تفصیلات' : '↺ Account Details'}</span>
                   </button>
                 </div>
               </div>
@@ -437,7 +443,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
             {/* Bank Name */}
             <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs">
               <span className="font-semibold text-slate-500 dark:text-slate-400">
-                {t?.bankName || (isUrdu ? 'بینک کا نام' : 'Bank Name')}
+                {isUrdu ? 'بینک کا نام' : 'Bank Name'}
               </span>
               <strong className="text-slate-800 dark:text-slate-200 font-bold">
                 {account.bankName}
@@ -447,10 +453,14 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
             {/* Account Title */}
             <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs">
               <span className="font-semibold text-slate-500 dark:text-slate-400">
-                {t?.accountTitle || (isUrdu ? 'اکاؤنٹ ٹائٹل' : 'Account Title')}
+                {isUrdu ? 'اکاؤنٹ ٹائٹل' : 'Account Title'}
               </span>
               <div className="flex items-center gap-2">
-                <strong className="text-slate-800 dark:text-slate-200 font-bold select-all">
+                <strong
+                  dir="ltr"
+                  style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+                  className="text-slate-800 dark:text-slate-200 font-bold select-all font-mono"
+                >
                   {account.accountTitle}
                 </strong>
                 <button
@@ -491,7 +501,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
             {/* Raast ID */}
             <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs">
               <span className="font-semibold text-slate-500 dark:text-slate-400">
-                {t?.raastId || (isUrdu ? 'راست آئی ڈی' : 'Raast ID')}
+                {isUrdu ? 'راست آئی ڈی (Raast ID)' : 'Raast ID'}
               </span>
               <div className="flex items-center gap-2">
                 <strong
@@ -517,10 +527,9 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
           <div className="mt-4 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex items-start gap-3">
             <span className="text-amber-600 dark:text-amber-400 text-base mt-0.5">ℹ️</span>
             <p className="text-xs text-amber-900 dark:text-amber-200/90 leading-relaxed">
-              {t?.waNotice ||
-                (isUrdu
-                  ? 'رقم منتقل کرنے کے بعد رسید کا اسکرین شاٹ واٹس ایپ پر انتظامیہ کو ضرور بھیجیں۔'
-                  : 'Kindly share a screenshot of your transfer/receipt with management on WhatsApp for instant confirmation.')}
+              {isUrdu
+                ? 'رقم منتقل کرنے کے بعد رسید کا اسکرین شاٹ واٹس ایپ پر انتظامیہ کو ضرور بھیجیں۔'
+                : 'Kindly share a screenshot of your transfer/receipt with management on WhatsApp for instant confirmation.'}
             </p>
           </div>
 
@@ -531,7 +540,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
               onClick={onClose}
               className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
             >
-              {t?.closeBtn || (isUrdu ? 'بند کریں' : 'Close')}
+              {isUrdu ? 'بند کریں' : 'Close'}
             </button>
 
             <a
@@ -541,7 +550,7 @@ export const BankDetailsModal = ({ isOpen, onClose }) => {
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 transition-all active:scale-95"
             >
               <MessageCircle size={16} />
-              <span>{t?.sendProofWa || (isUrdu ? 'ادائیگی رسید واٹس ایپ کریں' : 'Submit Receipt on WhatsApp')}</span>
+              <span>{isUrdu ? 'ادائیگی رسید واٹس ایپ کریں' : 'Submit Receipt on WhatsApp'}</span>
               <ExternalLink size={14} />
             </a>
           </div>
