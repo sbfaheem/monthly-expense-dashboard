@@ -20,7 +20,7 @@ import { useLanguage } from '../context/LanguageContext'
 import { translateMonth } from '../utils/translations'
 import { exportToCSV, printReport } from '../utils/export'
 import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
-import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2, Calendar, Landmark, ClipboardCheck } from 'lucide-react'
+import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2, Calendar, Landmark, ClipboardCheck, BellRing } from 'lucide-react'
 
 const QUICK_TAGS_EN = [
   '💎 100% Transparent',
@@ -117,6 +117,7 @@ export default function ViewerDashboard() {
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
   const [showWhatsAppSnapshotModal, setShowWhatsAppSnapshotModal] = useState(false)
   const [showBankDetailsModal, setShowBankDetailsModal] = useState(false)
+  const [showPaymentReminderModal, setShowPaymentReminderModal] = useState(false)
 
   useEffect(() => {
     loadData().then(freshData => {
@@ -595,6 +596,23 @@ export default function ViewerDashboard() {
 
             {/* Desktop Action Buttons (Visible on lg and larger screens) */}
             <div className="hidden lg:flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              {/* Monthly Payment Due Reminder Notification Button (Desktop) */}
+              <button
+                type="button"
+                onClick={() => setShowPaymentReminderModal(true)}
+                className="relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 border border-amber-300 dark:border-amber-700/60 text-amber-700 dark:text-amber-300 text-xs sm:text-sm font-black shadow-xs transition-all active:scale-95 flex-shrink-0 whitespace-nowrap cursor-pointer"
+                title={isUrdu ? 'ماہانہ مینٹیننس فنڈز کی یاد دہانی' : 'Monthly Maintenance Due Reminder (1st – 15th)'}
+              >
+                <div className="relative">
+                  <BellRing size={16} className="text-amber-600 dark:text-amber-400" />
+                  <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                  </span>
+                </div>
+                <span className={isUrdu ? 'font-urdu' : ''}>{isUrdu ? 'یاد دہانی نوٹس' : 'Due Reminder'}</span>
+              </button>
+
               {/* Bank & Raast Details Button */}
               {FEATURE_FLAGS.SHOW_BANK_DETAILS_MODAL && (
                 <button
@@ -629,6 +647,17 @@ export default function ViewerDashboard() {
         {/* Row 2: Mobile Action Buttons Bar (Underneath Language Switcher & Brand on Mobile) */}
         <div className="lg:hidden border-t border-slate-200/80 dark:border-slate-800/80 bg-slate-50/90 dark:bg-slate-900/90 px-3 py-2">
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+            {/* Payment Due Reminder Notification Button (Mobile) */}
+            <button
+              type="button"
+              onClick={() => setShowPaymentReminderModal(true)}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 text-amber-700 dark:text-amber-300 hover:bg-amber-100 text-xs font-black shadow-xs transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
+              title={isUrdu ? 'ماہانہ مینٹیننس فنڈز کی یاد دہانی' : 'Monthly Due Reminder (1st – 15th)'}
+            >
+              <BellRing size={14} className="shrink-0 text-amber-600 dark:text-amber-400" />
+              <span className={isUrdu ? 'font-urdu' : ''}>{isUrdu ? 'یاد دہانی' : 'Due Notice'}</span>
+            </button>
+
             {FEATURE_FLAGS.SHOW_BANK_DETAILS_MODAL && (
               <button
                 type="button"
@@ -1686,14 +1715,16 @@ export default function ViewerDashboard() {
         isAdmin={isAdmin}
       />
 
-      {/* Smart Monthly Payment Reminder Modal (Active 1st - 18th) */}
+      {/* Smart Monthly Payment Reminder Modal & Desktop Floating Dock (Active 1st - 15th) */}
       <MonthlyPaymentReminderModal
+        isOpen={showPaymentReminderModal}
+        onClose={() => setShowPaymentReminderModal(false)}
+        onOpen={() => setShowPaymentReminderModal(true)}
         currentMonthKey={currentMonthKey}
         selectedMonth={selectedMonth}
         selectedYear={selectedYear}
         resident={resident}
         onPayDues={() => setShowBankDetailsModal(true)}
-        isAdmin={isAdmin}
       />
     </div>
   )
