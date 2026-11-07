@@ -65,14 +65,16 @@ export const MonthComparison3D = ({
 
   // Delta Computations
   const collectionDiff = currCollection - prevCollection
+  const absCollDiff = Math.abs(collectionDiff).toLocaleString('en-PK')
   const collectionPct = prevCollection > 0
-    ? ((collectionDiff / prevCollection) * 100).toFixed(1)
+    ? ((Math.abs(collectionDiff) / prevCollection) * 100).toFixed(1)
     : '0.0'
   const isCollectionUp = collectionDiff >= 0
 
   const expenseDiff = currExpenses - prevExpenses
+  const absExpDiff = Math.abs(expenseDiff).toLocaleString('en-PK')
   const expensePct = prevExpenses > 0
-    ? ((expenseDiff / prevExpenses) * 100).toFixed(1)
+    ? ((Math.abs(expenseDiff) / prevExpenses) * 100).toFixed(1)
     : '0.0'
   const isExpenseUp = expenseDiff > 0
 
@@ -121,13 +123,14 @@ export const MonthComparison3D = ({
           <button
             type="button"
             onClick={() => setMobileTab('split')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
               mobileTab === 'split'
-                ? 'bg-gradient-to-r from-indigo-500 to-cyan-500 text-white shadow-md'
+                ? 'bg-gradient-to-r from-indigo-600 via-teal-600 to-cyan-600 text-white shadow-md shadow-indigo-500/25 ring-2 ring-cyan-400/40'
                 : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
             }`}
           >
-            {isUrdu ? '3D موازنہ' : '3D Split'}
+            <Sparkles size={13} className={mobileTab === 'split' ? 'animate-pulse' : ''} />
+            <span>{isUrdu ? '3D موازنہ (+/-)' : '3D Split (+/-)'}</span>
           </button>
           <button
             type="button"
@@ -151,10 +154,11 @@ export const MonthComparison3D = ({
           <motion.div
             onClick={() => setElevatedCard(1)}
             whileHover={shouldReduceMotion ? {} : { y: -4 }}
+            whileTap={shouldReduceMotion ? {} : { scale: 0.99 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             className={`relative rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#0f172a] p-6 sm:p-7 overflow-hidden flex flex-col justify-between cursor-pointer transition-all duration-200 ${
               elevatedCard === 1
-                ? 'shadow-[0_20px_45px_-10px_rgba(59,130,246,0.18),0_8px_20px_-4px_rgba(0,0,0,0.06)] ring-2 ring-primary/30'
+                ? 'shadow-[0_20px_45px_-10px_rgba(59,130,246,0.22),0_8px_20px_-4px_rgba(0,0,0,0.06)] ring-2 ring-primary/40'
                 : 'shadow-[0_10px_30px_-5px_rgba(0,0,0,0.06),0_4px_12px_-2px_rgba(0,0,0,0.04)]'
             } ${mobileTab === 'current' ? 'hidden lg:flex' : 'flex'}`}
             style={{
@@ -256,8 +260,8 @@ export const MonthComparison3D = ({
             </div>
           </motion.div>
 
-          {/* ================= CENTER PILLAR: FLOATING VARIANCE / DELTA ================= */}
-          <div className="hidden lg:flex flex-col items-center justify-center p-4 rounded-3xl bg-[#070b16] border-2 border-cyan-500/40 shadow-xl text-center w-[178px] flex-shrink-0 z-20 self-center relative overflow-hidden">
+          {/* ================= CENTER PILLAR: FLOATING VARIANCE / DELTA (DESKTOP) ================= */}
+          <div className="hidden lg:flex flex-col items-center justify-center p-4 rounded-3xl bg-[#070b16] border-2 border-cyan-500/40 shadow-xl text-center w-[184px] flex-shrink-0 z-20 self-center relative overflow-hidden">
             {/* Ambient Background Radial Glow */}
             <div className="pointer-events-none absolute -top-10 -left-10 size-32 rounded-full bg-cyan-500/20 blur-2xl" />
 
@@ -270,36 +274,38 @@ export const MonthComparison3D = ({
             {/* Collection Shift */}
             <div className="w-full bg-slate-900/90 rounded-2xl p-2.5 mb-2.5 border border-slate-800">
               <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wide mb-1">
-                {isUrdu ? 'وصولی تبدیلی' : 'Collection'}
+                {isUrdu ? 'وصولی تبدیلی' : 'Collection (+)'}
               </p>
               <div
                 dir="ltr"
                 style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black font-mono ${
+                className={`inline-flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-xl text-xs font-black font-mono w-full ${
                   isCollectionUp
                     ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/40'
                     : 'bg-rose-950/80 text-rose-400 border border-rose-500/40'
                 }`}
               >
                 <span>{isCollectionUp ? '↑ +' : '↓ '}{collectionPct}%</span>
+                <span className="text-[9px] font-bold opacity-80">{isCollectionUp ? '+' : '-'}{displayCurrency} {absCollDiff}</span>
               </div>
             </div>
 
             {/* Expense Shift */}
             <div className="w-full bg-slate-900/90 rounded-2xl p-2.5 mb-3 border border-slate-800">
               <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wide mb-1">
-                {isUrdu ? 'اخراجات تبدیلی' : 'Expenses'}
+                {isUrdu ? 'اخراجات بچت' : 'Expenses (-)'}
               </p>
               <div
                 dir="ltr"
                 style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black font-mono ${
+                className={`inline-flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-xl text-xs font-black font-mono w-full ${
                   !isExpenseUp
                     ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/40'
                     : 'bg-rose-950/80 text-rose-400 border border-rose-500/40'
                 }`}
               >
-                <span>{isExpenseUp ? '↑ +' : '↓ '}{expensePct}%</span>
+                <span>{expenseDiff < 0 ? '↓ -' : '↑ +'}{expensePct}%</span>
+                <span className="text-[9px] font-bold opacity-80">{expenseDiff < 0 ? '-' : '+'}{displayCurrency} {absExpDiff}</span>
               </div>
             </div>
 
@@ -309,10 +315,101 @@ export const MonthComparison3D = ({
             </div>
           </div>
 
+          {/* ================= MOBILE 3D VARIANCE CONNECTOR & DELTA BRIDGE ================= */}
+          <div className={`lg:hidden flex flex-col items-center justify-center my-2 z-20 w-full ${mobileTab === 'split' ? 'flex' : 'hidden'}`}>
+            <motion.div
+              initial={{ opacity: 0, y: 8, scale: 0.97 }}
+              animate={shouldReduceMotion ? { opacity: 1, y: 0, scale: 1 } : {
+                opacity: 1,
+                y: [0, -3, 0],
+                scale: 1,
+              }}
+              transition={{
+                duration: 3.5,
+                repeat: Infinity,
+                repeatType: 'reverse',
+                ease: 'easeInOut'
+              }}
+              className="w-full rounded-2xl bg-gradient-to-r from-slate-900 via-[#0a1226] to-slate-900 border-2 border-cyan-500/60 p-3.5 sm:p-4 shadow-xl shadow-cyan-500/15 text-white relative overflow-hidden"
+              style={{
+                perspective: 800,
+                transformStyle: 'preserve-3d',
+              }}
+            >
+              {/* Radial ambient glow */}
+              <div className="pointer-events-none absolute -top-8 -right-8 size-28 rounded-full bg-cyan-500/20 blur-xl" />
+              <div className="pointer-events-none absolute -bottom-8 -left-8 size-28 rounded-full bg-emerald-500/20 blur-xl" />
+
+              {/* Title & Badge */}
+              <div className="flex items-center justify-between gap-2 mb-2.5 pb-2 border-b border-cyan-500/30">
+                <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-cyan-300">
+                  <Sparkles size={14} className="text-cyan-400 animate-pulse" />
+                  <span>{isUrdu ? '⚡ ماہانہ فرق (پلس / مائنس 3D موازنہ)' : '⚡ MoM 3D Variance (+ / -)'}</span>
+                </div>
+                <span className="text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                  {isUrdu ? 'تبدیلی' : 'Delta'}
+                </span>
+              </div>
+
+              {/* 3 Interactive Highlighted Metrics with Clear Plus/Minus */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                {/* 1. Collection Shift */}
+                <div className="p-2 rounded-xl bg-slate-900/95 border border-emerald-500/50 flex flex-col items-center justify-center shadow-xs">
+                  <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">
+                    {isUrdu ? 'وصولی' : 'Collection'}
+                  </span>
+                  <div className="flex items-center gap-0.5 text-xs sm:text-sm font-black font-mono text-emerald-400">
+                    <span>{isCollectionUp ? '↑ +' : '↓ '}{collectionPct}%</span>
+                  </div>
+                  <span className="text-[9px] font-mono font-bold text-emerald-300/90 mt-0.5">
+                    {isCollectionUp ? '+' : '-'}{displayCurrency} {absCollDiff}
+                  </span>
+                </div>
+
+                {/* 2. Expense Shift */}
+                <div className="p-2 rounded-xl bg-slate-900/95 border border-cyan-500/50 flex flex-col items-center justify-center shadow-xs">
+                  <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">
+                    {isUrdu ? 'اخراجات' : 'Expenses'}
+                  </span>
+                  <div className="flex items-center gap-0.5 text-xs sm:text-sm font-black font-mono text-emerald-400">
+                    <span>{expenseDiff < 0 ? '↓ -' : '↑ +'}{expensePct}%</span>
+                  </div>
+                  <span className="text-[9px] font-mono font-bold text-cyan-300/90 mt-0.5">
+                    {expenseDiff < 0 ? '-' : '+'}{displayCurrency} {absExpDiff} {expenseDiff < 0 ? (isUrdu ? 'بچت' : 'Saved') : ''}
+                  </span>
+                </div>
+
+                {/* 3. Net Recovery Shift */}
+                <div className="p-2 rounded-xl bg-slate-900/95 border border-amber-400/50 flex flex-col items-center justify-center shadow-xs">
+                  <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">
+                    {isUrdu ? 'خالص بچت' : 'Net Recovery'}
+                  </span>
+                  <div className="flex items-center gap-0.5 text-xs sm:text-sm font-black font-mono text-amber-300">
+                    <span>+{displayCurrency} {absBalanceDiff}</span>
+                  </div>
+                  <span className="text-[9px] font-mono font-bold text-amber-300/80 mt-0.5">
+                    {isUrdu ? 'سرپلس فائدہ' : 'Surplus Gain'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Bottom Directional Flow Bar */}
+              <div className="mt-2.5 pt-2 border-t border-cyan-500/20 flex items-center justify-center gap-2 text-[10px] font-bold text-cyan-300/90 flex-wrap">
+                <span>{translateMonth(prevName, lang).split(' ')[0]}</span>
+                <span className="text-cyan-400 font-black animate-pulse">➔</span>
+                <span>{translateMonth(currName, lang).split(' ')[0]}</span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono font-black">
+                  {isUrdu ? 'کیش فلو میں نمایاں بہتری (+)' : 'Cashflow Improved (+)'}
+                </span>
+              </div>
+            </motion.div>
+          </div>
+
           {/* ================= CARD 2: CURRENT CYCLE ================= */}
           <motion.div
             onClick={() => setElevatedCard(2)}
             whileHover={shouldReduceMotion ? {} : { y: -4 }}
+            whileTap={shouldReduceMotion ? {} : { scale: 0.99 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             className={`relative rounded-3xl border-2 border-indigo-500/50 dark:border-indigo-500/40 bg-gradient-to-b from-indigo-50/40 via-white to-white dark:from-slate-900 dark:via-[#0b1120] dark:to-[#0b1120] p-6 sm:p-7 overflow-hidden flex flex-col justify-between cursor-pointer transition-all duration-200 ${
               elevatedCard === 2
@@ -368,17 +465,20 @@ export const MonthComparison3D = ({
                     prefix={displayCurrency}
                     className="text-sm sm:text-base md:text-lg font-black font-mono text-slate-900 dark:text-slate-100"
                   />
-                  <span
+                  <motion.span
                     dir="ltr"
                     style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
+                    animate={shouldReduceMotion ? {} : { scale: [1, 1.05, 1] }}
+                    transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                    className={`text-[10px] sm:text-xs font-mono font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs ${
                       isCollectionUp
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300/40'
-                        : 'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300/40'
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-300 border border-emerald-400/60 ring-2 ring-emerald-500/20'
+                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950/90 dark:text-rose-300 border border-rose-400/60 ring-2 ring-rose-500/20'
                     }`}
                   >
-                    {isCollectionUp ? '↑ +' : '↓ '}{collectionPct}%
-                  </span>
+                    <span>{isCollectionUp ? '↑ +' : '↓ '}{collectionPct}%</span>
+                    <span className="hidden sm:inline font-bold opacity-80">(+{displayCurrency} {absCollDiff})</span>
+                  </motion.span>
                 </div>
               </div>
 
@@ -398,17 +498,20 @@ export const MonthComparison3D = ({
                     prefix={displayCurrency}
                     className="text-sm sm:text-base md:text-lg font-black font-mono text-slate-900 dark:text-slate-100"
                   />
-                  <span
+                  <motion.span
                     dir="ltr"
                     style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
+                    animate={shouldReduceMotion ? {} : { scale: [1, 1.05, 1] }}
+                    transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+                    className={`text-[10px] sm:text-xs font-mono font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs ${
                       !isExpenseUp
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300/40'
-                        : 'bg-rose-100 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-300/40'
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-300 border border-emerald-400/60 ring-2 ring-emerald-500/20'
+                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950/90 dark:text-rose-300 border border-rose-400/60 ring-2 ring-rose-500/20'
                     }`}
                   >
-                    {isExpenseUp ? '↑ +' : '↓ '}{expensePct}%
-                  </span>
+                    <span>{expenseDiff < 0 ? '↓ -' : '↑ +'}{expensePct}%</span>
+                    <span className="hidden sm:inline font-bold opacity-80">(-{displayCurrency} {absExpDiff} {expenseDiff < 0 ? (isUrdu ? 'بچت' : 'Saved') : ''})</span>
+                  </motion.span>
                 </div>
               </div>
 
@@ -432,17 +535,20 @@ export const MonthComparison3D = ({
                         : 'text-rose-600 dark:text-rose-400'
                     }`}
                   />
-                  <span
+                  <motion.span
                     dir="ltr"
                     style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded inline-block ${
+                    animate={shouldReduceMotion ? {} : { scale: [1, 1.05, 1] }}
+                    transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+                    className={`text-[10px] sm:text-xs font-mono font-black px-2 py-0.5 rounded-full inline-flex items-center gap-1 shadow-xs ${
                       balanceDiff >= 0
-                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400'
-                        : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400'
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-300 border border-emerald-400/60 ring-2 ring-emerald-500/20'
+                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950/90 dark:text-rose-300 border border-rose-400/60 ring-2 ring-rose-500/20'
                     }`}
                   >
-                    {balanceDiff >= 0 ? '+' : '-'}{displayCurrency} {absBalanceDiff}
-                  </span>
+                    <span>{balanceDiff >= 0 ? '+' : '-'}{displayCurrency} {absBalanceDiff}</span>
+                    <span className="hidden sm:inline font-bold opacity-80">({isUrdu ? 'بہتری' : 'Recovery'})</span>
+                  </motion.span>
                 </div>
               </div>
             </div>
