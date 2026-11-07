@@ -12,7 +12,8 @@ import {
   Filter,
   RefreshCw,
   PhoneCall,
-  X
+  X,
+  Lock
 } from 'lucide-react'
 import { useLanguage } from '../context/LanguageContext'
 import { fetchCycleReceipts, updateReceiptStatus } from '../utils/receiptService'
@@ -304,27 +305,36 @@ export default function AdminReconciliationTable({
                       )}
                     </td>
 
-                    {/* Quick Approve / Reject Actions */}
-                    <td className="p-4 text-right space-x-2 whitespace-nowrap">
-                      {row.status !== 'verified' && row.status !== 'paid' && (
-                        <button
-                          type="button"
-                          disabled={actionInProgress === row.id}
-                          onClick={() => handleStatusChange(row.id, row.residentId, 'verified')}
-                          className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black text-[11px] transition shadow-xs cursor-pointer"
-                        >
-                          {isUrdu ? 'منظور کریں' : 'Approve'}
-                        </button>
-                      )}
-                      {row.status !== 'rejected' && (
-                        <button
-                          type="button"
-                          disabled={actionInProgress === row.id}
-                          onClick={() => handleStatusChange(row.id, row.residentId, 'rejected')}
-                          className="px-3 py-1 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-black text-[11px] transition shadow-xs cursor-pointer"
-                        >
-                          {isUrdu ? 'مسترد کریں' : 'Reject'}
-                        </button>
+                    {/* Quick Approve / Reject Actions - Locked when Approved */}
+                    <td className="p-4 text-right whitespace-nowrap">
+                      {row.status === 'verified' || row.status === 'paid' ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-[11px] border border-slate-200 dark:border-slate-700/80 shadow-2xs select-none">
+                          <Lock size={12} className="text-emerald-600 dark:text-emerald-400" />
+                          <span>{isUrdu ? 'منظور شدہ (لاک)' : 'Locked & Approved'}</span>
+                        </span>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5">
+                          {row.status === 'pending' && (
+                            <button
+                              type="button"
+                              disabled={actionInProgress === row.id}
+                              onClick={() => handleStatusChange(row.id, row.residentId, 'verified')}
+                              className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black text-[11px] transition shadow-xs cursor-pointer"
+                            >
+                              {isUrdu ? 'منظور کریں' : 'Approve'}
+                            </button>
+                          )}
+                          {row.status !== 'rejected' && (
+                            <button
+                              type="button"
+                              disabled={actionInProgress === row.id}
+                              onClick={() => handleStatusChange(row.id, row.residentId, 'rejected')}
+                              className="px-3 py-1 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-black text-[11px] transition shadow-xs cursor-pointer"
+                            >
+                              {isUrdu ? 'مسترد کریں' : 'Reject'}
+                            </button>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -381,27 +391,43 @@ export default function AdminReconciliationTable({
                 </span>
               </div>
 
-              {/* Modal Action Footer */}
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleStatusChange(activeProof.id, activeProof.residentId, 'verified')
-                  }
-                  className="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition cursor-pointer"
-                >
-                  {isUrdu ? 'بطور ادا شدہ منظور کریں' : 'Approve as Paid'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleStatusChange(activeProof.id, activeProof.residentId, 'rejected')
-                  }
-                  className="py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md transition cursor-pointer"
-                >
-                  {isUrdu ? 'رسید مسترد کریں' : 'Reject Proof'}
-                </button>
-              </div>
+              {/* Modal Action Footer - Locked when Approved */}
+              {activeProof.status === 'verified' || activeProof.status === 'paid' ? (
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 font-black text-xs border border-emerald-300/60">
+                    <Lock size={13} className="text-emerald-600 dark:text-emerald-400" />
+                    <span>{isUrdu ? 'منظور شدہ اور مقفل' : 'Locked & Approved'}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setActiveProof(null)}
+                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-xs transition cursor-pointer"
+                  >
+                    {isUrdu ? 'بند کریں' : 'Close'}
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleStatusChange(activeProof.id, activeProof.residentId, 'verified')
+                    }
+                    className="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition cursor-pointer"
+                  >
+                    {isUrdu ? 'بطور ادا شدہ منظور کریں' : 'Approve as Paid'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleStatusChange(activeProof.id, activeProof.residentId, 'rejected')
+                    }
+                    className="py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md transition cursor-pointer"
+                  >
+                    {isUrdu ? 'رسید مسترد کریں' : 'Reject Proof'}
+                  </button>
+                </div>
+              )}
             </motion.div>
           </div>
         )}

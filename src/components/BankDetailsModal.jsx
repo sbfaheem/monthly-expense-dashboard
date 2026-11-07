@@ -11,10 +11,13 @@ import {
   ExternalLink,
   Smartphone,
   UploadCloud,
-  Landmark
+  Landmark,
+  CheckCircle2,
+  Lock
 } from 'lucide-react'
 import { soundEffects } from '../utils/soundEffects'
 import ReceiptUploadModal from './ReceiptUploadModal'
+import { checkResidentApprovedReceipt } from '../utils/receiptService'
 
 // Cyclic Redundancy Check (CRC-16 / CCITT-FALSE) as mandated by State Bank of Pakistan (SBP) & EMVCo
 const computeCrc16 = (payload) => {
@@ -104,6 +107,49 @@ export const BankDetailsModal = ({
   const [copiedKey, setCopiedKey] = useState('')
   const [qrDataUrls, setQrDataUrls] = useState({ easypaisa: '', bank: '' })
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
+  const [alreadyApprovedReceipt, setAlreadyApprovedReceipt] = useState(null)
+
+  // Verify whether the resident's receipt is already uploaded & approved for this cycle
+  const cycleKey = `${currentYear}-${currentMonth}`
+  useEffect(() => {
+    let isMounted = true
+    const checkApproved = async () => {
+      try {
+        if (typeof window !== 'undefined') {
+          const local = localStorage.getItem(`receipt_approved_${cycleKey}`)
+          if (local) {
+            const parsed = JSON.parse(local)
+            if (parsed && (parsed.status === 'verified' || parsed.status === 'paid')) {
+              if (isMounted) setAlreadyApprovedReceipt(parsed)
+              return
+            }
+          }
+        }
+      } catch (_) {}
+
+      try {
+        const approved = await checkResidentApprovedReceipt(
+          currentUser?.id,
+          currentUser?.houseNumber,
+          cycleKey
+        )
+        if (isMounted && approved && (approved.status === 'verified' || approved.status === 'paid')) {
+          setAlreadyApprovedReceipt(approved)
+        }
+      } catch (_) {}
+    }
+
+    if (isOpen) {
+      checkApproved()
+    }
+
+    const handleReceiptUpdate = () => checkApproved()
+    window.addEventListener('receipt-updated', handleReceiptUpdate)
+    return () => {
+      isMounted = false
+      window.removeEventListener('receipt-updated', handleReceiptUpdate)
+    }
+  }, [isOpen, cycleKey, currentUser])
 
   // Interactive 3D tilt springs
   const mouseX = useMotionValue(0)
@@ -790,19 +836,37 @@ export const BankDetailsModal = ({
             </div>
           </div>
 
-          {/* Advisory Notice */}
-          <div className="mt-4 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex items-start gap-3">
-            <span className="text-amber-600 dark:text-amber-400 text-base mt-0.5">ℹ️</span>
-            <p className="text-xs text-amber-900 dark:text-amber-200/90 leading-relaxed">
-              {isUrdu
-                ? (activeAccountTab === 'bank'
-                    ? 'ایم سی بی بینک اکاؤنٹ میں رقم منتقل کرنے کے بعد رسید اپلوڈ کریں یا واٹس ایپ پر انتظامیہ کو اسکرین شاٹ بھیجیں۔'
-                    : 'ایزی پیسہ یا راست سے رقم منتقل کرنے کے بعد ایپ میں رسید اپلوڈ کریں یا واٹس ایپ پر اسکرین شاٹ بھیجیں۔')
-                : (activeAccountTab === 'bank'
-                    ? 'After transferring dues to MCB Bank, upload your receipt directly or share a screenshot on WhatsApp for instant confirmation.'
-                    : 'After transferring dues via Easypaisa or Raast, upload your receipt directly or share a screenshot on WhatsApp for instant confirmation.')}
-            </p>
-          </div>
+          {/* Approved Status / Advisory Notice */}
+          {alreadyApprovedReceipt ? (
+            <div className="mt-4 p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 flex items-center gap-3">
+              <div className="size-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <CheckCircle2 size={20} />
+              </div>
+              <div className="flex-1 min-w-0 text-xs">
+                <span className="font-black text-emerald-800 dark:text-emerald-200 block">
+                  {isUrdu ? 'رسید جمع اور منظور ہو چکی ہے (Paid Resident)' : 'Receipt Already Uploaded & Approved'}
+                </span>
+                <span className="text-emerald-700 dark:text-emerald-300 text-[11px] block mt-0.5">
+                  {isUrdu
+                    ? `${currentMonth} ${currentYear} کے فنڈز وصول پا چکے ہیں۔ آپ کا شکریہ!`
+                    : `Maintenance dues for ${currentMonth} ${currentYear} are settled. Thank you!`}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex items-start gap-3">
+              <span className="text-amber-600 dark:text-amber-400 text-base mt-0.5">ℹ️</span>
+              <p className="text-xs text-amber-900 dark:text-amber-200/90 leading-relaxed">
+                {isUrdu
+                  ? (activeAccountTab === 'bank'
+                      ? 'ایم سی بی بینک اکاؤنٹ میں رقم منتقل کرنے کے بعد رسید اپلوڈ کریں یا واٹس ایپ پر انتظامیہ کو اسکرین شاٹ بھیجیں۔'
+                      : 'ایزی پیسہ یا راست سے رقم منتقل کرنے کے بعد ایپ میں رسید اپلوڈ کریں یا واٹس ایپ پر اسکرین شاٹ بھیجیں۔')
+                  : (activeAccountTab === 'bank'
+                      ? 'After transferring dues to MCB Bank, upload your receipt directly or share a screenshot on WhatsApp for instant confirmation.'
+                      : 'After transferring dues via Easypaisa or Raast, upload your receipt directly or share a screenshot on WhatsApp for instant confirmation.')}
+              </p>
+            </div>
+          )}
 
           {/* ================= DUAL-CTA ACTION BAR ================= */}
           <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-slate-800 flex flex-col-reverse sm:flex-row items-center justify-between gap-3">
@@ -816,18 +880,30 @@ export const BankDetailsModal = ({
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
               {/* 1. PRIMARY IN-APP ACTION: UPLOAD RECEIPT */}
-              <button
-                type="button"
-                onClick={() => setIsUploadModalOpen(true)}
-                className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer text-center ${
-                  activeAccountTab === 'bank'
-                    ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
-                    : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
-                }`}
-              >
-                <UploadCloud size={16} />
-                <span>{isUrdu ? 'رسید اپلوڈ کریں' : 'Upload Receipt'}</span>
-              </button>
+              {alreadyApprovedReceipt ? (
+                <button
+                  type="button"
+                  disabled
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60 text-xs font-black shadow-xs cursor-not-allowed opacity-90 text-center"
+                  title={isUrdu ? 'رسید پہلے ہی جمع ہو چکی ہے اور منظور ہے' : 'Receipt is already uploaded and approved'}
+                >
+                  <Lock size={15} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>{isUrdu ? 'رسید جمع شدہ (Already Uploaded)' : 'Already Uploaded'}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsUploadModalOpen(true)}
+                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer text-center ${
+                    activeAccountTab === 'bank'
+                      ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
+                      : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+                  }`}
+                >
+                  <UploadCloud size={16} />
+                  <span>{isUrdu ? 'رسید اپلوڈ کریں' : 'Upload Receipt'}</span>
+                </button>
+              )}
 
               {/* 2. SECONDARY EXTERNAL ACTION: SUBMIT ON WHATSAPP */}
               <a

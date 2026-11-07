@@ -5,6 +5,7 @@ import {
   doc,
   setDoc,
   updateDoc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -138,7 +139,75 @@ export async function submitPaymentReceipt({
     updatedAt: serverTimestamp()
   }, { merge: true })
 
+  // Instant local cache so resident is prevented from duplicate uploading
+  if (typeof window !== 'undefined') {
+    try {
+      const summary = {
+        receiptId,
+        residentName,
+        houseNumber,
+        amountPaid: Number(amountPaid),
+        cycleKey,
+        status: 'verified',
+        submittedAt: Date.now()
+      }
+      localStorage.setItem(`receipt_approved_${cycleKey}`, JSON.stringify(summary))
+      localStorage.setItem(`receipt_approved_${cycleKey}_${cleanHouse}`, JSON.stringify(summary))
+    } catch (_) {}
+  }
+
   return receiptId
+}
+
+/**
+ * Checks whether a resident or house already has an approved receipt for this cycle
+ */
+export async function checkResidentApprovedReceipt(residentId, houseNumber, cycleKey) {
+  if (!cycleKey) return null
+
+  // 1. Check local storage cache
+  if (typeof window !== 'undefined') {
+    try {
+      const local = localStorage.getItem(`receipt_approved_${cycleKey}`)
+      if (local) {
+        const parsed = JSON.parse(local)
+        if (parsed && (parsed.status === 'verified' || parsed.status === 'paid')) {
+          return parsed
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 2. Query Firestore billing status
+  try {
+    const cleanResidentId = String(residentId || 'RES').replace(/[^a-zA-Z0-9_-]/g, '-')
+    const billingIndexRef = doc(db, 'residents_billing_status', `${cleanResidentId}_${cycleKey}`)
+    const snap = await getDoc(billingIndexRef)
+    if (snap && snap.exists()) {
+      const data = snap.data()
+      if (data.status === 'paid' || data.status === 'verified') {
+        return data
+      }
+    }
+  } catch (_) {}
+
+  // 3. Query payment_receipts directly
+  try {
+    const q = query(
+      collection(db, 'payment_receipts'),
+      where('cycleKey', '==', cycleKey),
+      where('status', 'in', ['verified', 'paid'])
+    )
+    const snap = await getDocs(q)
+    const found = snap.docs.map(d => d.data()).find(r => {
+      const matchRes = residentId && r.residentId === residentId
+      const matchHouse = houseNumber && r.houseNumber && r.houseNumber.toLowerCase().trim() === houseNumber.toLowerCase().trim()
+      return matchRes || matchHouse
+    })
+    return found || null
+  } catch (_) {
+    return null
+  }
 }
 
 /**

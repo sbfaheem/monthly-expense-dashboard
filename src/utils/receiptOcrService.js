@@ -74,7 +74,65 @@ export function parseReceiptText(text) {
     }
   }
 
-  return { amount: foundAmount, transactionRef: foundTid }
+  // 3. Sender / Resident Name Patterns
+  let foundSenderName = null
+  const invalidNameKeywords = [
+    'easypaisa', 'jazzcash', 'raast', 'bank', 'transfer', 'payment', 'successful',
+    'transaction', 'amount', 'fee', 'charges', 'balance', 'details', 'account',
+    'telenor', 'microfinance', 'receipt', 'stan', 'status', 'approved', 'paid',
+    'debit', 'credit', 'ref', 'reference', 'pkr', 'rs', 'total', 'receiver', 'beneficiary',
+    'faysal', 'meezan', 'hbl', 'ubl', 'mcb', 'alfalah', 'zindigi', 'js bank', 'branch',
+    'iban', 'date', 'time', 'statement', 'online', 'mobile', 'digibank'
+  ]
+
+  const cleanNameCandidate = (raw) => {
+    if (!raw) return null
+    let cleaned = raw.replace(/[^A-Za-z\s.]/g, ' ').replace(/\s+/g, ' ').trim()
+    if (cleaned.length < 3 || cleaned.length > 35) return null
+    const lower = cleaned.toLowerCase()
+    for (const kw of invalidNameKeywords) {
+      if (lower === kw || lower.startsWith(kw + ' ') || lower.endsWith(' ' + kw)) {
+        return null
+      }
+    }
+    if (!/[A-Za-z]/.test(cleaned)) return null
+    return cleaned
+  }
+
+  const senderPatterns = [
+    /(?:Sender\s*(?:Name)?|Sent\s*By|From\s*(?:Account|Name)?|Remitter\s*(?:Name)?|Payer\s*(?:Name)?|Paid\s*By|Debit\s*From|Customer\s*Name)\s*[:#\-\s]+([A-Za-z\s.]{3,35})/i,
+    /(?:Sender\s*Title|Sender\s*Account\s*Title|Account\s*Title\s*\(Sender\))\s*[:#\-\s]+([A-Za-z\s.]{3,35})/i
+  ]
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (!foundSenderName) {
+      for (const pattern of senderPatterns) {
+        const match = line.match(pattern)
+        if (match && match[1]) {
+          const cand = cleanNameCandidate(match[1])
+          if (cand) {
+            foundSenderName = cand
+            break
+          }
+        }
+      }
+
+      if (
+        !foundSenderName &&
+        /^(?:Sender(?:\s*(?:Name|Details|Title))?|From(?:\s*Account)?|Remitter|Payer|Paid\s*By)$/i.test(line)
+      ) {
+        if (i + 1 < lines.length) {
+          const cand = cleanNameCandidate(lines[i + 1])
+          if (cand) {
+            foundSenderName = cand
+          }
+        }
+      }
+    }
+  }
+
+  return { amount: foundAmount, transactionRef: foundTid, residentName: foundSenderName }
 }
 
 /**
@@ -205,8 +263,9 @@ export async function scanReceiptForDetails(imageSource, onProgress) {
     return {
       amount: parsed.amount,
       transactionRef: parsed.transactionRef,
+      residentName: parsed.residentName,
       rawText: fullText,
-      success: Boolean(parsed.amount || parsed.transactionRef)
+      success: Boolean(parsed.amount || parsed.transactionRef || parsed.residentName)
     }
   } catch (err) {
     console.warn('Receipt OCR Scan error (falling back to manual entry):', err)
@@ -218,6 +277,7 @@ export async function scanReceiptForDetails(imageSource, onProgress) {
     return {
       amount: null,
       transactionRef: null,
+      residentName: null,
       rawText: '',
       success: false,
       error: err.message
