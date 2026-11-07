@@ -557,14 +557,15 @@ export default function ViewerDashboard() {
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
       {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-50 w-full border-b border-primary/10 bg-white/90 dark:bg-background-dark/90 backdrop-blur-md overflow-x-auto no-scrollbar scroll-smooth">
-        <div className="flex items-center justify-between gap-4 px-4 sm:px-6 lg:px-10 py-3 sm:py-4 min-w-max">
-          <div className="flex items-center gap-3 text-primary flex-shrink-0">
-            <div className="size-8 bg-primary text-white rounded-lg flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined">account_balance_wallet</span>
+      <header className="sticky top-0 z-50 w-full border-b border-primary/10 bg-white/95 dark:bg-background-dark/95 backdrop-blur-md">
+        {/* Row 1: Brand & Status (Left) | Language Switcher & Admin Toggle & Desktop Actions (Right) */}
+        <div className="flex items-center justify-between gap-3 px-3 sm:px-6 lg:px-10 py-2.5 sm:py-3.5 w-full">
+          <div className="flex items-center gap-2.5 sm:gap-3 text-primary flex-shrink-0 min-w-0">
+            <div className="size-8 bg-primary text-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-xs">
+              <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
             </div>
-            <div className="flex flex-col">
-              <h2 className="text-slate-900 dark:text-slate-100 text-base sm:text-lg font-bold leading-tight tracking-tight whitespace-nowrap">
+            <div className="flex flex-col min-w-0">
+              <h2 className="text-slate-900 dark:text-slate-100 text-sm sm:text-lg font-bold leading-tight tracking-tight truncate">
                 {isUrdu ? (t.appTitle || 'ماہانہ اخراجات ڈیش بورڈ') : 'ExpensePro'}
               </h2>
               <span className="text-primary text-[10px] sm:text-xs font-semibold uppercase tracking-wider whitespace-nowrap">
@@ -573,14 +574,14 @@ export default function ViewerDashboard() {
             </div>
           </div>
           
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
             <LanguageSwitcher />
 
             {/* Quick Super Admin Mode Switcher */}
             <button
               type="button"
               onClick={toggleAdminMode}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold border transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-extrabold border transition-all cursor-pointer ${
                 isAdmin
                   ? 'bg-amber-500 text-white border-amber-600 shadow-sm animate-pulse'
                   : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'
@@ -591,7 +592,8 @@ export default function ViewerDashboard() {
               <span>{isAdmin ? (isUrdu ? 'ایڈمن موڈ آن' : 'Admin Active') : (isUrdu ? 'ایڈمن موڈ' : 'Admin Mode')}</span>
             </button>
 
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+            {/* Desktop Action Buttons (Visible on lg and larger screens) */}
+            <div className="hidden lg:flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               {/* Bank & Raast Details Button */}
               {FEATURE_FLAGS.SHOW_BANK_DETAILS_MODAL && (
                 <button
@@ -620,6 +622,45 @@ export default function ViewerDashboard() {
                 <span className="material-symbols-outlined text-sm sm:text-base">print</span>
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Row 2: Mobile Action Buttons Bar (Underneath Language Switcher & Brand on Mobile) */}
+        <div className="lg:hidden border-t border-slate-200/80 dark:border-slate-800/80 bg-slate-50/90 dark:bg-slate-900/90 px-3 py-2">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+            {FEATURE_FLAGS.SHOW_BANK_DETAILS_MODAL && (
+              <button
+                type="button"
+                onClick={() => setShowBankDetailsModal(true)}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-black shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
+                title={isUrdu ? 'سوسائٹی بینک اکاؤنٹ و راست تفصیلات' : 'Community Bank Account & Raast Details'}
+              >
+                <Landmark size={15} className="shrink-0" />
+                <span>{t.payDuesBtn || (isUrdu ? 'بینک تفصیلات و ادائیگی' : 'Pay Dues / Bank Details')}</span>
+              </button>
+            )}
+            <button
+              onClick={() => setShowWhatsAppSnapshotModal(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
+              title="Download 1080px WhatsApp Card Summary"
+            >
+              <Share2 size={15} className="shrink-0" />
+              <span>{isUrdu ? 'واٹس ایپ سمری' : 'WhatsApp Summary'}</span>
+            </button>
+            <button
+              onClick={() => exportToCSV(monthlyExpenses, totals, currentMonthKey)}
+              className="flex items-center justify-center rounded-xl h-9 w-9 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors shrink-0 cursor-pointer"
+              title="Export CSV"
+            >
+              <span className="material-symbols-outlined text-base">download</span>
+            </button>
+            <button
+              onClick={printReport}
+              className="flex items-center justify-center rounded-xl h-9 w-9 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors shrink-0 cursor-pointer"
+              title="Print Report"
+            >
+              <span className="material-symbols-outlined text-base">print</span>
+            </button>
           </div>
         </div>
       </header>
