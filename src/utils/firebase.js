@@ -1,5 +1,12 @@
-import { initializeApp } from 'firebase/app'
+import { initializeApp, setLogLevel } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
+
+// Suppress verbose Firebase default root logger warnings in browser console
+try {
+  setLogLevel('error')
+} catch (e) {
+  // Silent fallback
+}
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
