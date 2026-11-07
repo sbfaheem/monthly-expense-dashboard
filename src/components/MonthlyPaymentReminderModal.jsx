@@ -9,9 +9,9 @@ import {
   Clock,
   Sparkles,
   ShieldCheck,
-  Droplets,
-  Zap,
+  Lightbulb,
   Trash2,
+  Waves,
   ArrowRight,
   ArrowLeft
 } from 'lucide-react'
@@ -22,8 +22,8 @@ import { soundEffects } from '../utils/soundEffects'
 /**
  * MonthlyPaymentReminderModal
  * 
- * Non-intrusive, smart payment reminder modal active strictly between the 1st and 18th of the month.
- * Provides bilingual support (English/Urdu), local storage caching, 24h snooze,
+ * Non-intrusive, smart payment reminder modal active strictly between the 1st and 15th of the month.
+ * Provides bilingual support (English/Urdu), local storage caching,
  * and seamless hand-off to BankDetailsModal for receipt upload.
  */
 export default function MonthlyPaymentReminderModal({
@@ -40,10 +40,10 @@ export default function MonthlyPaymentReminderModal({
   const [isOpen, setIsOpen] = useState(false)
   const [isThankYou, setIsThankYou] = useState(false)
 
-  // Current calendar day check: Active strictly between 1st and 18th
+  // Current calendar day check: Active strictly between 1st and 15th
   const today = new Date()
   const currentDay = today.getDate()
-  const isInWindow = currentDay >= 1 && currentDay <= 18
+  const isInWindow = currentDay >= 1 && currentDay <= 15
 
   // Month key for scoped localStorage
   const rawMonthKey = currentMonthKey || `${selectedMonth || 'Current'} ${selectedYear || today.getFullYear()}`
@@ -53,7 +53,7 @@ export default function MonthlyPaymentReminderModal({
 
   // Initial appearance check with non-intrusive 1.8s delay
   useEffect(() => {
-    // If admin mode or outside 1st-18th window, do not trigger
+    // If admin mode or outside 1st-15th window, do not trigger
     if (isAdmin || !isInWindow) return
 
     try {
@@ -105,19 +105,7 @@ export default function MonthlyPaymentReminderModal({
     setIsThankYou(true)
   }
 
-  // Handle "Remind Me Later" (24h snooze)
-  const handleRemindLater = () => {
-    try {
-      if (typeof window !== 'undefined') {
-        const snoozeTimestamp = Date.now() + 24 * 60 * 60 * 1000 // 24 hours
-        localStorage.setItem(snoozedKey, String(snoozeTimestamp))
-      }
-      soundEffects.playBounce()
-    } catch (e) {}
-    setIsOpen(false)
-  }
-
-  // Handle modal X close (defaults to 24h snooze so it doesn't repeatedly badger the user)
+  // Handle modal X or backdrop dismiss (silences for 24h to avoid nagging)
   const handleClose = () => {
     try {
       if (typeof window !== 'undefined') {
@@ -149,7 +137,7 @@ export default function MonthlyPaymentReminderModal({
         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-sm overflow-y-auto"
         dir={isUrdu ? 'rtl' : 'ltr'}
       >
-        {/* Backdrop click to snooze */}
+        {/* Backdrop click to dismiss */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -184,12 +172,12 @@ export default function MonthlyPaymentReminderModal({
             /* 1. INITIAL REMINDER STATE                                  */
             /* ========================================================== */
             <div className="p-6 sm:p-7">
-              {/* Header Badge: Active Window */}
+              {/* Header Badge: Active Window (1st – 15th) */}
               <div className="flex items-center gap-2 mb-4">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold tracking-wide bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60 shadow-xs">
                   <Calendar size={13} className="text-emerald-600 dark:text-emerald-400" />
                   <span className={isUrdu ? 'font-urdu' : ''}>
-                    {isUrdu ? 'ادائیگی کی مدت: یکم تا 18 تاریخ' : 'Payment Window: 1st – 18th of the Month'}
+                    {isUrdu ? 'ادائیگی کی مدت: ماہ کی یکم سے 15 تاریخ' : 'Payment Window: 1st – 15th of the Month'}
                   </span>
                 </span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/60">
@@ -237,17 +225,17 @@ export default function MonthlyPaymentReminderModal({
                   }`}
                 >
                   {isUrdu
-                    ? 'معزز رہائشی، برائے مہربانی یکم سے 18 تاریخ کے درمیان ماہانہ مینٹیننس فنڈز کی ادائیگی یقینی بنائیں تاکہ پانی کی فراہمی، سیکیورٹی، جنریٹر اور صفائی کے تمام انتظامات بلا تعطل جاری رہ سکیں۔'
-                    : 'Dear Resident, kindly clear your monthly maintenance dues between the 1st and 18th to ensure uninterrupted water supply, security, generator fuel, and street sanitation services.'}
+                    ? 'معزز رہائشی، برائے مہربانی یکم سے 15 تاریخ کے درمیان ماہانہ مینٹیننس فنڈز کی ادائیگی یقینی بنائیں تاکہ سویپنگ و سیوریج، سیکیورٹی، اسٹریٹ لائٹس اور صفائی کے تمام انتظامات بلا تعطل جاری رہ سکیں۔'
+                    : 'Dear Resident, kindly clear your monthly maintenance dues between the 1st and 15th to ensure uninterrupted Sweeping & Sewerage, Security, Street Lights, and Sanitation Services.'}
                 </p>
               </div>
 
               {/* Essential Services Highlights */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3.5">
                 <div className="flex items-center gap-1.5 p-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 text-blue-700 dark:text-blue-300">
-                  <Droplets size={14} className="shrink-0 text-blue-600 dark:text-blue-400" />
+                  <Waves size={14} className="shrink-0 text-blue-600 dark:text-blue-400" />
                   <span className={`text-[11px] font-bold truncate ${isUrdu ? 'font-urdu' : ''}`}>
-                    {isUrdu ? 'پانی کی فراہمی' : 'Water Supply'}
+                    {isUrdu ? 'سویپنگ و سیوریج' : 'Sweeping & Sewerage'}
                   </span>
                 </div>
 
@@ -259,16 +247,16 @@ export default function MonthlyPaymentReminderModal({
                 </div>
 
                 <div className="flex items-center gap-1.5 p-2 rounded-xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/40 text-amber-700 dark:text-amber-300">
-                  <Zap size={14} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                  <Lightbulb size={14} className="shrink-0 text-amber-600 dark:text-amber-400" />
                   <span className={`text-[11px] font-bold truncate ${isUrdu ? 'font-urdu' : ''}`}>
-                    {isUrdu ? 'جنریٹر ایندھن' : 'Generator Fuel'}
+                    {isUrdu ? 'اسٹریٹ لائٹس' : 'Street Lights'}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-1.5 p-2 rounded-xl bg-purple-50/70 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-900/40 text-purple-700 dark:text-purple-300">
                   <Trash2 size={14} className="shrink-0 text-purple-600 dark:text-purple-400" />
                   <span className={`text-[11px] font-bold truncate ${isUrdu ? 'font-urdu' : ''}`}>
-                    {isUrdu ? 'گلیوں کی صفائی' : 'Sanitation'}
+                    {isUrdu ? 'صفائی کے انتظامات' : 'Sanitation'}
                   </span>
                 </div>
               </div>
@@ -307,19 +295,6 @@ export default function MonthlyPaymentReminderModal({
                   <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400" />
                   <span className={isUrdu ? 'font-urdu' : ''}>
                     {isUrdu ? 'میں ادا کر چکا ہوں' : 'Already Paid'}
-                  </span>
-                </button>
-              </div>
-
-              {/* Remind Me Later (24-Hour Snooze) */}
-              <div className="mt-3.5 text-center">
-                <button
-                  onClick={handleRemindLater}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors py-1 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                >
-                  <Clock size={13} />
-                  <span className={isUrdu ? 'font-urdu' : ''}>
-                    {isUrdu ? 'بعد میں یاد دہانی (24 گھنٹے)' : 'Remind Me Later (24h)'}
                   </span>
                 </button>
               </div>
