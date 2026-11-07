@@ -12,6 +12,7 @@ import {
   Check,
   Home,
   User,
+  Phone,
   ShieldCheck,
   Lock
 } from 'lucide-react'
@@ -41,6 +42,7 @@ export default function ReceiptUploadModal({
   const [previewUrl, setPreviewUrl] = useState(null)
   const [houseNumber, setHouseNumber] = useState('')
   const [residentName, setResidentName] = useState('')
+  const [contactNumber, setContactNumber] = useState('')
   const [amount, setAmount] = useState(standardDues)
   const [transactionRef, setTransactionRef] = useState('')
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -56,25 +58,33 @@ export default function ReceiptUploadModal({
   const fileInputRef = useRef(null)
   const cycleKey = `${currentYear}-${currentMonth}`
 
-  // Prefill resident identity & house number when opening modal
+  // Prefill resident identity, house number & contact number from active session or props
   useEffect(() => {
-    if (currentUser) {
-      if (currentUser.name && currentUser.name !== 'Community Resident' && currentUser.name !== 'Resident') {
-        setResidentName(currentUser.name)
-      } else {
-        setResidentName('')
+    let stored = null
+    try {
+      if (typeof window !== 'undefined') {
+        const raw = localStorage.getItem('resident_identity')
+        if (raw) stored = JSON.parse(raw)
       }
+    } catch (_) {}
 
-      if (
-        currentUser.houseNumber &&
-        currentUser.houseNumber !== 'Sector 7D/1' &&
-        !currentUser.houseNumber.includes('res_identified')
-      ) {
-        setHouseNumber(currentUser.houseNumber)
-      } else {
-        setHouseNumber('')
-      }
-    }
+    const effName = (stored?.name && stored.name !== 'Community Resident' && stored.name !== 'Resident')
+      ? stored.name
+      : (currentUser?.name && currentUser.name !== 'Community Resident' && currentUser.name !== 'Resident')
+      ? currentUser.name
+      : ''
+
+    const effHouse = (stored?.houseAddress || stored?.houseNo)
+      ? (stored.houseAddress || stored.houseNo)
+      : (currentUser?.houseNumber && currentUser.houseNumber !== 'Sector 7D/1' && !currentUser.houseNumber.includes('res_identified'))
+      ? currentUser.houseNumber
+      : ''
+
+    const effPhone = stored?.phone || currentUser?.phoneNumber || ''
+
+    if (effName) setResidentName(effName)
+    if (effHouse) setHouseNumber(effHouse)
+    if (effPhone) setContactNumber(effPhone)
   }, [currentUser])
 
   // Check if resident already uploaded and is approved for this billing cycle
@@ -209,6 +219,12 @@ export default function ReceiptUploadModal({
       return
     }
 
+    const cleanPhone = contactNumber.trim()
+    if (!cleanPhone) {
+      setError('Please provide your Contact / WhatsApp Number.')
+      return
+    }
+
     try {
       setIsSubmitting(true)
       setError('')
@@ -221,12 +237,12 @@ export default function ReceiptUploadModal({
         (progress) => setUploadProgress(progress)
       )
 
-      // 2. Save in Firestore with detailed House Number & Resident Name
+      // 2. Save in Firestore with detailed House Number, Resident Name & Contact Number
       const recId = await submitPaymentReceipt({
         residentId: currentUser?.id || 'res_user',
         residentName: cleanName,
         houseNumber: cleanHouse,
-        contactNumber: currentUser?.phoneNumber || '',
+        contactNumber: cleanPhone,
         billingMonth: currentMonth,
         billingYear: currentYear,
         amountPaid: Number(amount),
@@ -246,6 +262,7 @@ export default function ReceiptUploadModal({
             JSON.stringify({
               ...existing,
               name: cleanName,
+              phone: cleanPhone,
               houseAddress: cleanHouse,
               houseNo: cleanHouse
             })
@@ -404,6 +421,12 @@ export default function ReceiptUploadModal({
                 <span className="text-slate-500 font-bold">Resident</span>
                 <span className="font-bold text-slate-900 dark:text-white">{residentName}</span>
               </div>
+              {contactNumber && (
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-bold">Contact #</span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">{contactNumber}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 font-bold">Amount Paid</span>
                 <span className="font-mono font-black text-emerald-600 dark:text-emerald-400">
@@ -576,8 +599,25 @@ export default function ReceiptUploadModal({
               </div>
             </div>
 
-            {/* Amount and Ref Inputs */}
+            {/* Contact Number & Amount Inputs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Contact / WhatsApp Number */}
+              <div>
+                <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                  <Phone size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Contact / WhatsApp # *</span>
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 0346-2650446"
+                  value={contactNumber}
+                  onChange={(e) => setContactNumber(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono text-xs font-bold outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
+                  required
+                />
+              </div>
+
+              {/* Amount Paid */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase block">
@@ -601,30 +641,31 @@ export default function ReceiptUploadModal({
                   required
                 />
               </div>
+            </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase block">
-                    Transaction TID (Optional)
-                  </label>
-                  {ocrDetected?.tid && (
-                    <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded-md">
-                      Auto-filled
-                    </span>
-                  )}
-                </div>
-                <input
-                  type="text"
-                  placeholder="e.g. 2938472910"
-                  value={transactionRef}
-                  onChange={(e) => setTransactionRef(e.target.value)}
-                  className={`w-full px-3 py-2 rounded-xl border bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono text-sm outline-none transition ${
-                    ocrDetected?.tid
-                      ? 'border-emerald-500/80 ring-1 ring-emerald-500/30 font-bold'
-                      : 'border-slate-200 dark:border-slate-700 focus:border-emerald-500'
-                  }`}
-                />
+            {/* Transaction Ref / TID */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase block">
+                  Transaction TID (Optional)
+                </label>
+                {ocrDetected?.tid && (
+                  <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-900/40 px-1.5 py-0.5 rounded-md">
+                    Auto-filled
+                  </span>
+                )}
               </div>
+              <input
+                type="text"
+                placeholder="e.g. 2938472910"
+                value={transactionRef}
+                onChange={(e) => setTransactionRef(e.target.value)}
+                className={`w-full px-3 py-2 rounded-xl border bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono text-xs outline-none transition ${
+                  ocrDetected?.tid
+                    ? 'border-emerald-500/80 ring-1 ring-emerald-500/30 font-bold'
+                    : 'border-slate-200 dark:border-slate-700 focus:border-emerald-500'
+                }`}
+              />
             </div>
 
             {error && (

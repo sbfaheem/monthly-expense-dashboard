@@ -5,6 +5,7 @@ import {
   doc,
   setDoc,
   updateDoc,
+  deleteDoc,
   getDoc,
   getDocs,
   query,
@@ -260,5 +261,73 @@ export async function fetchCycleReceipts(cycleKey) {
       console.error('Failed to load receipts fallback:', err2)
       return []
     }
+  }
+}
+
+/**
+ * Super Admin: Updates an existing receipt's fields (Resident Name, House Number, Contact Number, Amount, TID, Status)
+ */
+export async function updatePaymentReceipt(receiptId, residentId, cycleKey, updatedData) {
+  const receiptRef = doc(db, 'payment_receipts', receiptId)
+  const payload = {
+    ...updatedData,
+    updatedAt: serverTimestamp()
+  }
+  if (updatedData.amountPaid !== undefined) {
+    payload.amountPaid = Number(updatedData.amountPaid)
+  }
+  await updateDoc(receiptRef, payload)
+
+  // Update billing status index if present
+  if (residentId && cycleKey) {
+    try {
+      const cleanResidentId = String(residentId || 'RES').replace(/[^a-zA-Z0-9_-]/g, '-')
+      const billingIndexRef = doc(db, 'residents_billing_status', `${cleanResidentId}_${cycleKey}`)
+      const billingUpdates = {
+        updatedAt: serverTimestamp()
+      }
+      if (updatedData.residentName) billingUpdates.residentName = updatedData.residentName
+      if (updatedData.houseNumber) billingUpdates.houseNumber = updatedData.houseNumber
+      if (updatedData.contactNumber) billingUpdates.contactNumber = updatedData.contactNumber
+      if (updatedData.amountPaid !== undefined) billingUpdates.amountPaid = Number(updatedData.amountPaid)
+      if (updatedData.status) {
+        billingUpdates.status = (updatedData.status === 'verified' || updatedData.status === 'paid') ? 'paid' : updatedData.status
+      }
+      await updateDoc(billingIndexRef, billingUpdates)
+    } catch (_) {}
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('receipt-updated', { detail: { receiptId, ...updatedData } }))
+  }
+}
+
+/**
+ * Super Admin: Deletes a receipt entry permanently
+ */
+export async function deletePaymentReceipt(receiptId, residentId, cycleKey) {
+  const receiptRef = doc(db, 'payment_receipts', receiptId)
+  await deleteDoc(receiptRef)
+
+  if (residentId && cycleKey) {
+    try {
+      const cleanResidentId = String(residentId || 'RES').replace(/[^a-zA-Z0-9_-]/g, '-')
+      const billingIndexRef = doc(db, 'residents_billing_status', `${cleanResidentId}_${cycleKey}`)
+      await deleteDoc(billingIndexRef)
+    } catch (_) {}
+  }
+
+  // Clear local storage approval lock if it belongs to this cycle
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem(`receipt_approved_${cycleKey}`)
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith(`receipt_approved_${cycleKey}`)) {
+          localStorage.removeItem(key)
+        }
+      }
+    } catch (_) {}
+    window.dispatchEvent(new CustomEvent('receipt-updated', { detail: { receiptId, deleted: true } }))
   }
 }
