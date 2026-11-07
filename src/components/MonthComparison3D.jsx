@@ -13,6 +13,7 @@ import {
 import { useLanguage } from '../context/LanguageContext'
 import { translateMonth } from '../utils/translations'
 import RollingOdometer from './RollingOdometer'
+import { getUrlParam, updateUrlParams } from '../utils/urlState'
 
 export const MonthComparison3D = ({
   previousMonth = {
@@ -41,8 +42,30 @@ export const MonthComparison3D = ({
   // Active focused card on tap (1: prev lifted, 2: curr lifted)
   const [elevatedCard, setElevatedCard] = useState(2)
 
-  // Mobile segmented view: 'split' | 'prev' | 'current'
-  const [mobileTab, setMobileTab] = useState('split')
+  // Mobile segmented view: 'split' | 'prev' | 'current' (synced with URL ?compare=)
+  const [mobileTab, setMobileTab] = useState(() => {
+    const param = getUrlParam('compare')
+    if (param === 'split' || param === 'prev' || param === 'current') {
+      return param
+    }
+    return 'split'
+  })
+
+  const handleMobileTabChange = (tab) => {
+    setMobileTab(tab)
+    updateUrlParams({ compare: tab }, true)
+  }
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const param = getUrlParam('compare')
+      if (param === 'split' || param === 'prev' || param === 'current') {
+        setMobileTab(param)
+      }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   // Realtime 3D Math Animation Step:
   // 0: Sep Baseline -> 1: Realtime Addition & Subtraction (+ / -) -> 2: Oct Result
@@ -123,7 +146,7 @@ export const MonthComparison3D = ({
         <div className="flex lg:hidden items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-inner self-start sm:self-auto">
           <button
             type="button"
-            onClick={() => setMobileTab('prev')}
+            onClick={() => handleMobileTabChange('prev')}
             className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
               mobileTab === 'prev'
                 ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md'
@@ -134,7 +157,7 @@ export const MonthComparison3D = ({
           </button>
           <button
             type="button"
-            onClick={() => setMobileTab('split')}
+            onClick={() => handleMobileTabChange('split')}
             className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
               mobileTab === 'split'
                 ? 'bg-gradient-to-r from-indigo-600 via-teal-600 to-cyan-600 text-white shadow-md shadow-indigo-500/25 ring-2 ring-cyan-400/40'
@@ -146,7 +169,7 @@ export const MonthComparison3D = ({
           </button>
           <button
             type="button"
-            onClick={() => setMobileTab('current')}
+            onClick={() => handleMobileTabChange('current')}
             className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
               mobileTab === 'current'
                 ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md'

@@ -30,6 +30,7 @@ import AdminReconciliationTable from '../components/AdminReconciliationTable'
 import { exportToCSV, printReport } from '../utils/export'
 import { predictNextWaterSupply } from '../utils/waterPrediction'
 import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
+import { getUrlParam, updateUrlParams } from '../utils/urlState'
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const CATEGORIES = ['Security', 'Maintenance', 'Utilities', 'Miscellaneous', 'Capital']
@@ -51,7 +52,19 @@ export default function AdminPanel() {
   const navigate = useNavigate()
   const [data, setData] = useState(defaultData)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('dashboard')
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabParam = getUrlParam('tab')
+    if (tabParam) {
+      return tabParam === 'whatsapp' ? 'broadcast' : tabParam
+    }
+    return 'dashboard'
+  })
+
+  const handleTabChange = (tabId, pushToHistory = true) => {
+    const targetId = tabId === 'whatsapp' ? 'broadcast' : tabId
+    setActiveTab(targetId)
+    updateUrlParams({ tab: targetId }, pushToHistory)
+  }
   const [selectedMonth, setSelectedMonth] = useState('')
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [recordForm, setRecordForm] = useState({ month: '', openingBalance: '', monthlyCollection: '', manualSaving: '', isManualSaving: false, cctvExpense: 0, showCctvExpense: false, note: '' })
@@ -90,9 +103,25 @@ export default function AdminPanel() {
     }
     init()
     if (typeof window !== 'undefined') {
-      const tabParam = new URLSearchParams(window.location.search).get('tab')
-      if (tabParam) setActiveTab(tabParam)
+
+
     }
+  }, [])
+
+  // Sync tab with URL search parameter and browser history (popstate)
+  useEffect(() => {
+    const currentTab = getUrlParam('tab')
+    if (!currentTab) {
+      updateUrlParams({ tab: activeTab }, false)
+    }
+
+    const handlePopState = () => {
+      const tabParam = getUrlParam('tab')
+      const targetId = tabParam === 'whatsapp' ? 'broadcast' : (tabParam || 'dashboard')
+      setActiveTab(targetId)
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
   const currentMonthKey = `${selectedMonth} ${selectedYear}`
@@ -237,7 +266,7 @@ export default function AdminPanel() {
   const handleEditStart = (expense) => {
     setEditingId(expense.id)
     setForm({ date: expense.date, category: expense.category, name: expense.name, amount: expense.amount, description: expense.description || '' })
-    setActiveTab('expenses')
+    handleTabChange('expenses')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -299,7 +328,7 @@ export default function AdminPanel() {
       ...record,
       note: record.note || ''
     })
-    setActiveTab('records')
+    handleTabChange('records')
   }
 
   const handleEditRecordSave = async (e) => {
@@ -494,7 +523,7 @@ export default function AdminPanel() {
               <button
                 key={item.id}
                 onClick={() => {
-                  setActiveTab(item.id)
+                  handleTabChange(item.id)
                   setMobileMenuOpen(false)
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 ${
@@ -551,7 +580,7 @@ export default function AdminPanel() {
                   <button
                     key={item.id}
                     onClick={() => {
-                      setActiveTab(item.id)
+                      handleTabChange(item.id)
                       setMobileMenuOpen(false)
                     }}
                     className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-bold text-sm transition-all ${
@@ -603,7 +632,7 @@ export default function AdminPanel() {
           {navItems.map(item => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => handleTabChange(item.id)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-colors ${activeTab === item.id ? 'bg-primary text-white' : 'text-slate-500 hover:bg-primary/5 hover:text-primary'}`}
             >
               {item.icon} {item.label}
@@ -701,7 +730,7 @@ export default function AdminPanel() {
               </div>
               <button
                 type="button"
-                onClick={() => setActiveTab('receipts')}
+                onClick={() => handleTabChange('receipts')}
                 className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs transition shadow-sm flex items-center gap-2 shrink-0 cursor-pointer"
               >
                 <span>Open All Receipts</span>

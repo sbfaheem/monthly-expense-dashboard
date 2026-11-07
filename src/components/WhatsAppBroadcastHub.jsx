@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { getUrlParam, updateUrlParams } from '../utils/urlState'
 import {
   MessageSquare, Send, Users, UserPlus, Megaphone, Copy,
   Check, ExternalLink, Trash2, Pencil, Search, Sparkles,
@@ -19,7 +20,29 @@ export default function WhatsAppBroadcastHub({
   totals,
   showNotif
 }) {
-  const [activeSubTab, setActiveSubTab] = useState('composer') // 'composer' | 'contacts' | 'groups'
+  const [activeSubTab, setActiveSubTab] = useState(() => {
+    const param = getUrlParam('subtab')
+    if (param && ['composer', 'contacts', 'groups'].includes(param)) return param
+    return 'composer'
+  })
+
+  const handleSubTabChange = (tabId) => {
+    setActiveSubTab(tabId)
+    updateUrlParams({ subtab: tabId === 'composer' ? null : tabId }, true)
+  }
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const param = getUrlParam('subtab')
+      if (param && ['composer', 'contacts', 'groups'].includes(param)) {
+        setActiveSubTab(param)
+      } else {
+        setActiveSubTab('composer')
+      }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
   const currentMonthKey = `${selectedMonth} ${selectedYear}`
 
   // ─── Contacts State ──────────────────────────────────────────
@@ -448,7 +471,7 @@ export default function WhatsAppBroadcastHub({
         {/* Sub-Tab Navigation Pills */}
         <div className="flex items-center bg-slate-100 dark:bg-slate-700/50 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
           <button
-            onClick={() => setActiveSubTab('composer')}
+            onClick={() => handleSubTabChange('composer')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
               activeSubTab === 'composer'
                 ? 'bg-white dark:bg-slate-800 text-primary shadow-sm'
@@ -458,7 +481,7 @@ export default function WhatsAppBroadcastHub({
             <Megaphone size={14} /> Compose &amp; Send
           </button>
           <button
-            onClick={() => setActiveSubTab('contacts')}
+            onClick={() => handleSubTabChange('contacts')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
               activeSubTab === 'contacts'
                 ? 'bg-white dark:bg-slate-800 text-primary shadow-sm'
@@ -468,7 +491,7 @@ export default function WhatsAppBroadcastHub({
             <Users size={14} /> Contacts Directory ({contacts.length})
           </button>
           <button
-            onClick={() => setActiveSubTab('groups')}
+            onClick={() => handleSubTabChange('groups')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${
               activeSubTab === 'groups'
                 ? 'bg-white dark:bg-slate-800 text-primary shadow-sm'

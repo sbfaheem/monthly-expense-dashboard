@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useLanguage } from '../context/LanguageContext'
 import { fetchCycleReceipts, updateReceiptStatus } from '../utils/receiptService'
+import { getUrlParam, updateUrlParams } from '../utils/urlState'
 
 export default function AdminReconciliationTable({
   currentMonth = 'September',
@@ -29,7 +30,29 @@ export default function AdminReconciliationTable({
 
   const [receipts, setReceipts] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all') // 'all' | 'verified' | 'pending' | 'rejected'
+  const [statusFilter, setStatusFilter] = useState(() => {
+    const param = getUrlParam('status')
+    if (param && ['all', 'verified', 'pending', 'rejected'].includes(param)) return param
+    return 'all'
+  })
+
+  const handleStatusFilterChange = (statusKey) => {
+    setStatusFilter(statusKey)
+    updateUrlParams({ status: statusKey === 'all' ? null : statusKey }, true)
+  }
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const param = getUrlParam('status')
+      if (param && ['all', 'verified', 'pending', 'rejected'].includes(param)) {
+        setStatusFilter(param)
+      } else {
+        setStatusFilter('all')
+      }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
   const [activeProof, setActiveProof] = useState(null)
   const [loading, setLoading] = useState(true)
   const [actionInProgress, setActionInProgress] = useState('')
@@ -195,7 +218,7 @@ export default function AdminReconciliationTable({
           ].map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setStatusFilter(tab.key)}
+              onClick={() => handleStatusFilterChange(tab.key)}
               className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all whitespace-nowrap cursor-pointer ${
                 statusFilter === tab.key
                   ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'

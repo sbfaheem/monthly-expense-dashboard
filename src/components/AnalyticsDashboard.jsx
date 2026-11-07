@@ -6,6 +6,7 @@ import {
   Star, Home, ThumbsUp, MessageSquareHeart, Phone, Edit2, UserPlus, Check
 } from 'lucide-react'
 import { loadData, clearVisitorLogs, clearFeedback, updateVisitorLog, deleteVisitorLog } from '../utils/storage'
+import { getUrlParam, updateUrlParams } from '../utils/urlState'
 
 // Helper to normalize phone numbers for robust matching (last 10 digits)
 const normalizePhone = (p) => (p || '').replace(/[^0-9]/g, '').slice(-10)
@@ -33,7 +34,29 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
   }, [defaultView])
 
   // Table Mode: 'visits' (Total Impressions with Name, Phone, Address) vs 'directory' (70 Registered Contacts)
-  const [tableMode, setTableMode] = useState('visits')
+  const [tableMode, setTableMode] = useState(() => {
+    const param = getUrlParam('table')
+    if (param === 'visits' || param === 'directory') return param
+    return 'visits'
+  })
+
+  const handleTableModeChange = (mode) => {
+    setTableMode(mode)
+    updateUrlParams({ table: mode === 'visits' ? null : mode }, true)
+  }
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const param = getUrlParam('table')
+      if (param === 'visits' || param === 'directory') {
+        setTableMode(param)
+      } else {
+        setTableMode('visits')
+      }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   // Visits Log filters
   const [visitSearchTerm, setVisitSearchTerm] = useState('')
@@ -731,7 +754,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1: Unique Residents Visited */}
         <div 
-          onClick={() => setTableMode('directory')}
+          onClick={() => handleTableModeChange('directory')}
           className={`bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border transition-all cursor-pointer hover:shadow-md space-y-3 ${
             tableMode === 'directory' ? 'ring-2 ring-emerald-500 border-emerald-500/30' : 'border-primary/10 hover:border-emerald-300'
           }`}
@@ -767,7 +790,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
 
         {/* KPI 2: Total Dashboard Visits */}
         <div 
-          onClick={() => setTableMode('visits')}
+          onClick={() => handleTableModeChange('visits')}
           className={`bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border transition-all cursor-pointer hover:shadow-md space-y-3 ${
             tableMode === 'visits' ? 'ring-2 ring-blue-500 border-blue-500/30' : 'border-primary/10 hover:border-blue-300'
           }`}
@@ -852,7 +875,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
             {/* Primary Toggle: Total Visits Log vs Registered Directory */}
             <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-700 w-fit">
               <button
-                onClick={() => setTableMode('visits')}
+                onClick={() => handleTableModeChange('visits')}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-black transition-all ${
                   tableMode === 'visits'
                     ? 'bg-blue-600 text-white shadow-sm'
@@ -869,7 +892,7 @@ export default function AnalyticsDashboard({ data = {}, setData, showNotif, defa
               </button>
 
               <button
-                onClick={() => setTableMode('directory')}
+                onClick={() => handleTableModeChange('directory')}
                 className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-black transition-all ${
                   tableMode === 'directory'
                     ? 'bg-emerald-600 text-white shadow-sm'

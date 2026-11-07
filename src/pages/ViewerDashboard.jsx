@@ -20,6 +20,7 @@ import { useLanguage } from '../context/LanguageContext'
 import { translateMonth } from '../utils/translations'
 import { exportToCSV, printReport } from '../utils/export'
 import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
+import { getUrlParam, updateUrlParams } from '../utils/urlState'
 import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2, Calendar, Landmark, ClipboardCheck, BellRing } from 'lucide-react'
 
 const QUICK_TAGS_EN = [
@@ -80,8 +81,26 @@ export default function ViewerDashboard() {
     feedback: []
   })
   const [loading, setLoading] = useState(true)
-  const [selectedMonth, setSelectedMonth] = useState('')
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const param = getUrlParam('month')
+    if (param && MONTH_NAMES.includes(param)) return param
+    return ''
+  })
+  const [selectedYear, setSelectedYear] = useState(() => {
+    const param = getUrlParam('year')
+    if (param && !isNaN(Number(param))) return Number(param)
+    return new Date().getFullYear()
+  })
+
+  const handleMonthChange = (newMonth) => {
+    setSelectedMonth(newMonth)
+    updateUrlParams({ month: newMonth }, true)
+  }
+
+  const handleYearChange = (newYear) => {
+    setSelectedYear(newYear)
+    updateUrlParams({ year: newYear }, true)
+  }
 
   // Admin Mode detection from URL (?admin=true) or LocalStorage
   const [isAdmin, setIsAdmin] = useState(() => {
@@ -123,8 +142,12 @@ export default function ViewerDashboard() {
     loadData().then(freshData => {
       setData(freshData)
       const last = getLastDataMonth(freshData)
-      setSelectedMonth(last.month)
-      setSelectedYear(last.year)
+      const urlMonth = getUrlParam('month')
+      const urlYear = getUrlParam('year')
+      const activeMonth = (urlMonth && MONTH_NAMES.includes(urlMonth)) ? urlMonth : last.month
+      const activeYear = (urlYear && !isNaN(Number(urlYear))) ? Number(urlYear) : last.year
+      setSelectedMonth(activeMonth)
+      setSelectedYear(activeYear)
 
       // Resolve resident identity and WhatsApp group
       const params = new URLSearchParams(window.location.search)
@@ -212,6 +235,24 @@ export default function ViewerDashboard() {
     }).finally(() => {
       setLoading(false)
     })
+  }, [])
+
+  // Sync month, year, and admin mode with URL and browser history (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlMonth = getUrlParam('month')
+      const urlYear = getUrlParam('year')
+      if (urlMonth && MONTH_NAMES.includes(urlMonth)) {
+        setSelectedMonth(urlMonth)
+      }
+      if (urlYear && !isNaN(Number(urlYear))) {
+        setSelectedYear(Number(urlYear))
+      }
+      const adminParam = getUrlParam('admin') === 'true' || getUrlParam('role') === 'admin'
+      setIsAdmin(adminParam)
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
   const currentMonthKey = `${selectedMonth} ${selectedYear}`
@@ -545,6 +586,7 @@ export default function ViewerDashboard() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('is_admin_mode', String(next))
     }
+    updateUrlParams({ admin: next ? 'true' : null }, true)
   }
 
   if (loading) {
@@ -803,8 +845,8 @@ export default function ViewerDashboard() {
         <Header
           selectedMonth={selectedMonth}
           selectedYear={selectedYear}
-          onMonthChange={setSelectedMonth}
-          onYearChange={setSelectedYear}
+          onMonthChange={handleMonthChange}
+          onYearChange={handleYearChange}
           isAdmin={isAdmin}
         />
 

@@ -16,6 +16,7 @@ import { soundEffects } from '../utils/soundEffects'
 import { getParentCategory, normalizeItem } from '../utils/normalizeExpense'
 import { translations, translateCategory, translateItemName, translateMonth } from '../utils/translations'
 import RollingOdometer from './RollingOdometer'
+import { getUrlParam, updateUrlParams } from '../utils/urlState'
 
 // Helper to resolve parent category and metadata matching Dashboard standards
 function getCategoryInfo(item, isUrdu = false) {
@@ -169,8 +170,30 @@ export const Charts = ({
   const shouldReduceMotion = useReducedMotion()
 
   const [activeCategoryIndex, setActiveCategoryIndex] = useState(0)
-  // View mode: 'donut' | 'split' | 'bars'
-  const [viewMode, setViewMode] = useState('split')
+  // View mode: 'donut' | 'split' | 'bars' (synced with URL ?chart=)
+  const [viewMode, setViewMode] = useState(() => {
+    const param = getUrlParam('chart') || getUrlParam('view')
+    if (param === 'donut' || param === 'split' || param === 'bars') {
+      return param
+    }
+    return 'split'
+  })
+
+  const handleViewModeChange = (mode) => {
+    setViewMode(mode)
+    updateUrlParams({ chart: mode }, true)
+  }
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const mode = getUrlParam('chart') || getUrlParam('view')
+      if (mode === 'donut' || mode === 'split' || mode === 'bars') {
+        setViewMode(mode)
+      }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   // Aggregate monthly expenses into standard categories from the Monthly Expense Dashboard
   const categoryData = useMemo(() => {
@@ -378,7 +401,7 @@ export const Charts = ({
         <div className="inline-flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-inner self-start sm:self-auto shrink-0 flex-wrap max-w-full">
           <button
             type="button"
-            onClick={() => setViewMode('donut')}
+            onClick={() => handleViewModeChange('donut')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
               viewMode === 'donut'
                 ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md'
@@ -390,7 +413,7 @@ export const Charts = ({
           </button>
           <button
             type="button"
-            onClick={() => setViewMode('split')}
+            onClick={() => handleViewModeChange('split')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
               viewMode === 'split'
                 ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md'
@@ -402,7 +425,7 @@ export const Charts = ({
           </button>
           <button
             type="button"
-            onClick={() => setViewMode('bars')}
+            onClick={() => handleViewModeChange('bars')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
               viewMode === 'bars'
                 ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md'
