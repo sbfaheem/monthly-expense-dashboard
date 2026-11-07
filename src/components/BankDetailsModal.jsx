@@ -11,13 +11,12 @@ import {
   ExternalLink,
   Smartphone,
   UploadCloud,
-  Landmark,
-  Building2
+  Landmark
 } from 'lucide-react'
 import { soundEffects } from '../utils/soundEffects'
 import ReceiptUploadModal from './ReceiptUploadModal'
 
-// Cyclic Redundancy Check (CRC-16 / CCITT-FALSE) as mandated by State Bank of Pakistan (SBP)
+// Cyclic Redundancy Check (CRC-16 / CCITT-FALSE) as mandated by State Bank of Pakistan (SBP) & EMVCo
 const computeCrc16 = (payload) => {
   let crc = 0xFFFF
   for (let i = 0; i < payload.length; i += 1) {
@@ -29,19 +28,59 @@ const computeCrc16 = (payload) => {
   return crc.toString(16).toUpperCase().padStart(4, '0')
 }
 
-// SBP-compliant Raast P2P payload using official 24-char Pakistani IBAN with Beneficiary Name for full interoperability
+// Helper to format TLV (Tag-Length-Value) data object
+const formatTlv = (tag, val) => {
+  const strVal = String(val)
+  const len = String(strVal.length).padStart(2, '0')
+  return tag + len + strVal
+}
+
+// Universal SBP & EMVCo-compliant Raast QR Payload Generator
+// Fully interoperable across Faysal Bank DigiBank, Zindagi by JS Bank, Meezan, Alfalah, HBL, UBL, Easypaisa, JazzCash, etc.
 const buildRaastP2pPayload = (iban, accountTitle = 'BENEFICIARY') => {
   const cleanIban = iban.trim().toUpperCase().replace(/\s+/g, '')
-  const cleanTitle = (accountTitle || 'BENEFICIARY').trim().toUpperCase()
-  const titleLen = String(cleanTitle.length).padStart(2, '0')
-  // Tag 00: Version 02
-  // Tag 01: Initiation 11 (Static open-amount)
-  // Tag 02: Scheme 00 (IBAN)
-  // Tag 03: Beneficiary Name
-  // Tag 04: Official IBAN (24 chars)
-  // Tag 10: Checksum
-  const base = `00020201021102020003${titleLen}${cleanTitle}0424${cleanIban}1004`
-  return base + computeCrc16(base)
+  const cleanTitle = (accountTitle || 'BENEFICIARY').trim().toUpperCase().slice(0, 25)
+  // Extract 4-character bank code from Pakistani IBAN (e.g. PK60TMFB... -> TMFB, PK89MUCB... -> MUCB)
+  const bankCode = cleanIban.slice(4, 8)
+  const bic = bankCode ? `${bankCode}PKKA` : ''
+
+  let payload = ''
+
+  // 1. Tag 00: Payload Format Indicator (Fixed '01' per EMVCo standard)
+  payload += formatTlv('00', '01')
+
+  // 2. Tag 01: Point of Initiation Method ('11' for Static QR - open amount)
+  payload += formatTlv('01', '11')
+
+  // 3. Tag 26: Official SBP Raast Merchant Account Information Template
+  // Sub-tag 00: Globally Unique Identifier (GUID) = 'pk.gov.sbp.raast'
+  // Sub-tag 01: 24-character Pakistani IBAN
+  // Sub-tag 02: 8-character Bank BIC (resolves receivingBankImd in Faysal DigiBank / 1Link)
+  let tag26Content = formatTlv('00', 'pk.gov.sbp.raast') + formatTlv('01', cleanIban)
+  if (bic) {
+    tag26Content += formatTlv('02', bic)
+  }
+  payload += formatTlv('26', tag26Content)
+
+  // 4. Tag 52: Merchant Category Code ('0000' general consumer / society dues)
+  payload += formatTlv('52', '0000')
+
+  // 5. Tag 53: Transaction Currency ('586' for Pakistani Rupee - PKR)
+  payload += formatTlv('53', '586')
+
+  // 6. Tag 58: Country Code ('PK' for Pakistan)
+  payload += formatTlv('58', 'PK')
+
+  // 7. Tag 59: Merchant / Beneficiary Name (EMVCo Payee Name)
+  payload += formatTlv('59', cleanTitle)
+
+  // 8. Tag 60: Merchant City ('KARACHI')
+  payload += formatTlv('60', 'KARACHI')
+
+  // 9. Tag 63: CRC-16 (CCITT-FALSE) over entire payload string including '6304'
+  const payloadWithTag63 = payload + '6304'
+  const crc = computeCrc16(payloadWithTag63)
+  return payloadWithTag63 + crc
 }
 
 export const BankDetailsModal = ({
@@ -124,8 +163,7 @@ export const BankDetailsModal = ({
         accentBg: 'bg-emerald-600',
         accentText: 'text-emerald-400',
         accentLight: 'text-emerald-200',
-        chipBorder: '#b45309',
-        qrDark: '#064e3b'
+        chipBorder: '#b45309'
       }
     },
     bank: {
@@ -153,15 +191,14 @@ export const BankDetailsModal = ({
         accentBg: 'bg-blue-600',
         accentText: 'text-amber-300',
         accentLight: 'text-blue-200',
-        chipBorder: '#d97706',
-        qrDark: '#0f2b48'
+        chipBorder: '#d97706'
       }
     }
   }
 
   const account = activeAccountTab === 'bank' ? accounts.bank : accounts.easypaisa
 
-  // Generate official SBP Raast P2P QR Code for both accounts
+  // Generate universal high-contrast EMVCo SBP Raast QR Code for both accounts
   useEffect(() => {
     let isMounted = true
 
@@ -170,17 +207,17 @@ export const BankDetailsModal = ({
         const epPayload = buildRaastP2pPayload(accounts.easypaisa.iban, accounts.easypaisa.cardholderName)
         const epUrl = await QRCode.toDataURL(epPayload, {
           width: 320,
-          margin: 2,
-          errorCorrectionLevel: 'H',
-          color: { dark: '#064e3b', light: '#ffffff' }
+          margin: 1,
+          errorCorrectionLevel: 'M',
+          color: { dark: '#000000', light: '#ffffff' }
         })
 
         const bankPayload = buildRaastP2pPayload(accounts.bank.iban, accounts.bank.cardholderName)
         const bankUrl = await QRCode.toDataURL(bankPayload, {
           width: 320,
-          margin: 2,
-          errorCorrectionLevel: 'H',
-          color: { dark: '#0f2b48', light: '#ffffff' }
+          margin: 1,
+          errorCorrectionLevel: 'M',
+          color: { dark: '#000000', light: '#ffffff' }
         })
 
         if (isMounted) {
@@ -523,7 +560,7 @@ export const BankDetailsModal = ({
                 </div>
               </div>
 
-              {/* ================= BACK FACE: RAAST QR & WHATSAPP CONFIRMATION ================= */}
+              {/* ================= BACK FACE: UNIVERSAL RAAST QR ================= */}
               <div
                 style={{
                   backfaceVisibility: 'hidden',
@@ -544,15 +581,15 @@ export const BankDetailsModal = ({
                 {/* Raast QR Preview Area */}
                 <div className="flex items-center gap-4 my-auto py-1">
                   {/* High Contrast Clean Scannable Raast QR Container */}
-                  <div className="bg-white p-2 rounded-2xl shadow-lg border-2 border-emerald-400/50 shrink-0 flex items-center justify-center">
+                  <div className="bg-white p-2.5 rounded-2xl shadow-xl border-2 border-emerald-400/60 shrink-0 flex items-center justify-center">
                     {currentQr ? (
                       <img
                         src={currentQr}
-                        alt="Official SBP Raast QR Code"
-                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-contain block"
+                        alt="Universal SBP Raast QR Code"
+                        className="w-24 h-24 sm:w-28 sm:h-28 rounded-lg object-contain block"
                       />
                     ) : (
-                      <div className="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center bg-slate-100 rounded-lg text-slate-400 text-[10px]">
+                      <div className="w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center bg-slate-100 rounded-lg text-slate-400 text-[10px]">
                         QR Loading...
                       </div>
                     )}
