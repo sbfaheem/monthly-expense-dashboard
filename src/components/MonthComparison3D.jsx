@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   Wallet,
   TrendingDown,
@@ -43,6 +43,18 @@ export const MonthComparison3D = ({
 
   // Mobile segmented view: 'split' | 'prev' | 'current'
   const [mobileTab, setMobileTab] = useState('split')
+
+  // Realtime 3D Math Animation Step:
+  // 0: Sep Baseline -> 1: Realtime Addition & Subtraction (+ / -) -> 2: Oct Result
+  const [mathStep, setMathStep] = useState(1)
+
+  useEffect(() => {
+    if (shouldReduceMotion) return
+    const timer = setInterval(() => {
+      setMathStep((prev) => (prev + 1) % 3)
+    }, 3200)
+    return () => clearInterval(timer)
+  }, [shouldReduceMotion])
 
   // Normalized Financial Data
   const prevName = previousMonth?.name || 'August 2026'
@@ -318,14 +330,13 @@ export const MonthComparison3D = ({
           {/* ================= MOBILE 3D VARIANCE CONNECTOR & DELTA BRIDGE ================= */}
           <div className={`lg:hidden flex flex-col items-center justify-center my-2 z-20 w-full ${mobileTab === 'split' ? 'flex' : 'hidden'}`}>
             <motion.div
-              initial={{ opacity: 0, y: 8, scale: 0.97 }}
-              animate={shouldReduceMotion ? { opacity: 1, y: 0, scale: 1 } : {
-                opacity: 1,
-                y: [0, -3, 0],
-                scale: 1,
+              initial={{ opacity: 1, y: 0 }}
+              animate={shouldReduceMotion ? { y: 0 } : {
+                y: [0, -3.5, 0],
+                rotateX: [0, 1.2, 0],
               }}
               transition={{
-                duration: 3.5,
+                duration: 4.5,
                 repeat: Infinity,
                 repeatType: 'reverse',
                 ease: 'easeInOut'
@@ -340,67 +351,247 @@ export const MonthComparison3D = ({
               <div className="pointer-events-none absolute -top-8 -right-8 size-28 rounded-full bg-cyan-500/20 blur-xl" />
               <div className="pointer-events-none absolute -bottom-8 -left-8 size-28 rounded-full bg-emerald-500/20 blur-xl" />
 
-              {/* Title & Badge */}
-              <div className="flex items-center justify-between gap-2 mb-2.5 pb-2 border-b border-cyan-500/30">
+              {/* Title & 3-Step Realtime Math Ticker Controls */}
+              <div className="flex items-center justify-between gap-1.5 mb-2.5 pb-2 border-b border-cyan-500/30">
                 <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-cyan-300">
                   <Sparkles size={14} className="text-cyan-400 animate-pulse" />
-                  <span>{isUrdu ? '⚡ ماہانہ فرق (پلس / مائنس 3D موازنہ)' : '⚡ MoM 3D Variance (+ / -)'}</span>
+                  <span>{isUrdu ? '⚡ ریئل ٹائم 3D حساب (+/-)' : '⚡ Realtime 3D Math (+/-)'}</span>
                 </div>
-                <span className="text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                  {isUrdu ? 'تبدیلی' : 'Delta'}
-                </span>
+                
+                {/* 3-Step Interactive Math Progress Pills */}
+                <div className="flex items-center gap-1 bg-slate-950/80 p-0.5 rounded-full border border-cyan-500/30 text-[9px] font-mono">
+                  <button
+                    type="button"
+                    onClick={() => setMathStep(0)}
+                    className={`px-1.5 py-0.5 rounded-full transition-all cursor-pointer ${
+                      mathStep === 0
+                        ? 'bg-cyan-500 text-slate-950 font-black shadow-xs'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    1. {translateMonth(prevName, lang).split(' ')[0]}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMathStep(1)}
+                    className={`px-1.5 py-0.5 rounded-full transition-all cursor-pointer ${
+                      mathStep === 1
+                        ? 'bg-gradient-to-r from-emerald-500 to-cyan-400 text-slate-950 font-black shadow-xs ring-1 ring-emerald-300 animate-pulse'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    2. {isUrdu ? 'حساب (+/-)' : '+ / -'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMathStep(2)}
+                    className={`px-1.5 py-0.5 rounded-full transition-all cursor-pointer ${
+                      mathStep === 2
+                        ? 'bg-indigo-500 text-white font-black shadow-xs'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    3. {translateMonth(currName, lang).split(' ')[0]}
+                  </button>
+                </div>
               </div>
 
-              {/* 3 Interactive Highlighted Metrics with Clear Plus/Minus */}
-              <div className="grid grid-cols-3 gap-2 text-center">
+              {/* 3 Interactive Highlighted Metrics with Realtime 3D Math Flip Animation */}
+              <div className="grid grid-cols-3 gap-2 text-center" style={{ perspective: 600 }}>
                 {/* 1. Collection Shift */}
-                <div className="p-2 rounded-xl bg-slate-900/95 border border-emerald-500/50 flex flex-col items-center justify-center shadow-xs">
-                  <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">
-                    {isUrdu ? 'وصولی' : 'Collection'}
-                  </span>
-                  <div className="flex items-center gap-0.5 text-xs sm:text-sm font-black font-mono text-emerald-400">
-                    <span>{isCollectionUp ? '↑ +' : '↓ '}{collectionPct}%</span>
+                <div className="p-2 rounded-xl bg-slate-900/95 border border-emerald-500/50 flex flex-col items-center justify-between shadow-xs min-h-[96px] overflow-hidden relative">
+                  <div className="flex items-center gap-1 text-[9px] uppercase font-bold text-slate-400">
+                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>{isUrdu ? 'وصولی' : 'Collection'}</span>
                   </div>
-                  <span className="text-[9px] font-mono font-bold text-emerald-300/90 mt-0.5">
-                    {isCollectionUp ? '+' : '-'}{displayCurrency} {absCollDiff}
-                  </span>
+
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`coll-${mathStep}`}
+                      initial={{ opacity: 0, y: 6, rotateX: -15 }}
+                      animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                      exit={{ opacity: 0, y: -6, rotateX: 15 }}
+                      transition={{ duration: 0.35, ease: 'easeOut' }}
+                      className="w-full my-auto flex flex-col items-center justify-center"
+                    >
+                      {mathStep === 0 && (
+                        <>
+                          <span className="text-xs sm:text-sm font-black font-mono text-slate-300">
+                            {displayCurrency} {prevCollection.toLocaleString('en-PK')}
+                          </span>
+                          <span className="text-[9px] font-mono text-slate-400 font-bold mt-0.5">
+                            {isUrdu ? 'گزشتہ بنیاد' : 'Sep Starting'}
+                          </span>
+                        </>
+                      )}
+
+                      {mathStep === 1 && (
+                        <>
+                          <div className="inline-flex items-center gap-0.5 text-xs sm:text-sm font-black font-mono text-emerald-400">
+                            <span className="text-emerald-300 font-black">➕</span>
+                            <span>+{collectionPct}%</span>
+                          </div>
+                          <span className="text-[10px] font-mono font-black text-emerald-300 mt-0.5 bg-emerald-950/80 px-1 py-0.2 rounded border border-emerald-500/30">
+                            +{displayCurrency} {absCollDiff}
+                          </span>
+                          <span className="text-[8px] font-bold text-emerald-400/80 uppercase tracking-tighter mt-0.5">
+                            {isUrdu ? 'وصولی میں اضافہ (+)' : 'Added Inflow (+)'}
+                          </span>
+                        </>
+                      )}
+
+                      {mathStep === 2 && (
+                        <>
+                          <span className="text-xs sm:text-sm font-black font-mono text-emerald-400">
+                            {displayCurrency} {currCollection.toLocaleString('en-PK')}
+                          </span>
+                          <span className="text-[9px] font-mono text-emerald-300/80 font-bold mt-0.5">
+                            {isUrdu ? 'موجودہ ٹوٹل' : 'Oct Total (↑ +4.4%)'}
+                          </span>
+                        </>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
 
                 {/* 2. Expense Shift */}
-                <div className="p-2 rounded-xl bg-slate-900/95 border border-cyan-500/50 flex flex-col items-center justify-center shadow-xs">
-                  <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">
-                    {isUrdu ? 'اخراجات' : 'Expenses'}
-                  </span>
-                  <div className="flex items-center gap-0.5 text-xs sm:text-sm font-black font-mono text-emerald-400">
-                    <span>{expenseDiff < 0 ? '↓ -' : '↑ +'}{expensePct}%</span>
+                <div className="p-2 rounded-xl bg-slate-900/95 border border-cyan-500/50 flex flex-col items-center justify-between shadow-xs min-h-[96px] overflow-hidden relative">
+                  <div className="flex items-center gap-1 text-[9px] uppercase font-bold text-slate-400">
+                    <span className="size-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                    <span>{isUrdu ? 'اخراجات' : 'Expenses'}</span>
                   </div>
-                  <span className="text-[9px] font-mono font-bold text-cyan-300/90 mt-0.5">
-                    {expenseDiff < 0 ? '-' : '+'}{displayCurrency} {absExpDiff} {expenseDiff < 0 ? (isUrdu ? 'بچت' : 'Saved') : ''}
-                  </span>
+
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`exp-${mathStep}`}
+                      initial={{ opacity: 0, y: 6, rotateX: -15 }}
+                      animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                      exit={{ opacity: 0, y: -6, rotateX: 15 }}
+                      transition={{ duration: 0.35, ease: 'easeOut' }}
+                      className="w-full my-auto flex flex-col items-center justify-center"
+                    >
+                      {mathStep === 0 && (
+                        <>
+                          <span className="text-xs sm:text-sm font-black font-mono text-slate-300">
+                            {displayCurrency} {prevExpenses.toLocaleString('en-PK')}
+                          </span>
+                          <span className="text-[9px] font-mono text-slate-400 font-bold mt-0.5">
+                            {isUrdu ? 'گزشتہ اخراجات' : 'Sep Burn'}
+                          </span>
+                        </>
+                      )}
+
+                      {mathStep === 1 && (
+                        <>
+                          <div className="inline-flex items-center gap-0.5 text-xs sm:text-sm font-black font-mono text-cyan-400">
+                            <span className="text-cyan-300 font-black">➖</span>
+                            <span>-{expensePct}%</span>
+                          </div>
+                          <span className="text-[10px] font-mono font-black text-cyan-300 mt-0.5 bg-cyan-950/80 px-1 py-0.2 rounded border border-cyan-500/30">
+                            -{displayCurrency} {absExpDiff}
+                          </span>
+                          <span className="text-[8px] font-bold text-cyan-400/80 uppercase tracking-tighter mt-0.5">
+                            {isUrdu ? 'اخراجات میں کمی (-)' : 'Spend Cut (Saved -)'}
+                          </span>
+                        </>
+                      )}
+
+                      {mathStep === 2 && (
+                        <>
+                          <span className="text-xs sm:text-sm font-black font-mono text-cyan-400">
+                            {displayCurrency} {currExpenses.toLocaleString('en-PK')}
+                          </span>
+                          <span className="text-[9px] font-mono text-cyan-300/80 font-bold mt-0.5">
+                            {isUrdu ? 'موجودہ اخراجات' : 'Oct Total (↓ -8.1%)'}
+                          </span>
+                        </>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
 
                 {/* 3. Net Recovery Shift */}
-                <div className="p-2 rounded-xl bg-slate-900/95 border border-amber-400/50 flex flex-col items-center justify-center shadow-xs">
-                  <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">
-                    {isUrdu ? 'خالص بچت' : 'Net Recovery'}
-                  </span>
-                  <div className="flex items-center gap-0.5 text-xs sm:text-sm font-black font-mono text-amber-300">
-                    <span>+{displayCurrency} {absBalanceDiff}</span>
+                <div className="p-2 rounded-xl bg-slate-900/95 border border-amber-400/50 flex flex-col items-center justify-between shadow-xs min-h-[96px] overflow-hidden relative">
+                  <div className="flex items-center gap-1 text-[9px] uppercase font-bold text-slate-400">
+                    <span className="size-1.5 rounded-full bg-amber-400 animate-pulse" />
+                    <span>{isUrdu ? 'خالص بچت' : 'Recovery'}</span>
                   </div>
-                  <span className="text-[9px] font-mono font-bold text-amber-300/80 mt-0.5">
-                    {isUrdu ? 'سرپلس فائدہ' : 'Surplus Gain'}
-                  </span>
+
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`net-${mathStep}`}
+                      initial={{ opacity: 0, y: 6, rotateX: -15 }}
+                      animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                      exit={{ opacity: 0, y: -6, rotateX: 15 }}
+                      transition={{ duration: 0.35, ease: 'easeOut' }}
+                      className="w-full my-auto flex flex-col items-center justify-center"
+                    >
+                      {mathStep === 0 && (
+                        <>
+                          <span className="text-xs sm:text-sm font-black font-mono text-rose-400">
+                            -{displayCurrency} {Math.abs(prevBalance).toLocaleString('en-PK')}
+                          </span>
+                          <span className="text-[9px] font-mono text-rose-400/80 font-bold mt-0.5">
+                            {isUrdu ? 'گزشتہ خسارہ' : 'Sep Deficit'}
+                          </span>
+                        </>
+                      )}
+
+                      {mathStep === 1 && (
+                        <>
+                          <div className="inline-flex items-center gap-0.5 text-xs sm:text-sm font-black font-mono text-amber-300">
+                            <span className="text-amber-300 font-black">➕</span>
+                            <span>+{displayCurrency} {absBalanceDiff}</span>
+                          </div>
+                          <span className="text-[10px] font-mono font-black text-amber-300 mt-0.5 bg-amber-950/80 px-1 py-0.2 rounded border border-amber-500/30">
+                            {isUrdu ? 'سرپلس فائدہ' : 'Surplus Gain'}
+                          </span>
+                          <span className="text-[8px] font-bold text-amber-400/80 uppercase tracking-tighter mt-0.5">
+                            {isUrdu ? 'کیش فلو ریکوری (+)' : 'Recovery Gain (+)'}
+                          </span>
+                        </>
+                      )}
+
+                      {mathStep === 2 && (
+                        <>
+                          <span className="text-xs sm:text-sm font-black font-mono text-amber-300">
+                            -{displayCurrency} {Math.abs(currBalance).toLocaleString('en-PK')}
+                          </span>
+                          <span className="text-[9px] font-mono text-emerald-300 font-bold mt-0.5">
+                            {isUrdu ? 'خسارہ 80% کم' : 'Deficit Cut by 80%'}
+                          </span>
+                        </>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
               </div>
 
-              {/* Bottom Directional Flow Bar */}
-              <div className="mt-2.5 pt-2 border-t border-cyan-500/20 flex items-center justify-center gap-2 text-[10px] font-bold text-cyan-300/90 flex-wrap">
-                <span>{translateMonth(prevName, lang).split(' ')[0]}</span>
-                <span className="text-cyan-400 font-black animate-pulse">➔</span>
-                <span>{translateMonth(currName, lang).split(' ')[0]}</span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-mono font-black">
-                  {isUrdu ? 'کیش فلو میں نمایاں بہتری (+)' : 'Cashflow Improved (+)'}
-                </span>
+              {/* Bottom Directional Flow Bar with Dynamic Math Narrative */}
+              <div className="mt-2.5 pt-2 border-t border-cyan-500/20 flex items-center justify-between gap-1 text-[10px] font-bold text-cyan-300/90 flex-wrap">
+                <div className="flex items-center gap-1.5 font-mono">
+                  <span>{translateMonth(prevName, lang).split(' ')[0]}</span>
+                  <span className="text-cyan-400 font-black animate-pulse">➔</span>
+                  <span className="text-white font-black">{translateMonth(currName, lang).split(' ')[0]}</span>
+                </div>
+
+                <div className="flex items-center gap-1.5 font-mono text-[9px] sm:text-[10px]">
+                  {mathStep === 0 && (
+                    <span className="text-slate-400 font-semibold">
+                      {isUrdu ? 'مرحلہ 1: ستمبر کی بنیادی رقم' : '1. September Starting Figures'}
+                    </span>
+                  )}
+                  {mathStep === 1 && (
+                    <span className="text-emerald-300 font-black bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/40 animate-pulse">
+                      {isUrdu ? '⚡ لائیو 3D حساب: (+ وصولی) اور (- اخراجات کی بچت)' : '⚡ Live 3D Math: (+ Inflow) & (- Expense Saved)'}
+                    </span>
+                  )}
+                  {mathStep === 2 && (
+                    <span className="text-cyan-300 font-black bg-cyan-950/80 px-2 py-0.5 rounded-full border border-cyan-500/40">
+                      {isUrdu ? 'مرحلہ 3: اکتوبر میں خالص سرپلس بہتری (+17,986)' : '3. October Net Surplus Recovered (+17,986)'}
+                    </span>
+                  )}
+                </div>
               </div>
             </motion.div>
           </div>
