@@ -12,6 +12,7 @@ import DynamicAlertBanner from '../components/DynamicAlertBanner'
 import WhatsAppSnapshotModal from '../components/WhatsAppSnapshotModal'
 import BankDetailsModal from '../components/BankDetailsModal'
 import ExitIntentFeedbackModal from '../components/ExitIntentFeedbackModal'
+import MonthlyPaymentReminderModal from '../components/MonthlyPaymentReminderModal'
 import AdminReconciliationTable from '../components/AdminReconciliationTable'
 import { FEATURE_FLAGS } from '../config/features'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
@@ -1682,6 +1683,16 @@ export default function ViewerDashboard() {
         resident={resident}
         currentMonthKey={currentMonthKey}
         onSubmitFeedback={handleExitFeedbackSubmit}
+        isAdmin={isAdmin}
+      />
+
+      {/* Smart Monthly Payment Reminder Modal (Active 1st - 18th) */}
+      <MonthlyPaymentReminderModal
+        currentMonthKey={currentMonthKey}
+        selectedMonth={selectedMonth}
+        selectedYear={selectedYear}
+        resident={resident}
+        onPayDues={() => setShowBankDetailsModal(true)}
         isAdmin={isAdmin}
       />
     </div>
