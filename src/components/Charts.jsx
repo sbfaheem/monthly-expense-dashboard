@@ -501,12 +501,13 @@ export const Charts = ({
               {/* Center Cutout Cylinder */}
               <motion.div
                 style={{
-                  transform: 'translateZ(24px)',
+                  transform: 'translateZ(4px)',
+                  backfaceVisibility: 'hidden',
                   WebkitFontSmoothing: 'antialiased',
                   MozOsxFontSmoothing: 'grayscale',
                   textRendering: 'geometricPrecision',
                 }}
-                className="absolute flex flex-col items-center justify-center size-[94px] sm:size-[102px] rounded-full bg-white/95 dark:bg-[#0b1222] border-2 border-slate-200/90 dark:border-slate-700 shadow-lg pointer-events-none text-center p-1.5"
+                className="absolute flex flex-col items-center justify-center size-[96px] sm:size-[104px] rounded-full bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 shadow-md pointer-events-none text-center p-1.5"
               >
                 <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider text-slate-400">
                   {t.totalSpend || (isUrdu ? 'مجموعی خرچ' : 'TOTAL SPEND')}
