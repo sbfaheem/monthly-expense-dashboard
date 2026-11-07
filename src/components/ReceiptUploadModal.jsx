@@ -17,6 +17,7 @@ export default function ReceiptUploadModal({
   currentMonth = 'October',
   currentYear = 2026,
   standardDues = 1700,
+  paymentChannel = 'easypaisa',
   onSuccess
 }) {
   const [file, setFile] = useState(null)
@@ -119,7 +120,7 @@ export default function ReceiptUploadModal({
         billingMonth: currentMonth,
         billingYear: currentYear,
         amountPaid: amount,
-        paymentChannel: 'easypaisa',
+        paymentChannel: paymentChannel || 'easypaisa',
         transactionRef,
         receiptUrl: downloadURL,
         receiptStoragePath: storagePath
@@ -159,7 +160,7 @@ export default function ReceiptUploadModal({
         <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800">
           <div>
             <h3 className="text-lg font-black text-slate-900 dark:text-white">
-              Upload Easypaisa / Raast Receipt
+              {paymentChannel === 'mcb_bank' ? 'Upload MCB Bank Payment Receipt' : 'Upload Easypaisa / Raast Receipt'}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Billing Cycle: {currentMonth} {currentYear}

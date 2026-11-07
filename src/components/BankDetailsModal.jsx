@@ -10,7 +10,9 @@ import {
   MessageCircle,
   ExternalLink,
   Smartphone,
-  UploadCloud
+  UploadCloud,
+  Landmark,
+  Building2
 } from 'lucide-react'
 import { soundEffects } from '../utils/soundEffects'
 import ReceiptUploadModal from './ReceiptUploadModal'
@@ -28,14 +30,14 @@ const computeCrc16 = (payload) => {
 }
 
 // SBP-compliant Raast P2P payload using official 24-char Pakistani IBAN with Beneficiary Name for full interoperability
-const buildRaastP2pPayload = (iban, accountTitle = 'HANZALA MUZAFFAR') => {
+const buildRaastP2pPayload = (iban, accountTitle = 'BENEFICIARY') => {
   const cleanIban = iban.trim().toUpperCase().replace(/\s+/g, '')
-  const cleanTitle = (accountTitle || 'HANZALA MUZAFFAR').trim().toUpperCase()
+  const cleanTitle = (accountTitle || 'BENEFICIARY').trim().toUpperCase()
   const titleLen = String(cleanTitle.length).padStart(2, '0')
   // Tag 00: Version 02
   // Tag 01: Initiation 11 (Static open-amount)
   // Tag 02: Scheme 00 (IBAN)
-  // Tag 03: Beneficiary Name (HANZALA MUZAFFAR)
+  // Tag 03: Beneficiary Name
   // Tag 04: Official IBAN (24 chars)
   // Tag 10: Checksum
   const base = `00020201021102020003${titleLen}${cleanTitle}0424${cleanIban}1004`
@@ -54,13 +56,14 @@ export const BankDetailsModal = ({
   currentMonth = 'September',
   currentYear = 2026
 }) => {
-  const { lang, t, isRtl } = useLanguage ? useLanguage() : { lang: 'en', t: {}, isRtl: false }
+  const { lang, t } = useLanguage ? useLanguage() : { lang: 'en', t: {} }
   const isUrdu = lang === 'ur'
   const shouldReduceMotion = useReducedMotion()
 
+  const [activeAccountTab, setActiveAccountTab] = useState('easypaisa') // 'easypaisa' | 'bank'
   const [isFlipped, setIsFlipped] = useState(false)
   const [copiedKey, setCopiedKey] = useState('')
-  const [qrDataUrl, setQrDataUrl] = useState('')
+  const [qrDataUrls, setQrDataUrls] = useState({ easypaisa: '', bank: '' })
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false)
 
   // Interactive 3D tilt springs
@@ -80,7 +83,6 @@ export const BankDetailsModal = ({
     const rect = e.currentTarget.getBoundingClientRect()
     const x = (clientX - rect.left) / rect.width - 0.5
     const y = (clientY - rect.top) / rect.height - 0.5
-    // Tilt up to 14 degrees
     mouseX.set(x * 14)
     mouseY.set(-y * 14)
   }
@@ -95,45 +97,108 @@ export const BankDetailsModal = ({
     setIsFlipped((prev) => !prev)
   }
 
-  // Easypaisa Bank Ltd Account Credentials
-  const account = {
-    bankName: isUrdu ? 'ایزی پیسہ (Easypaisa / Telenor Bank)' : 'Easypaisa (Telenor Microfinance Bank)',
-    shortName: 'Easypaisa',
-    accountTitle: 'Hanzala Muzaffar',
-    cardholderName: 'HANZALA MUZAFFAR',
-    accountNumber: '03462650446',
-    formattedNumber: '0346 2650 446',
-    raastId: '03462650446',
-    formattedRaast: '0346-2650446',
-    iban: 'PK60TMFB0000000039676234',
-    formattedIban: 'PK60 TMFB 0000 0000 3967 6234',
-    whatsappNumber: '923462650446',
-    tagText: 'Branchless Banking / برانچ لیس بینکنگ',
+  // Account Configurations (Easypaisa vs MCB Bank)
+  const accounts = {
+    easypaisa: {
+      id: 'easypaisa',
+      tabLabel: isUrdu ? 'ایزی پیسہ اکاؤنٹ' : 'Easypaisa Account',
+      badge: 'EP',
+      bankName: isUrdu ? 'ایزی پیسہ (ٹیلی نار مائیکرو فنانس بینک)' : 'Easypaisa (Telenor Microfinance Bank)',
+      shortName: 'Easypaisa',
+      accountTitle: 'Hanzala Muzaffar',
+      cardholderName: 'HANZALA MUZAFFAR',
+      accountNumber: '03462650446',
+      formattedNumber: '0346 2650 446',
+      raastId: '03462650446',
+      formattedRaast: '0346-2650446',
+      iban: 'PK60TMFB0000000039676234',
+      formattedIban: 'PK60 TMFB 0000 0000 3967 6234',
+      branch: isUrdu ? 'برانچ لیس بینکنگ' : 'Branchless Banking',
+      whatsappNumber: '923462650446',
+      tagText: isUrdu ? 'برانچ لیس بینکنگ' : 'Branchless Banking',
+      cardType: 'easypaisa',
+      colorTheme: {
+        gradient: 'from-[#022c22] via-[#064e3b] to-[#0f172a]',
+        border: 'border-emerald-500/50',
+        radialGlow: 'radial-gradient(circle at 25% 25%, rgba(16, 185, 129, 0.4), transparent 60%)',
+        accentBg: 'bg-emerald-600',
+        accentText: 'text-emerald-400',
+        accentLight: 'text-emerald-200',
+        chipBorder: '#b45309',
+        qrDark: '#064e3b'
+      }
+    },
+    bank: {
+      id: 'bank',
+      tabLabel: isUrdu ? 'بینک اکاؤنٹ' : 'Bank Account',
+      badge: 'MCB',
+      bankName: isUrdu ? 'ایم سی بی بینک (یو پی موڑ برانچ)' : 'MCB Bank U.P. More Branch',
+      shortName: 'MCB Bank',
+      accountTitle: isUrdu ? 'عبدالمجید' : 'ABDUL MAJID',
+      cardholderName: 'ABDUL MAJID',
+      accountNumber: '0484677071008725',
+      formattedNumber: '0484 6770 7100 8725',
+      raastId: '0484677071008725',
+      formattedRaast: '0484 6770 7100 8725',
+      iban: 'PK89MUCB0484677071008725',
+      formattedIban: 'PK89 MUCB 0484 6770 7100 8725',
+      branch: isUrdu ? 'یو پی موڑ برانچ، کراچی' : 'U.P. More Branch, Karachi',
+      whatsappNumber: '923462650446',
+      tagText: isUrdu ? 'مسلم کمرشل بینک' : 'Muslim Commercial Bank',
+      cardType: 'bank',
+      colorTheme: {
+        gradient: 'from-[#081b33] via-[#0f2b48] to-[#1e3a8a]',
+        border: 'border-amber-400/50',
+        radialGlow: 'radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.35), transparent 60%)',
+        accentBg: 'bg-blue-600',
+        accentText: 'text-amber-300',
+        accentLight: 'text-blue-200',
+        chipBorder: '#d97706',
+        qrDark: '#0f2b48'
+      }
+    }
   }
 
-  // Generate official SBP Raast P2P QR Code targeting Easypaisa official IBAN with Beneficiary Name
+  const account = activeAccountTab === 'bank' ? accounts.bank : accounts.easypaisa
+
+  // Generate official SBP Raast P2P QR Code for both accounts
   useEffect(() => {
     let isMounted = true
-    const payload = buildRaastP2pPayload(account.iban, account.cardholderName)
-    QRCode.toDataURL(payload, {
-      width: 320,
-      margin: 2,
-      errorCorrectionLevel: 'H',
-      color: {
-        dark: '#064e3b',
-        light: '#ffffff'
-      }
-    })
-      .then((url) => {
-        if (isMounted) setQrDataUrl(url)
-      })
-      .catch((err) => {
+
+    const generateQrs = async () => {
+      try {
+        const epPayload = buildRaastP2pPayload(accounts.easypaisa.iban, accounts.easypaisa.cardholderName)
+        const epUrl = await QRCode.toDataURL(epPayload, {
+          width: 320,
+          margin: 2,
+          errorCorrectionLevel: 'H',
+          color: { dark: '#064e3b', light: '#ffffff' }
+        })
+
+        const bankPayload = buildRaastP2pPayload(accounts.bank.iban, accounts.bank.cardholderName)
+        const bankUrl = await QRCode.toDataURL(bankPayload, {
+          width: 320,
+          margin: 2,
+          errorCorrectionLevel: 'H',
+          color: { dark: '#0f2b48', light: '#ffffff' }
+        })
+
+        if (isMounted) {
+          setQrDataUrls({
+            easypaisa: epUrl,
+            bank: bankUrl
+          })
+        }
+      } catch (err) {
         console.error('Failed to generate Raast QR code', err)
-      })
+      }
+    }
+
+    generateQrs()
     return () => {
       isMounted = false
     }
-  }, [account.iban, account.cardholderName])
+  }, [])
 
   const copyToClipboard = async (text, key) => {
     try {
@@ -157,14 +222,15 @@ export const BankDetailsModal = ({
     }
   }
 
-  // Pre-filled WhatsApp payment proof message
+  // Pre-filled WhatsApp payment proof message tailored to current active tab
   const whatsappMessage = encodeURIComponent(
     isUrdu
-      ? `السلام علیکم! میں نے سوسائٹی کے ماہانہ فنڈز منتقل کر دیے ہیں۔ ادائیگی کی رسید منسلک ہے۔\nرہائشی: ${currentUser?.name || ''} (${currentUser?.houseNumber || ''})\nبینک: ${account.bankName}\nاکاؤنٹ ٹائٹل: ${account.accountTitle}\nاکاؤنٹ نمبر / راست: ${account.accountNumber}\nIBAN: ${account.formattedIban}`
-      : `Assalam o Alaikum! I have transferred the monthly society dues. Please find the payment receipt attached.\nResident: ${currentUser?.name || ''} (${currentUser?.houseNumber || ''})\nBank: ${account.bankName}\nAccount Title: ${account.accountTitle}\nAccount / Raast: ${account.accountNumber}\nIBAN: ${account.formattedIban}`
+      ? `السلام علیکم! میں نے سوسائٹی کے ماہانہ فنڈز منتقل کر دیے ہیں۔ ادائیگی کی رسید منسلک ہے۔\nرہائشی: ${currentUser?.name || ''} (${currentUser?.houseNumber || ''})\nبینک: ${account.bankName}\nاکاؤنٹ ٹائٹل: ${account.accountTitle}\nاکاؤنٹ نمبر: ${account.accountNumber}\nIBAN: ${account.formattedIban}`
+      : `Assalam o Alaikum! I have transferred the monthly society dues. Please find the payment receipt attached.\nResident: ${currentUser?.name || ''} (${currentUser?.houseNumber || ''})\nBank: ${account.bankName}\nAccount Title: ${account.accountTitle}\nAccount Number: ${account.accountNumber}\nIBAN: ${account.formattedIban}`
   )
 
   const whatsappUrl = `https://wa.me/${account.whatsappNumber}?text=${whatsappMessage}`
+  const currentQr = qrDataUrls[activeAccountTab] || ''
 
   if (!isOpen) return null
 
@@ -192,17 +258,25 @@ export const BankDetailsModal = ({
           {/* Header Bar */}
           <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
             <div className="flex items-center gap-3">
-              <div className="size-10 rounded-2xl bg-emerald-600/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-xs">
-                <Smartphone size={22} />
+              <div className={`size-10 rounded-2xl flex items-center justify-center shadow-xs ${
+                activeAccountTab === 'bank'
+                  ? 'bg-blue-600/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400'
+                  : 'bg-emerald-600/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+              }`}>
+                {activeAccountTab === 'bank' ? <Landmark size={22} /> : <Smartphone size={22} />}
               </div>
               <div>
                 <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-                  {t?.bankDetailsTitle || (isUrdu ? 'سوسائٹی بینک اکاؤنٹ کی تفصیلات' : 'Community Collection Bank Account')}
+                  {isUrdu ? 'سوسائٹی فنڈز اکاؤنٹ تفصیلات' : 'Community Collection Accounts'}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {isUrdu
-                    ? 'ماہانہ سوسائٹی فنڈز کی ادائیگی کے لیے باقاعدہ ایزی پیسہ اور راست اکاؤنٹ'
-                    : 'Official Easypaisa & Raast passbook for society dues payment'}
+                    ? (activeAccountTab === 'bank'
+                        ? 'ماہانہ فنڈز کی بینک منتقلی کے لیے باقاعدہ ایم سی بی بینک اکاؤنٹ'
+                        : 'ماہانہ فنڈز کی فوری ادائیگی کے لیے باقاعدہ ایزی پیسہ اور راست اکاؤنٹ')
+                    : (activeAccountTab === 'bank'
+                        ? 'Official MCB Bank passbook for direct society dues transfer'
+                        : 'Official Easypaisa & Raast passbook for society dues payment')}
                 </p>
               </div>
             </div>
@@ -217,10 +291,55 @@ export const BankDetailsModal = ({
             </button>
           </div>
 
+          {/* ================= TWO TABS: EASYPAISA ACCOUNT & BANK ACCOUNT ================= */}
+          <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl mb-4">
+            {/* Tab 1: Easypaisa Account */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveAccountTab('easypaisa')
+                setIsFlipped(false)
+                soundEffects.playBounce()
+              }}
+              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-black text-xs sm:text-sm transition-all cursor-pointer ${
+                activeAccountTab === 'easypaisa'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white/60 dark:hover:bg-slate-700/60'
+              }`}
+            >
+              <span className={`size-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
+                activeAccountTab === 'easypaisa'
+                  ? 'bg-white text-emerald-700'
+                  : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400'
+              }`}>
+                EP
+              </span>
+              <span>{isUrdu ? 'ایزی پیسہ اکاؤنٹ' : 'Easypaisa Account'}</span>
+            </button>
+
+            {/* Tab 2: Bank Account */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveAccountTab('bank')
+                setIsFlipped(false)
+                soundEffects.playBounce()
+              }}
+              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-black text-xs sm:text-sm transition-all cursor-pointer ${
+                activeAccountTab === 'bank'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white/60 dark:hover:bg-slate-700/60'
+              }`}
+            >
+              <Landmark size={16} />
+              <span>{isUrdu ? 'بینک اکاؤنٹ' : 'Bank Account'}</span>
+            </button>
+          </div>
+
           {/* ================= 3D PERSPECTIVE CONTAINER ================= */}
           <div
             style={{ perspective: 1400 }}
-            className="w-full flex justify-center py-2"
+            className="w-full flex justify-center py-1 sm:py-2"
           >
             {/* Flipping 3D Card Body (Pointer & Touch Interactive) */}
             <motion.div
@@ -252,13 +371,13 @@ export const BankDetailsModal = ({
                   WebkitBackfaceVisibility: 'hidden',
                   transform: 'translateZ(1px)',
                 }}
-                className="absolute inset-0 rounded-2xl sm:rounded-3xl p-5 sm:p-6 bg-gradient-to-tr from-[#022c22] via-[#064e3b] to-[#0f172a] border border-emerald-500/50 shadow-2xl flex flex-col justify-between overflow-hidden text-white"
+                className={`absolute inset-0 rounded-2xl sm:rounded-3xl p-5 sm:p-6 bg-gradient-to-tr ${account.colorTheme.gradient} ${account.colorTheme.border} border shadow-2xl flex flex-col justify-between overflow-hidden text-white`}
               >
                 {/* Brushed Metal Sheen & Radial Light Effect */}
                 <div 
                   className="pointer-events-none absolute inset-0 opacity-25" 
                   style={{
-                    background: 'radial-gradient(circle at 25% 25%, rgba(16, 185, 129, 0.4), transparent 60%)'
+                    background: account.colorTheme.radialGlow
                   }}
                 />
                 <div 
@@ -269,23 +388,40 @@ export const BankDetailsModal = ({
                   }}
                 />
 
-                {/* Top Row: Official Easypaisa Branding & Contactless / EMV Chip */}
+                {/* Top Row: Official Bank Branding & Contactless / EMV Chip */}
                 <div className="flex items-center justify-between z-10" dir="ltr">
-                  {/* Official Easypaisa Branding (Top-Left) */}
-                  <div className="flex items-center gap-2.5 bg-slate-950/80 border border-emerald-500/30 px-3 py-1.5 rounded-2xl backdrop-blur-sm shadow-md">
-                    <div className="size-6 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center font-black text-[11px] shadow-xs flex-shrink-0">
-                      EP
+                  {/* Branding Badge (Top-Left) */}
+                  {activeAccountTab === 'bank' ? (
+                    <div className="flex items-center gap-2.5 bg-slate-950/85 border border-amber-400/40 px-3 py-1.5 rounded-2xl backdrop-blur-sm shadow-md">
+                      <div className="size-6 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-black text-[10px] shadow-xs flex-shrink-0">
+                        MCB
+                      </div>
+                      <div className="flex flex-col text-left">
+                        <span className="text-sm font-black tracking-tight text-white leading-none font-sans flex items-center gap-1">
+                          <span className="text-amber-300 font-black">MCB</span>
+                          <span className="text-white font-extrabold">Bank</span>
+                        </span>
+                        <span className="text-[8.5px] font-bold text-amber-200/90 tracking-tight leading-tight mt-0.5 font-sans">
+                          {isUrdu ? 'یو پی موڑ برانچ • مسلم کمرشل بینک' : 'U.P. More Branch • Karachi'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-col text-left">
-                      <span className="text-sm font-black tracking-tight text-white leading-none font-sans flex items-center gap-0.5">
-                        <span className="text-emerald-400 font-black">easy</span>
-                        <span className="text-white font-extrabold">paisa</span>
-                      </span>
-                      <span className="text-[8.5px] font-bold text-emerald-200/90 tracking-tight leading-tight mt-0.5 font-sans">
-                        Branchless Banking / برانچ لیس بینکنگ
-                      </span>
+                  ) : (
+                    <div className="flex items-center gap-2.5 bg-slate-950/80 border border-emerald-500/30 px-3 py-1.5 rounded-2xl backdrop-blur-sm shadow-md">
+                      <div className="size-6 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center font-black text-[11px] shadow-xs flex-shrink-0">
+                        EP
+                      </div>
+                      <div className="flex flex-col text-left">
+                        <span className="text-sm font-black tracking-tight text-white leading-none font-sans flex items-center gap-0.5">
+                          <span className="text-emerald-400 font-black">easy</span>
+                          <span className="text-white font-extrabold">paisa</span>
+                        </span>
+                        <span className="text-[8.5px] font-bold text-emerald-200/90 tracking-tight leading-tight mt-0.5 font-sans">
+                          {isUrdu ? 'برانچ لیس بینکنگ' : 'Branchless Banking'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Top-Right: Contactless Wave & Embossed EMV Chip */}
                   <div className="flex items-center gap-2.5">
@@ -304,7 +440,7 @@ export const BankDetailsModal = ({
                       fill="none"
                       xmlns="http://www.w3.org/2000/svg"
                     >
-                      <rect width="54" height="44" rx="6" fill="url(#chipGrad)" stroke="#b45309" strokeWidth="1" />
+                      <rect width="54" height="44" rx="6" fill="url(#chipGrad)" stroke={account.colorTheme.chipBorder} strokeWidth="1" />
                       <line x1="0" y1="22" x2="54" y2="22" stroke="#92400e" strokeWidth="1.2" />
                       <line x1="27" y1="0" x2="27" y2="44" stroke="#92400e" strokeWidth="1.2" />
                       <rect x="18" y="14" width="18" height="16" rx="3" stroke="#92400e" strokeWidth="1.2" fill="#fde68a" fillOpacity="0.45" />
@@ -321,8 +457,10 @@ export const BankDetailsModal = ({
 
                 {/* Middle Row: Formatted Account Number & Copy Button */}
                 <div className="my-auto py-1 z-10">
-                  <div className="text-[10px] sm:text-xs font-semibold text-emerald-300 uppercase tracking-wider mb-0.5">
-                    {isUrdu ? 'ایزی پیسہ اکاؤنٹ نمبر' : 'Easypaisa Account Number'}
+                  <div className={`text-[10px] sm:text-xs font-semibold ${account.colorTheme.accentLight} uppercase tracking-wider mb-0.5`}>
+                    {activeAccountTab === 'bank'
+                      ? (isUrdu ? 'ایم سی بی بینک اکاؤنٹ نمبر' : 'MCB Bank Account Number')
+                      : (isUrdu ? 'ایزی پیسہ اکاؤنٹ نمبر' : 'Easypaisa Account Number')}
                   </div>
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div
@@ -339,7 +477,7 @@ export const BankDetailsModal = ({
                         e.stopPropagation()
                         copyToClipboard(account.accountNumber, 'acc_num')
                       }}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/25 hover:bg-emerald-500/40 border border-emerald-400/40 text-emerald-200 text-xs font-bold transition-all active:scale-95 shadow-sm cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white text-xs font-bold transition-all active:scale-95 shadow-sm cursor-pointer"
                     >
                       {copiedKey === 'acc_num' ? (
                         <>
@@ -357,9 +495,9 @@ export const BankDetailsModal = ({
                 </div>
 
                 {/* Bottom Row: Account Title & Flip to Raast Button */}
-                <div className="flex items-end justify-between gap-3 pt-2 border-t border-emerald-800/60 z-10">
+                <div className="flex items-end justify-between gap-3 pt-2 border-t border-white/15 z-10">
                   <div className={isUrdu ? 'text-right' : 'text-left'}>
-                    <span className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                    <span className="text-[9px] sm:text-[10px] uppercase font-bold text-slate-300 tracking-wider block">
                       {isUrdu ? 'اکاؤنٹ ٹائٹل' : 'Account Title'}
                     </span>
                     <span
@@ -392,12 +530,14 @@ export const BankDetailsModal = ({
                   WebkitBackfaceVisibility: 'hidden',
                   transform: 'rotateY(180deg) translateZ(1px)',
                 }}
-                className="absolute inset-0 rounded-2xl sm:rounded-3xl p-5 sm:p-6 bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 border border-emerald-500/40 shadow-2xl flex flex-col justify-between overflow-hidden text-white"
+                className="absolute inset-0 rounded-2xl sm:rounded-3xl p-5 sm:p-6 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 border border-slate-700/80 shadow-2xl flex flex-col justify-between overflow-hidden text-white"
               >
                 {/* Magnetic Stripe with Sector 7D/1 Management branding */}
                 <div className="h-8 sm:h-10 w-[calc(100%+3rem)] -mx-6 -mt-6 bg-gradient-to-r from-neutral-900 via-black to-neutral-900 border-b border-white/10 flex items-center px-6">
                   <span className="text-[8px] tracking-widest text-slate-400 uppercase font-mono font-bold">
-                    {isUrdu ? 'سیکٹر 7D/1 مینجمنٹ • آفیشل ڈپازٹ پاس بک' : 'SECTOR 7D/1 MANAGEMENT • OFFICIAL DEPOSIT PASSBOOK'}
+                    {activeAccountTab === 'bank'
+                      ? (isUrdu ? 'سیکٹر 7D/1 مینجمنٹ • آفیشل ایم سی بی ڈپازٹ پاس بک' : 'SECTOR 7D/1 MANAGEMENT • OFFICIAL MCB PASSBOOK')
+                      : (isUrdu ? 'سیکٹر 7D/1 مینجمنٹ • آفیشل ایزی پیسہ پاس بک' : 'SECTOR 7D/1 MANAGEMENT • OFFICIAL EASYPAISA PASSBOOK')}
                   </span>
                 </div>
 
@@ -405,9 +545,9 @@ export const BankDetailsModal = ({
                 <div className="flex items-center gap-4 my-auto py-1">
                   {/* High Contrast Clean Scannable Raast QR Container */}
                   <div className="bg-white p-2 rounded-2xl shadow-lg border-2 border-emerald-400/50 shrink-0 flex items-center justify-center">
-                    {qrDataUrl ? (
+                    {currentQr ? (
                       <img
-                        src={qrDataUrl}
+                        src={currentQr}
                         alt="Official SBP Raast QR Code"
                         className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-contain block"
                       />
@@ -429,7 +569,7 @@ export const BankDetailsModal = ({
                       </span>
                     </div>
                     <h4 className="text-xs sm:text-sm font-extrabold text-white">
-                      {isUrdu ? 'راست آئی ڈی (فوری ٹرانسفر)' : 'Instant Raast Payment'}
+                      {isUrdu ? 'راست آئی ڈی / اکاؤنٹ' : 'Instant Raast Payment'}
                     </h4>
                     <div
                       dir="ltr"
@@ -455,7 +595,7 @@ export const BankDetailsModal = ({
                       ) : (
                         <>
                           <Copy size={13} />
-                          <span>{isUrdu ? 'کاپی' : 'Copy Raast ID'}</span>
+                          <span>{isUrdu ? 'کاپی' : 'Copy ID'}</span>
                         </>
                       )}
                     </button>
@@ -463,7 +603,7 @@ export const BankDetailsModal = ({
                 </div>
 
                 {/* Bottom Row: Direct WhatsApp Proof Action & Flip Back */}
-                <div className="flex items-center justify-between gap-2 pt-2 border-t border-emerald-800/60 z-10">
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-700/60 z-10">
                   <a
                     href={whatsappUrl}
                     target="_blank"
@@ -492,7 +632,7 @@ export const BankDetailsModal = ({
           </div>
 
           {/* Quick Copy Fields for Fast Mobile Reference */}
-          <div className="mt-5 space-y-2.5">
+          <div className="mt-4 sm:mt-5 space-y-2.5">
             {/* Bank Name */}
             <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs">
               <span className="font-semibold text-slate-500 dark:text-slate-400">
@@ -514,11 +654,11 @@ export const BankDetailsModal = ({
                   style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
                   className="text-slate-800 dark:text-slate-200 font-bold select-all font-mono"
                 >
-                  {account.accountTitle}
+                  {account.cardholderName}
                 </strong>
                 <button
                   type="button"
-                  onClick={() => copyToClipboard(account.accountTitle, 'title_quick')}
+                  onClick={() => copyToClipboard(account.cardholderName, 'title_quick')}
                   className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
                   title="Copy Title"
                 >
@@ -530,7 +670,9 @@ export const BankDetailsModal = ({
             {/* Account Number */}
             <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs">
               <span className="font-semibold text-slate-500 dark:text-slate-400">
-                {isUrdu ? 'ایزی پیسہ اکاؤنٹ نمبر' : 'Easypaisa Account Number'}
+                {activeAccountTab === 'bank'
+                  ? (isUrdu ? 'بینک اکاؤنٹ نمبر' : 'Bank Account Number')
+                  : (isUrdu ? 'ایزی پیسہ اکاؤنٹ نمبر' : 'Easypaisa Account Number')}
               </span>
               <div className="flex items-center gap-2">
                 <strong
@@ -551,29 +693,40 @@ export const BankDetailsModal = ({
               </div>
             </div>
 
-            {/* Raast ID */}
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs">
-              <span className="font-semibold text-slate-500 dark:text-slate-400">
-                {isUrdu ? 'راست آئی ڈی (Raast ID)' : 'Raast ID'}
-              </span>
-              <div className="flex items-center gap-2">
-                <strong
-                  dir="ltr"
-                  style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                  className="font-mono text-slate-800 dark:text-slate-200 font-bold select-all"
-                >
-                  {account.raastId}
-                </strong>
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(account.raastId, 'raast_quick')}
-                  className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
-                  title="Copy Raast ID"
-                >
-                  {copiedKey === 'raast_quick' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
-                </button>
+            {/* Raast ID / Branch */}
+            {activeAccountTab === 'easypaisa' ? (
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs">
+                <span className="font-semibold text-slate-500 dark:text-slate-400">
+                  {isUrdu ? 'راست آئی ڈی (Raast ID)' : 'Raast ID'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <strong
+                    dir="ltr"
+                    style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+                    className="font-mono text-slate-800 dark:text-slate-200 font-bold select-all"
+                  >
+                    {account.raastId}
+                  </strong>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(account.raastId, 'raast_quick')}
+                    className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
+                    title="Copy Raast ID"
+                  >
+                    {copiedKey === 'raast_quick' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs">
+                <span className="font-semibold text-slate-500 dark:text-slate-400">
+                  {isUrdu ? 'برانچ کی تفصیل' : 'Branch Details'}
+                </span>
+                <strong className="text-slate-800 dark:text-slate-200 font-bold">
+                  {account.branch}
+                </strong>
+              </div>
+            )}
 
             {/* Official IBAN */}
             <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 text-xs">
@@ -605,8 +758,12 @@ export const BankDetailsModal = ({
             <span className="text-amber-600 dark:text-amber-400 text-base mt-0.5">ℹ️</span>
             <p className="text-xs text-amber-900 dark:text-amber-200/90 leading-relaxed">
               {isUrdu
-                ? 'رقم منتقل کرنے کے بعد ایپ میں رسید اپلوڈ کریں یا واٹس ایپ پر انتظامیہ کو اسکرین شاٹ بھیجیں۔'
-                : 'After transferring dues, upload your receipt directly or share a screenshot on WhatsApp for instant confirmation.'}
+                ? (activeAccountTab === 'bank'
+                    ? 'ایم سی بی بینک اکاؤنٹ میں رقم منتقل کرنے کے بعد رسید اپلوڈ کریں یا واٹس ایپ پر انتظامیہ کو اسکرین شاٹ بھیجیں۔'
+                    : 'ایزی پیسہ یا راست سے رقم منتقل کرنے کے بعد ایپ میں رسید اپلوڈ کریں یا واٹس ایپ پر اسکرین شاٹ بھیجیں۔')
+                : (activeAccountTab === 'bank'
+                    ? 'After transferring dues to MCB Bank, upload your receipt directly or share a screenshot on WhatsApp for instant confirmation.'
+                    : 'After transferring dues via Easypaisa or Raast, upload your receipt directly or share a screenshot on WhatsApp for instant confirmation.')}
             </p>
           </div>
 
@@ -625,7 +782,11 @@ export const BankDetailsModal = ({
               <button
                 type="button"
                 onClick={() => setIsUploadModalOpen(true)}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer text-center"
+                className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer text-center ${
+                  activeAccountTab === 'bank'
+                    ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/20'
+                    : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
+                }`}
               >
                 <UploadCloud size={16} />
                 <span>{isUrdu ? 'رسید اپلوڈ کریں' : 'Upload Receipt'}</span>
@@ -654,6 +815,7 @@ export const BankDetailsModal = ({
         currentUser={currentUser}
         currentMonth={currentMonth}
         currentYear={currentYear}
+        paymentChannel={activeAccountTab === 'bank' ? 'mcb_bank' : 'easypaisa'}
         onSuccess={() => {
           setIsUploadModalOpen(false)
           onClose()
