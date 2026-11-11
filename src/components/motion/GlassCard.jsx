@@ -32,6 +32,12 @@ const GLOW_STYLES = {
     ringClass: 'ring-1 ring-rose-500/35 dark:ring-rose-400/35',
     tintClass: 'from-rose-500/[0.07] via-transparent to-amber-500/[0.03]',
   },
+  amber: {
+    boxShadow:
+      '0 20px 44px -12px rgba(245, 158, 11, 0.22), 0 8px 18px -4px rgba(245, 158, 11, 0.12), 0 2px 6px rgba(15, 23, 42, 0.05)',
+    ringClass: 'ring-1 ring-amber-500/35 dark:ring-amber-400/35',
+    tintClass: 'from-amber-500/[0.07] via-transparent to-yellow-500/[0.03]',
+  },
 }
 
 export const GlassCard = ({

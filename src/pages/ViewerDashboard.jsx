@@ -14,6 +14,8 @@ import BankDetailsModal from '../components/BankDetailsModal'
 import ExitIntentFeedbackModal from '../components/ExitIntentFeedbackModal'
 import MonthlyPaymentReminderModal from '../components/MonthlyPaymentReminderModal'
 import AdminReconciliationTable from '../components/AdminReconciliationTable'
+import ScopeGovernanceSection from '../components/governance/ScopeGovernanceSection'
+import ManagementContactsSection from '../components/contacts/ManagementContactsSection'
 import { FEATURE_FLAGS } from '../config/features'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useLanguage } from '../context/LanguageContext'
@@ -21,7 +23,7 @@ import { translateMonth } from '../utils/translations'
 import { exportToCSV, printReport } from '../utils/export'
 import { APP_VERSION, APP_RELEASE_DATE } from '../config/version'
 import { getUrlParam, updateUrlParams } from '../utils/urlState'
-import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Building2, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2, Calendar, Landmark, ClipboardCheck, BellRing } from 'lucide-react'
+import { UserCheck, User, Search, X, Check, ArrowRight, MessageSquare, Star, Home, Phone, Send, CheckCircle2, Sparkles, ShieldCheck, Share2, Landmark, BellRing } from 'lucide-react'
 
 const QUICK_TAGS_EN = [
   '💎 100% Transparent',
@@ -601,7 +603,7 @@ export default function ViewerDashboard() {
   }
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+    <div className="relative flex min-h-screen w-full flex-col overflow-x-clip">
       {/* Top Navigation Bar */}
       <header className="sticky top-0 z-50 w-full border-b border-primary/10 bg-white/95 dark:bg-background-dark/95 backdrop-blur-md">
         {/* Row 1: Brand & Status (Left) | Language Switcher & Admin Toggle & Desktop Actions (Right) */}
@@ -934,212 +936,20 @@ export default function ViewerDashboard() {
           currency={data?.settings?.currency || 'PKR'}
         />
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-          {/* Table Section */}
-          <div className="xl:col-span-8 min-w-0 space-y-6">
-            <ExpenseTable
-              expenses={monthlyExpenses}
-              allExpenses={data.expenses}
-              settings={data.settings}
-              selectedMonth={currentMonthKey}
-              totals={totals}
-              isAdmin={isAdmin}
-            />
-          </div>
+        {/* Main Expense Comparison Table */}
+        <ExpenseTable
+          expenses={monthlyExpenses}
+          allExpenses={data.expenses}
+          settings={data.settings}
+          selectedMonth={currentMonthKey}
+          totals={totals}
+          isAdmin={isAdmin}
+        />
 
-          {/* Sidebar Content */}
-          <div className="xl:col-span-4 space-y-6">
-            {/* Card 2: Report Governance & Audit */}
-            <div className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-2xl border border-primary/10 shadow-sm space-y-4">
-              <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-xl">assignment_turned_in</span>
-                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                    {t.governanceTitle || 'Governance & Scope'}
-                  </h4>
-                </div>
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50 px-2.5 py-0.5 rounded-full">
-                  <ShieldCheck size={12} /> {t.effectiveBadge || 'Official Record'}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/70 dark:border-slate-700/60 space-y-0.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1">
-                    <Calendar size={11} className="text-primary" /> {t.effectiveDateLabel || 'Effective Since'}
-                  </span>
-                  <p className="font-extrabold text-slate-800 dark:text-slate-100">
-                    {t.effectiveDateValue || 'Dec 01, 2025'}
-                  </p>
-                </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200/70 dark:border-slate-700/60 space-y-0.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1">
-                    <ShieldCheck size={11} className="text-emerald-500" /> {t.reportTypeLabel || 'Report Nature'}
-                  </span>
-                  <p className="font-extrabold text-slate-800 dark:text-slate-100">
-                    {t.reportTypeValue || 'Monthly Collections & Operational Expenses'}
-                  </p>
-                </div>
-              </div>
-
-              <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 pt-1 border-t border-slate-100 dark:border-slate-700/60 leading-relaxed">
-                <li className="flex items-start gap-2">
-                  <span className="size-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
-                  <span><strong>{isUrdu ? 'دائرہ اختیار:' : 'Scope:'}</strong> {isUrdu ? (t.governanceNote || 'انتظامیہ صرف 01 دسمبر 2025 کے بعد کی وصولیوں اور اخراجات کی پابند و جوابدہ ہے۔') : 'Covers collections & expenditures managed from Dec 01, 2025 onward.'}</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="size-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
-                  <span><strong>{isUrdu ? 'مقصد:' : 'Purpose:'}</strong> {isUrdu ? 'سوسائٹی کے رہائشیوں کے لیے ماہانہ عوامی مالیاتی شفافیت۔' : 'Monthly public financial transparency for society residents.'}</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Card 3: Management Contacts */}
-            <div className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-2xl border border-primary/10 shadow-sm space-y-4">
-              <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-3">
-                <h4 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm sm:text-base">
-                  <span className="material-symbols-outlined text-primary text-xl">contact_phone</span>
-                  {t.managementContacts || 'Management Contacts'}
-                </h4>
-                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-slate-500">
-                  {isUrdu ? 'براہ راست رابطہ' : 'Direct Contact'}
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {/* Contact 1: Mr. Majeed */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 space-y-3 shadow-2xs">
-                  <div className="flex items-center gap-3">
-                    <div className="size-11 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 flex items-center justify-center font-black text-base flex-shrink-0 shadow-xs border border-emerald-200/60">
-                      M
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <p className="text-sm sm:text-base font-black text-slate-800 dark:text-slate-100 truncate">
-                          {isUrdu ? 'جناب عبدالمجید صاحب' : 'Mr. Majeed'}
-                        </p>
-                        <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200/60">
-                          {t.supervisorRole || 'Project Supervisor'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium font-mono mt-0.5">
-                        <a href="tel:03013377675" className="hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline">0301-3377675</a>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <a
-                      href="tel:03013377675"
-                      className="inline-flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition active:scale-95 shadow-2xs border border-slate-200 dark:border-slate-700"
-                    >
-                      <Phone size={13} className="text-slate-500" />
-                      <span>{t.btnCall || 'Call'}</span>
-                    </a>
-                    <a
-                      href="https://wa.me/923013377675?text=Hello%20Mr.%20Majeed,%20regarding%20August%20Expense%20Sheet"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-xl transition active:scale-95 shadow-2xs border border-emerald-200/60 dark:border-emerald-800/40"
-                    >
-                      <MessageSquare size={13} className="text-emerald-600 dark:text-emerald-400" />
-                      <span>{t.btnChat || 'WhatsApp'}</span>
-                    </a>
-                  </div>
-                </div>
-
-                {/* Contact 2: Mr. Fahad Rizwan */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 space-y-3 shadow-2xs">
-                  <div className="flex items-center gap-3">
-                    <div className="size-11 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 flex items-center justify-center font-black text-base flex-shrink-0 shadow-xs border border-amber-200/60">
-                      F
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <p className="text-sm sm:text-base font-black text-slate-800 dark:text-slate-100 truncate">
-                          {isUrdu ? 'جناب فہد رضوان صاحب' : 'Mr. Fahad Rizwan'}
-                        </p>
-                        <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-full border border-amber-200/60">
-                          {t.auditorRole || 'Financial Auditor'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium font-mono mt-0.5">
-                        <a href="tel:03443160446" className="hover:text-amber-600 dark:hover:text-amber-400 hover:underline">0344-3160446</a>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <a
-                      href="tel:03443160446"
-                      className="inline-flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition active:scale-95 shadow-2xs border border-slate-200 dark:border-slate-700"
-                    >
-                      <Phone size={13} className="text-slate-500" />
-                      <span>{t.btnCall || 'Call'}</span>
-                    </a>
-                    <a
-                      href="https://wa.me/923443160446?text=Hello%20Mr.%20Fahad,%20regarding%20August%20Expense%20Sheet"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-xl transition active:scale-95 shadow-2xs border border-emerald-200/60 dark:border-emerald-800/40"
-                    >
-                      <MessageSquare size={13} className="text-emerald-600 dark:text-emerald-400" />
-                      <span>{t.btnChat || 'WhatsApp'}</span>
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 4: Dashboard Related Queries */}
-            <div className="bg-white dark:bg-slate-800 p-5 sm:p-6 rounded-2xl border border-primary/10 shadow-sm space-y-4">
-              <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700/60 pb-3">
-                <h4 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm sm:text-base">
-                  <span className="material-symbols-outlined text-primary text-xl">help_outline</span>
-                  {t.techSupportTitle || (isUrdu ? 'ڈیش بورڈ سے متعلق سوالات' : 'Dashboard Related Queries')}
-                </h4>
-                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-slate-500">
-                  {t.directContact || (isUrdu ? 'براہ راست رابطہ' : 'Direct Contact')}
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 space-y-3 shadow-2xs">
-                  <div className="flex items-center gap-3">
-                    <div className="size-11 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 flex items-center justify-center font-black text-base flex-shrink-0 shadow-xs border border-blue-200/60">
-                      B
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm sm:text-base font-black text-slate-800 dark:text-slate-100 truncate">
-                        {isUrdu ? 'جناب سید بلال فہیم' : 'Mr. Syed Bilal Faheem'}
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium font-mono mt-0.5">
-                        <a href="tel:03362607836" className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline">0336-2607836</a>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <a
-                      href="tel:03362607836"
-                      className="inline-flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition active:scale-95 shadow-2xs border border-slate-200 dark:border-slate-700"
-                    >
-                      <Phone size={13} className="text-slate-500" />
-                      <span>{t.btnCall || 'Call'}</span>
-                    </a>
-                    <a
-                      href="https://wa.me/923362607836?text=Hello%20Mr.%20Bilal,%20regarding%20Dashboard%20Application%20query/issue"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-xl transition active:scale-95 shadow-2xs border border-emerald-200/60 dark:border-emerald-800/40"
-                    >
-                      <MessageSquare size={13} className="text-emerald-600 dark:text-emerald-400" />
-                      <span>{t.btnChat || 'WhatsApp'}</span>
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
+        {/* Scope & Governance (Left) + Management Contacts & Queries (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <ScopeGovernanceSection t={t} isUrdu={isUrdu} />
+          <ManagementContactsSection settings={data?.settings} t={t} isUrdu={isUrdu} />
         </div>
 
         {/* ─── Resident Reviews & Community Feedback Section ─── */}
@@ -1317,7 +1127,7 @@ export default function ViewerDashboard() {
 
       </main>
       
-      <footer className="bg-white dark:bg-background-dark border-t border-primary/10 py-6 text-center text-slate-400 text-xs">
+      <footer className="bg-white dark:bg-background-dark border-t border-primary/10 pt-6 pb-[max(5rem,calc(env(safe-area-inset-bottom)+4rem))] lg:pb-10 text-center text-slate-400 text-xs">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-3 text-slate-500 dark:text-slate-400 font-medium">
           <span>© 2026 Sector 7D/1 Residents Management System</span>
           <span className="hidden sm:inline text-slate-300 dark:text-slate-600">•</span>

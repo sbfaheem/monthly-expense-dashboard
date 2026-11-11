@@ -22,6 +22,7 @@ export const TiltCard = ({
   mobileMaxTilt = 2.5,
   enableDeviceOrientation = false,
   dimmed = false,
+  disableTapScale = false,
   onClick,
   ...rest
 }) => {
@@ -126,7 +127,7 @@ export const TiltCard = ({
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
         onPointerCancel={handlePointerLeave}
-        whileTap={{ scale: restingScale * 0.985 }}
+        whileTap={disableTapScale ? undefined : { scale: restingScale * 0.985 }}
         animate={{
           scale: isHovered ? Math.max(restingScale, 1) : restingScale,
           z: isHovered ? restingZ + 12 : restingZ,
