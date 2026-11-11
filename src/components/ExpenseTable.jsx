@@ -9,6 +9,7 @@ import { translateMonth } from '../utils/translations'
 import GlassCard from './motion/GlassCard'
 import AnimatedNumber from './motion/AnimatedNumber'
 import ReceiptRow from './table/ReceiptRow'
+import { computeVariancePercent } from '../utils/formatters'
 
 const pkrFormatter = new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 })
 
@@ -91,7 +92,8 @@ const ExpenseTable = ({
     const priorAmount = priorMap[normName] || 0
     const isNew = !hasPriorData ? false : priorAmount === 0 && currentAmount > 0
     const diff = currentAmount - priorAmount
-    const pct = priorAmount > 0 ? ((diff / priorAmount) * 100).toFixed(1) : null
+    const pctObj = computeVariancePercent(diff, priorAmount)
+    const pct = pctObj ? pctObj.rawFixed : null
 
     return {
       id: e.id,
@@ -346,7 +348,7 @@ const ExpenseTable = ({
             <span
               dir="ltr"
               style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-              className="text-base sm:text-lg font-black font-mono tabular-nums whitespace-nowrap"
+              className="text-base sm:text-lg font-black font-numeric tabular-nums whitespace-nowrap"
             >
               - {displayCurrency} {fmt(totals.record.cctvExpense)}
             </span>

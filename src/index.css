@@ -16,11 +16,12 @@ html {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   -webkit-text-size-adjust: 100%;
+  overflow-x: clip;
 }
 
 body {
   font-family: var(--font-display);
-  overflow-x: hidden;
+  overflow-x: clip;
   touch-action: pan-y;
   text-rendering: optimizeLegibility;
 }
@@ -29,7 +30,13 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1, "zero" 0;
-  letter-spacing: -0.02em;
+}
+
+.font-numeric {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 0;
+  letter-spacing: -0.01em;
 }
 
 .font-urdu {

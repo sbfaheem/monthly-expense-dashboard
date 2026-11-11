@@ -18,6 +18,7 @@ import { useLanguage } from '../context/LanguageContext'
 import { translateMonth } from '../utils/translations'
 import { getUrlParam, updateUrlParams } from '../utils/urlState'
 import { soundEffects } from '../utils/soundEffects'
+import { computeVariancePercent } from '../utils/formatters'
 import GlassCard from './motion/GlassCard'
 import TiltCard from './motion/TiltCard'
 import AnimatedNumber from './motion/AnimatedNumber'
@@ -108,15 +109,15 @@ export const MonthComparison3D = ({
   const isPrevSurplus = previousMonth?.status === 'Surplus' || prevNet >= 0
   const isCurrSurplus = currentMonth?.status === 'Surplus' || currNet >= 0
 
-  // Delta Computations (derived purely from props)
+  // Delta Computations (derived purely from props, unified 1-decimal percentage rounding)
   const collectionDiff = currCollection - prevCollection
-  const collectionPctNum =
-    prevCollection > 0 ? (Math.abs(collectionDiff) / prevCollection) * 100 : 0
+  const collectionPctObj = computeVariancePercent(collectionDiff, prevCollection)
+  const collectionPctNum = collectionPctObj ? collectionPctObj.absValue : 0
   const isCollectionUp = collectionDiff >= 0
 
   const expenseDiff = currExpenses - prevExpenses
-  const expensePctNum =
-    prevExpenses > 0 ? (Math.abs(expenseDiff) / prevExpenses) * 100 : 0
+  const expensePctObj = computeVariancePercent(expenseDiff, prevExpenses)
+  const expensePctNum = expensePctObj ? expensePctObj.absValue : 0
   const isExpenseUp = expenseDiff > 0
 
   const balanceDiff = currBalance - prevBalance

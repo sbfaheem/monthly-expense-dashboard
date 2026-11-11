@@ -109,9 +109,10 @@ export const AnimatedNumber = ({
         direction: 'ltr',
         unicodeBidi: 'isolate',
         fontVariantNumeric: 'tabular-nums',
+        fontFeatureSettings: '"tnum" 1, "zero" 0',
         ...style,
       }}
-      className={`font-mono tabular-nums whitespace-nowrap inline-block ${className}`}
+      className={`font-sans tabular-nums whitespace-nowrap inline-block ${className}`}
     >
       {formatFormattedValue(shouldReduceMotion ? target : startVal, {
         prefix,

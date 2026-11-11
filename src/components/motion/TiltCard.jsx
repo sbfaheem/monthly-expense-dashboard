@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import { motion, useMotionValue, useSpring, useTransform, useReducedMotion } from 'framer-motion'
 
 /**
@@ -6,6 +6,8 @@ import { motion, useMotionValue, useSpring, useTransform, useReducedMotion } fro
  * - Animates only transform and opacity (GPU composited).
  * - Supports base resting orientation (e.g. rotateY: +8 deg for previous cycle)
  *   plus cursor/finger hover-tap tilt & moving specular sheen.
+ * - Reduces tilt amplitude automatically on narrow/coarse mobile screens for performance.
+ * - Optional opt-in DeviceOrientation tilt (`enableDeviceOrientation`) for mobile gyroscope.
  * - Gracefully simplifies to clean fade/flat card under prefers-reduced-motion.
  */
 export const TiltCard = ({
@@ -17,6 +19,8 @@ export const TiltCard = ({
   restingScale = 1,
   restingZ = 0,
   maxTilt = 7,
+  mobileMaxTilt = 2.5,
+  enableDeviceOrientation = false,
   dimmed = false,
   onClick,
   ...rest
@@ -24,9 +28,42 @@ export const TiltCard = ({
   const cardRef = useRef(null)
   const shouldReduceMotion = useReducedMotion()
   const [isHovered, setIsHovered] = useState(false)
+  const [isMobileView, setIsMobileView] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const check = () => {
+      const coarse = window.matchMedia?.('(pointer: coarse)')?.matches
+      setIsMobileView(window.innerWidth < 768 || Boolean(coarse))
+    }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  const effectiveTilt = isMobileView ? Math.min(maxTilt, mobileMaxTilt) : maxTilt
+  const effectiveRestingRotateY = isMobileView ? restingRotateY * 0.35 : restingRotateY
 
   const px = useMotionValue(0)
   const py = useMotionValue(0)
+
+  // Opt-in device orientation support (disabled unless user explicitly toggles on)
+  useEffect(() => {
+    if (!enableDeviceOrientation || shouldReduceMotion || typeof window === 'undefined') return
+    const handleOrientation = (e) => {
+      if (e.gamma == null || e.beta == null) return
+      const normX = Math.max(-0.5, Math.min(0.5, e.gamma / 45))
+      const normY = Math.max(-0.5, Math.min(0.5, (e.beta - 35) / 45))
+      px.set(normX)
+      py.set(normY)
+    }
+    window.addEventListener('deviceorientation', handleOrientation)
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientation)
+      px.set(0)
+      py.set(0)
+    }
+  }, [enableDeviceOrientation, shouldReduceMotion, px, py])
 
   const springCfg = { stiffness: 240, damping: 24, mass: 0.45 }
   const smoothX = useSpring(px, springCfg)
@@ -34,12 +71,12 @@ export const TiltCard = ({
 
   // Tilt deltas relative to resting orientation
   const rotateY = useTransform(smoothX, [-0.5, 0.5], [
-    restingRotateY - maxTilt,
-    restingRotateY + maxTilt,
+    effectiveRestingRotateY - effectiveTilt,
+    effectiveRestingRotateY + effectiveTilt,
   ])
   const rotateX = useTransform(smoothY, [-0.5, 0.5], [
-    restingRotateX + maxTilt * 0.75,
-    restingRotateX - maxTilt * 0.75,
+    restingRotateX + effectiveTilt * 0.75,
+    restingRotateX - effectiveTilt * 0.75,
   ])
 
   // Specular highlight position in %

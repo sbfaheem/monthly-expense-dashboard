@@ -15,6 +15,7 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 import { translateCategory, translateItemName, translateMonth } from '../../utils/translations'
+import { formatPercent } from '../../utils/formatters'
 import AnimatedNumber from '../motion/AnimatedNumber'
 
 const CATEGORY_STYLES = {
@@ -110,7 +111,7 @@ function VariancePill({
       <span
         dir="ltr"
         style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-        className="inline-flex items-center gap-1 font-black text-rose-700 dark:text-rose-300 text-xs bg-rose-500/12 px-2.5 py-1 rounded-xl border border-rose-400/35 whitespace-nowrap shrink-0 font-mono"
+        className="inline-flex items-center gap-1 font-black text-rose-700 dark:text-rose-300 text-xs bg-rose-500/12 px-2.5 py-1 rounded-xl border border-rose-400/35 whitespace-nowrap shrink-0 font-numeric tabular-nums"
       >
         <motion.span
           key={`up-${row.id || row.name}-${replayKey}`}
@@ -137,7 +138,7 @@ function VariancePill({
               isUrdu ? 'gap-1' : ''
             } text-[10.5px] font-extrabold text-rose-600 dark:text-rose-400 whitespace-nowrap`}
           >
-            <span>(▲ {row.pct}%</span>
+            <span>(▲ {formatPercent(row.pct)}%</span>
             {isUrdu && <span dir="rtl">{t.statusHigher}</span>}
             <span>)</span>
           </span>
@@ -151,7 +152,7 @@ function VariancePill({
       <span
         dir="ltr"
         style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-        className="inline-flex items-center gap-1 font-black text-emerald-700 dark:text-emerald-300 text-xs bg-emerald-500/12 px-2.5 py-1 rounded-xl border border-emerald-400/35 whitespace-nowrap shrink-0 font-mono"
+        className="inline-flex items-center gap-1 font-black text-emerald-700 dark:text-emerald-300 text-xs bg-emerald-500/12 px-2.5 py-1 rounded-xl border border-emerald-400/35 whitespace-nowrap shrink-0 font-numeric tabular-nums"
       >
         <motion.span
           key={`down-${row.id || row.name}-${replayKey}`}
@@ -178,7 +179,7 @@ function VariancePill({
               isUrdu ? 'gap-1' : ''
             } text-[10.5px] font-extrabold text-emerald-600 dark:text-emerald-400 whitespace-nowrap`}
           >
-            <span>(▼ {Math.abs(Number(row.pct))}%</span>
+            <span>(▼ {formatPercent(row.pct)}%</span>
             {isUrdu && <span dir="rtl">{t.statusSaved}</span>}
             <span>)</span>
           </span>
@@ -307,7 +308,7 @@ function Unfolding3DReceipt({
               <div className="flex items-center gap-2 flex-wrap">
                 {absPct !== null && (
                   <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-mono font-black whitespace-nowrap border ${
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-numeric tabular-nums font-black whitespace-nowrap border ${
                       diffVal < 0
                         ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/35'
                         : diffVal > 0
@@ -379,7 +380,7 @@ function Unfolding3DReceipt({
                 <div
                   dir="ltr"
                   style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                  className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm font-mono font-black"
+                  className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm font-numeric tabular-nums font-black"
                 >
                   <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 whitespace-nowrap">
                     {hasPriorData ? `${displayCurrency} ${fmt(prevVal)}` : `${displayCurrency} 0`}
@@ -432,7 +433,7 @@ function Unfolding3DReceipt({
                     <span
                       dir="ltr"
                       style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                      className="font-mono text-slate-700 dark:text-slate-200"
+                      className="font-numeric tabular-nums text-slate-700 dark:text-slate-200"
                     >
                       {hasPriorData ? `${displayCurrency} ${fmt(prevVal)}` : '—'}
                     </span>
@@ -458,7 +459,7 @@ function Unfolding3DReceipt({
                     <span
                       dir="ltr"
                       style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                      className="font-mono font-black text-slate-900 dark:text-white"
+                      className="font-numeric tabular-nums font-black text-slate-900 dark:text-white"
                     >
                       {displayCurrency} {fmt(currVal)}
                     </span>
@@ -590,7 +591,7 @@ export const ReceiptRow = ({
             <span
               dir="ltr"
               style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-              className="text-sm font-bold text-slate-600 dark:text-slate-300 font-mono tabular-nums whitespace-nowrap block"
+              className="text-sm font-bold text-slate-600 dark:text-slate-300 font-numeric tabular-nums whitespace-nowrap block"
             >
               {hasPriorData && row.priorAmount > 0 ? `${displayCurrency} ${fmt(row.priorAmount)}` : '—'}
             </span>
@@ -603,7 +604,7 @@ export const ReceiptRow = ({
             <span
               dir="ltr"
               style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-              className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 font-mono tabular-nums whitespace-nowrap block"
+              className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-100 font-numeric tabular-nums whitespace-nowrap block"
             >
               {displayCurrency} {fmt(row.currentAmount)}
             </span>
@@ -767,12 +768,12 @@ export const ReceiptRow = ({
               <span
                 dir="ltr"
                 style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                className="text-[13px] lg:text-sm font-semibold text-slate-600 dark:text-slate-300 font-mono tabular-nums whitespace-nowrap"
+                className="text-[13px] lg:text-sm font-semibold text-slate-600 dark:text-slate-300 font-numeric tabular-nums whitespace-nowrap"
               >
                 {displayCurrency} {fmt(row.priorAmount)}
               </span>
             ) : (
-              <span className="text-sm font-bold text-slate-300 dark:text-slate-600 font-mono">—</span>
+              <span className="text-sm font-bold text-slate-300 dark:text-slate-600 font-numeric">—</span>
             )}
           </motion.div>
         </td>
@@ -792,7 +793,7 @@ export const ReceiptRow = ({
             <span
               dir="ltr"
               style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-              className="text-[13px] lg:text-sm font-black text-slate-900 dark:text-slate-100 font-mono tabular-nums whitespace-nowrap"
+              className="text-[13px] lg:text-sm font-black text-slate-900 dark:text-slate-100 font-numeric tabular-nums whitespace-nowrap"
             >
               {displayCurrency} {fmt(row.currentAmount)}
             </span>
