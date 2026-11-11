@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import React, { useState, useEffect, useRef } from 'react'
+import { motion, useInView, useReducedMotion } from 'framer-motion'
 import {
   Wallet,
   TrendingDown,
@@ -7,13 +7,22 @@ import {
   Calendar,
   ShieldCheck,
   Sparkles,
-  ArrowRight,
-  ArrowLeftRight
+  ArrowLeftRight,
+  RotateCcw,
+  Calculator,
+  ArrowUp,
+  ArrowDown,
+  Layers,
 } from 'lucide-react'
 import { useLanguage } from '../context/LanguageContext'
 import { translateMonth } from '../utils/translations'
-import RollingOdometer from './RollingOdometer'
 import { getUrlParam, updateUrlParams } from '../utils/urlState'
+import { soundEffects } from '../utils/soundEffects'
+import GlassCard from './motion/GlassCard'
+import TiltCard from './motion/TiltCard'
+import AnimatedNumber from './motion/AnimatedNumber'
+import DeltaCapsule from './comparison/DeltaCapsule'
+import EquationPlayer, { CoinStackVisual } from './comparison/EquationPlayer'
 
 export const MonthComparison3D = ({
   previousMonth = {
@@ -22,30 +31,38 @@ export const MonthComparison3D = ({
     expenses: 297425,
     balance: -22387,
     closingBalance: -22387,
-    status: 'Deficit'
+    status: 'Deficit',
   },
   currentMonth = {
     name: 'October 2026',
+    openingBalance: -22387,
     collection: 291350,
     expenses: 273364,
+    cctvExpense: 0,
     balance: -4401,
     closingBalance: -4401,
-    status: 'Surplus'
+    status: 'Surplus',
   },
-  currency = 'PKR'
+  currency = 'PKR',
 }) => {
-  const { lang } = useLanguage ? useLanguage() : { lang: 'en' }
+  const { lang, isRtl } = useLanguage ? useLanguage() : { lang: 'en', isRtl: false }
   const isUrdu = lang === 'ur'
   const displayCurrency = isUrdu ? 'روپے' : currency
   const shouldReduceMotion = useReducedMotion()
 
-  // Active focused card on tap (1: prev lifted, 2: curr lifted)
+  const sectionRef = useRef(null)
+  const inView = useInView(sectionRef, { once: true, amount: 0.15 })
+
+  // Replay key for section entrance + delta split-flap + beam animations
+  const [replayKey, setReplayKey] = useState(0)
+
+  // Elevated tap selection on mobile / desktop
   const [elevatedCard, setElevatedCard] = useState(2)
 
-  // Mobile segmented view: 'split' | 'prev' | 'current' (synced with URL ?compare=)
+  // Mobile segmented view: 'split' | 'prev' | 'current' | 'carousel' (synced with ?compare=)
   const [mobileTab, setMobileTab] = useState(() => {
     const param = getUrlParam('compare')
-    if (param === 'split' || param === 'prev' || param === 'current') {
+    if (param === 'split' || param === 'prev' || param === 'current' || param === 'carousel') {
       return param
     }
     return 'split'
@@ -59,7 +76,7 @@ export const MonthComparison3D = ({
   useEffect(() => {
     const handlePopState = () => {
       const param = getUrlParam('compare')
-      if (param === 'split' || param === 'prev' || param === 'current') {
+      if (param === 'split' || param === 'prev' || param === 'current' || param === 'carousel') {
         setMobileTab(param)
       }
     }
@@ -67,731 +84,842 @@ export const MonthComparison3D = ({
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
-  // Realtime 3D Math Animation Step:
-  // 0: Sep Baseline -> 1: Realtime Addition & Subtraction (+ / -) -> 2: Oct Result
-  const [mathStep, setMathStep] = useState(1)
-
-  useEffect(() => {
-    if (shouldReduceMotion) return
-    const timer = setInterval(() => {
-      setMathStep((prev) => (prev + 1) % 3)
-    }, 3200)
-    return () => clearInterval(timer)
-  }, [shouldReduceMotion])
-
-  // Normalized Financial Data
-  const prevName = previousMonth?.name || 'August 2026'
-  const currName = currentMonth?.name || 'September 2026'
+  // Normalized Real Financial Data (read directly from props; never hardcoded)
+  const prevName = previousMonth?.name || 'Previous Cycle'
+  const currName = currentMonth?.name || 'Current Cycle'
 
   const prevCollection = Number(previousMonth?.collection ?? 0)
   const currCollection = Number(currentMonth?.collection ?? 0)
 
   const prevExpenses = Number(previousMonth?.expenses ?? 0)
   const currExpenses = Number(currentMonth?.expenses ?? 0)
+  const currCctv = Number(currentMonth?.cctvExpense ?? 0)
 
   const prevBalance = Number(previousMonth?.closingBalance ?? previousMonth?.balance ?? 0)
   const currBalance = Number(currentMonth?.closingBalance ?? currentMonth?.balance ?? 0)
+  const currOpening =
+    currentMonth?.openingBalance !== undefined && currentMonth?.openingBalance !== null
+      ? Number(currentMonth.openingBalance)
+      : prevBalance
 
-  const prevNet = Number(previousMonth?.netCashFlow ?? (prevCollection - prevExpenses))
-  const currNet = Number(currentMonth?.netCashFlow ?? (currCollection - currExpenses))
+  const prevNet = Number(previousMonth?.netCashFlow ?? prevCollection - prevExpenses)
+  const currNet = Number(currentMonth?.netCashFlow ?? currCollection - currExpenses)
 
-  const isPrevSurplus = (previousMonth?.status === 'Surplus') || prevNet >= 0
-  const isCurrSurplus = (currentMonth?.status === 'Surplus') || currNet >= 0
+  const isPrevSurplus = previousMonth?.status === 'Surplus' || prevNet >= 0
+  const isCurrSurplus = currentMonth?.status === 'Surplus' || currNet >= 0
 
-  // Delta Computations
+  // Delta Computations (derived purely from props)
   const collectionDiff = currCollection - prevCollection
-  const absCollDiff = Math.abs(collectionDiff).toLocaleString('en-PK')
-  const collectionPct = prevCollection > 0
-    ? ((Math.abs(collectionDiff) / prevCollection) * 100).toFixed(1)
-    : '0.0'
+  const collectionPctNum =
+    prevCollection > 0 ? (Math.abs(collectionDiff) / prevCollection) * 100 : 0
   const isCollectionUp = collectionDiff >= 0
 
   const expenseDiff = currExpenses - prevExpenses
-  const absExpDiff = Math.abs(expenseDiff).toLocaleString('en-PK')
-  const expensePct = prevExpenses > 0
-    ? ((Math.abs(expenseDiff) / prevExpenses) * 100).toFixed(1)
-    : '0.0'
+  const expensePctNum =
+    prevExpenses > 0 ? (Math.abs(expenseDiff) / prevExpenses) * 100 : 0
   const isExpenseUp = expenseDiff > 0
 
   const balanceDiff = currBalance - prevBalance
-  const absBalanceDiff = Math.abs(balanceDiff).toLocaleString('en-PK')
+  const isImprovedBalance = currBalance > prevBalance
   const isFavorableVariance = currNet >= prevNet
 
+  // ── Equation Playback State Machine (Steps 1 -> 2 -> 3 -> 4) ──────────────
+  // Default settled at Step 4 so all figures remain immediately legible.
+  const [mathStep, setMathStep] = useState(4)
+  const [isPlayingEquation, setIsPlayingEquation] = useState(false)
+  const [equationPlayCount, setEquationPlayCount] = useState(0)
+  const equationTimersRef = useRef([])
+
+  const clearEquationTimers = () => {
+    equationTimersRef.current.forEach((id) => clearTimeout(id))
+    equationTimersRef.current = []
+  }
+
+  useEffect(() => {
+    return () => clearEquationTimers()
+  }, [])
+
+  const runEquationSequence = () => {
+    clearEquationTimers()
+    soundEffects.playBounce()
+    setEquationPlayCount((c) => c + 1)
+
+    if (shouldReduceMotion) {
+      setMathStep(4)
+      setIsPlayingEquation(false)
+      return
+    }
+
+    setIsPlayingEquation(true)
+    setMathStep(1)
+
+    const t2 = setTimeout(() => setMathStep(2), 1300)
+    const t3 = setTimeout(() => setMathStep(3), 2700)
+    const t4 = setTimeout(() => {
+      setMathStep(4)
+      setIsPlayingEquation(false)
+    }, 4100)
+
+    equationTimersRef.current = [t2, t3, t4]
+  }
+
+  const handleSelectStep = (step) => {
+    clearEquationTimers()
+    setIsPlayingEquation(false)
+    setEquationPlayCount((c) => c + 1)
+    setMathStep(step)
+  }
+
+  const handleReplayAll = () => {
+    soundEffects.playBounce()
+    setReplayKey((k) => k + 1)
+    runEquationSequence()
+  }
+
+  // Running Balance for Current Card live readout during Steps 1..4
+  const afterCollectionBalance = currOpening + currCollection
+  const runningBalanceValue =
+    mathStep === 1
+      ? currOpening
+      : mathStep === 2
+      ? afterCollectionBalance
+      : currBalance
+
+  const runningBalanceFrom =
+    mathStep === 1
+      ? prevBalance
+      : mathStep === 2
+      ? currOpening
+      : mathStep === 3
+      ? afterCollectionBalance
+      : afterCollectionBalance
+
+  // Helper to format plain number
+  const fmtInt = (n) => new Intl.NumberFormat('en-PK').format(Math.round(Math.abs(Number(n) || 0)))
+
+  // Reusable Previous Cycle Card Content
+  const renderPreviousCard = ({ forCarousel = false } = {}) => (
+    <TiltCard
+      restingRotateY={forCarousel ? 0 : isRtl ? -8 : 8}
+      restingScale={forCarousel ? 1 : 0.96}
+      restingZ={0}
+      maxTilt={6}
+      dimmed={!forCarousel && elevatedCard !== 1}
+      onClick={() => setElevatedCard(1)}
+      className="cursor-pointer"
+    >
+      <GlassCard
+        glow="none"
+        interactive
+        className={`p-5 sm:p-6 flex flex-col justify-between transition-opacity duration-300 ${
+          !forCarousel && elevatedCard !== 1 ? 'opacity-90 lg:opacity-90' : 'opacity-100'
+        }`}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between gap-2 pb-3.5 border-b border-slate-900/[0.06] dark:border-white/[0.08]">
+          <div className="min-w-0">
+            <span className="text-[10px] font-mono uppercase font-extrabold tracking-wider text-slate-400 block">
+              {isUrdu ? 'گزشتہ مالیاتی سائیکل' : 'PREVIOUS CYCLE'}
+            </span>
+            <h4 className="text-lg sm:text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight mt-0.5 truncate">
+              {translateMonth(prevName, lang)}
+            </h4>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-200/70 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-300/60 dark:border-white/10 whitespace-nowrap">
+              {isUrdu ? 'بنیاد' : 'Baseline'}
+            </span>
+            <span
+              className={`px-2.5 py-1 rounded-full text-[11px] font-black whitespace-nowrap border ${
+                isPrevSurplus
+                  ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                  : 'bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30'
+              }`}
+            >
+              {isUrdu
+                ? isPrevSurplus
+                  ? 'سرپلس'
+                  : 'خسارہ'
+                : isPrevSurplus
+                ? 'Surplus'
+                : 'Deficit'}
+            </span>
+          </div>
+        </div>
+
+        {/* Metrics Rows */}
+        <div className="space-y-2.5 pt-3.5">
+          {/* Monthly Collection */}
+          <div className="flex items-center justify-between gap-2 p-3 sm:p-3.5 rounded-2xl bg-white/55 dark:bg-white/[0.05] border border-slate-200/70 dark:border-white/10">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="size-8 rounded-xl bg-emerald-500/12 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <Wallet size={16} />
+              </div>
+              <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 truncate">
+                {isUrdu ? 'ماہانہ وصولی' : 'Monthly Collection'}
+              </span>
+            </div>
+            <AnimatedNumber
+              value={prevCollection}
+              from={inView ? 0 : prevCollection}
+              prefix={displayCurrency}
+              duration={0.85}
+              triggerKey={replayKey}
+              className="text-sm sm:text-base md:text-lg font-black text-slate-800 dark:text-slate-100"
+            />
+          </div>
+
+          {/* Total Expenses */}
+          <div className="flex items-center justify-between gap-2 p-3 sm:p-3.5 rounded-2xl bg-white/55 dark:bg-white/[0.05] border border-slate-200/70 dark:border-white/10">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="size-8 rounded-xl bg-rose-500/12 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <TrendingDown size={16} />
+              </div>
+              <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 truncate">
+                {isUrdu ? 'کل اخراجات' : 'Total Expenses'}
+              </span>
+            </div>
+            <AnimatedNumber
+              value={prevExpenses}
+              from={inView ? 0 : prevExpenses}
+              prefix={displayCurrency}
+              duration={0.85}
+              delay={0.08}
+              triggerKey={replayKey}
+              className="text-sm sm:text-base md:text-lg font-black text-slate-800 dark:text-slate-100"
+            />
+          </div>
+
+          {/* Closing Balance (becomes Next Month Opening) */}
+          <div
+            className={`flex items-center justify-between gap-2 p-3 sm:p-3.5 rounded-2xl border transition-all duration-300 ${
+              mathStep === 1
+                ? 'bg-indigo-500/12 border-indigo-400/60 ring-2 ring-indigo-400/35'
+                : 'bg-white/55 dark:bg-white/[0.05] border-slate-200/70 dark:border-white/10'
+            }`}
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="size-8 rounded-xl bg-indigo-500/12 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                <Calendar size={16} />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 block truncate">
+                  {isUrdu ? 'اختتامی بیلنس' : 'Closing Balance'}
+                </span>
+                {mathStep === 1 && (
+                  <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-300 block">
+                    {isUrdu ? '→ اگلے ماہ کا ابتدائی بیلنس' : '→ Carries to Next Opening'}
+                  </span>
+                )}
+              </div>
+            </div>
+            <AnimatedNumber
+              value={prevBalance}
+              from={inView ? 0 : prevBalance}
+              prefix={displayCurrency}
+              signBeforeNumber
+              duration={0.85}
+              delay={0.14}
+              triggerKey={replayKey}
+              className={`text-sm sm:text-base md:text-lg font-black ${
+                prevBalance >= 0
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-rose-600 dark:text-rose-400'
+              }`}
+            />
+          </div>
+        </div>
+
+        {/* Sub-bar */}
+        <div className="mt-4 pt-3 border-t border-slate-900/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
+          <span className="flex items-center gap-1.5 min-w-0 truncate">
+            <ShieldCheck size={14} className="text-emerald-500 shrink-0" />
+            <span className="truncate">
+              {isUrdu ? 'مکمل تصدیق شدہ ریکارڈ' : 'Reconciled Audit Record'}
+            </span>
+          </span>
+          <span className="font-mono text-[11px] font-bold shrink-0 whitespace-nowrap">
+            {isUrdu ? '100% حساب مکمل' : '100% Settled'}
+          </span>
+        </div>
+      </GlassCard>
+    </TiltCard>
+  )
+
+  // Reusable Current Active Cycle Card Content (hosts the interactive Equation Animation)
+  const currentCardGlow =
+    mathStep === 4 && isPlayingEquation === false && equationPlayCount > 0 && isImprovedBalance
+      ? 'green'
+      : 'indigo'
+
+  const renderCurrentCard = ({ forCarousel = false } = {}) => (
+    <TiltCard
+      restingRotateY={forCarousel ? 0 : isRtl ? 4 : -4}
+      restingScale={1}
+      restingZ={forCarousel ? 0 : 18}
+      maxTilt={7}
+      dimmed={false}
+      onClick={() => setElevatedCard(2)}
+      className="cursor-pointer"
+    >
+      <GlassCard
+        glow={currentCardGlow}
+        interactive
+        className="p-5 sm:p-6 flex flex-col justify-between"
+      >
+        {/* Header + Inline "Show me how" trigger */}
+        <div className="flex items-start justify-between gap-2 pb-3.5 border-b border-indigo-500/15 dark:border-indigo-400/20">
+          <div className="min-w-0">
+            <span className="text-[10px] font-mono uppercase font-extrabold tracking-wider text-indigo-600 dark:text-indigo-300 block">
+              {isUrdu ? 'موجودہ فعال سائیکل' : 'CURRENT ACTIVE CYCLE'}
+            </span>
+            <h4 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight mt-0.5 truncate">
+              {translateMonth(currName, lang)}
+            </h4>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-black bg-indigo-600 text-white shadow-xs whitespace-nowrap">
+              {isUrdu ? 'موجودہ' : 'Live Active'}
+            </span>
+            <span
+              className={`px-2.5 py-1 rounded-full text-[11px] font-black whitespace-nowrap border ${
+                isCurrSurplus
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/35'
+                  : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/35'
+              }`}
+            >
+              {isUrdu
+                ? isCurrSurplus
+                  ? 'سرپلس'
+                  : 'خسارہ'
+                : isCurrSurplus
+                ? 'Surplus'
+                : 'Deficit'}
+            </span>
+          </div>
+        </div>
+
+        {/* Step 1: Opening Balance Chip glides in */}
+        <motion.div
+          key={`open-chip-${equationPlayCount}-${mathStep === 1}`}
+          initial={
+            shouldReduceMotion
+              ? { opacity: 1 }
+              : mathStep === 1
+              ? { opacity: 0, x: isRtl ? 36 : -36, scale: 0.92 }
+              : { opacity: 1, x: 0, scale: 1 }
+          }
+          animate={{ opacity: 1, x: 0, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+          className={`mt-3.5 px-3.5 py-2.5 rounded-2xl border flex items-center justify-between gap-2 transition-all duration-300 ${
+            mathStep === 1
+              ? 'bg-indigo-500/15 border-indigo-400/70 ring-2 ring-indigo-400/40 shadow-md'
+              : 'bg-white/60 dark:bg-white/[0.05] border-slate-200/70 dark:border-white/10'
+          }`}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="size-6 rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 flex items-center justify-center text-[11px] font-black shrink-0">
+              1
+            </span>
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300 truncate">
+              {isUrdu ? 'ابتدائی بیلنس (گزشتہ سے منتقل)' : 'Opening Balance (from prior closing)'}
+            </span>
+          </div>
+          <AnimatedNumber
+            value={currOpening}
+            from={mathStep === 1 ? 0 : currOpening}
+            prefix={displayCurrency}
+            signBeforeNumber
+            duration={0.6}
+            triggerKey={`open-${equationPlayCount}-${mathStep}`}
+            className={`text-xs sm:text-sm font-black shrink-0 ${
+              currOpening >= 0
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-rose-600 dark:text-rose-400'
+            }`}
+          />
+        </motion.div>
+
+        {/* Core Metric Rows on Current Card */}
+        <div className="space-y-2.5 pt-2.5">
+          {/* Step 2: + Monthly Collection Row with Glass Coin Stack Drop-In */}
+          <div
+            className={`p-3 sm:p-3.5 rounded-2xl border transition-all duration-300 ${
+              mathStep === 2
+                ? 'bg-emerald-500/14 border-emerald-400/70 ring-2 ring-emerald-400/40 shadow-md'
+                : 'bg-white/75 dark:bg-white/[0.07] border-indigo-200/60 dark:border-white/12'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="size-8 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <Wallet size={16} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 block truncate">
+                    {isUrdu ? '+ ماہانہ وصولی' : '+ Monthly Collection'}
+                  </span>
+                </div>
+                <CoinStackVisual mode="inflow" active={mathStep === 2} />
+              </div>
+
+              <div className="flex items-center gap-2 ml-auto">
+                <AnimatedNumber
+                  value={currCollection}
+                  from={mathStep === 2 ? 0 : inView ? 0 : currCollection}
+                  prefix={displayCurrency}
+                  showPlus={mathStep === 2}
+                  duration={0.85}
+                  triggerKey={`col-${replayKey}-${equationPlayCount}-${mathStep === 2 ? 'step2' : 'rest'}`}
+                  className="text-sm sm:text-base md:text-lg font-black text-emerald-700 dark:text-emerald-300"
+                />
+                {/* Single-line Variance Pill */}
+                <motion.span
+                  key={`pill-col-${replayKey}`}
+                  dir="ltr"
+                  style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+                  initial={shouldReduceMotion ? {} : { scale: 0.9 }}
+                  animate={shouldReduceMotion ? {} : { scale: [1, 1.12, 1] }}
+                  transition={{ duration: 0.45, delay: 0.35 }}
+                  className={`inline-flex items-center gap-0.5 text-[11px] font-mono font-black px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 border ${
+                    isCollectionUp
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/35'
+                      : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/35'
+                  }`}
+                >
+                  {isCollectionUp ? <ArrowUp size={11} /> : <ArrowDown size={11} />}
+                  <span>
+                    {isCollectionUp ? '+' : '-'}
+                    {collectionPctNum.toFixed(1)}%
+                  </span>
+                </motion.span>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 3: − Total Expenses Row with Flying Outflow Coins */}
+          <div
+            className={`p-3 sm:p-3.5 rounded-2xl border transition-all duration-300 ${
+              mathStep === 3
+                ? 'bg-rose-500/14 border-rose-400/70 ring-2 ring-rose-400/40 shadow-md'
+                : 'bg-white/75 dark:bg-white/[0.07] border-indigo-200/60 dark:border-white/12'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="size-8 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                  <TrendingDown size={16} />
+                </div>
+                <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                  {isUrdu ? '− کل اخراجات' : '− Total Expenses'}
+                </span>
+                <CoinStackVisual mode="outflow" active={mathStep === 3} />
+              </div>
+
+              <div className="flex items-center gap-2 ml-auto">
+                <AnimatedNumber
+                  value={mathStep === 3 ? -currExpenses : currExpenses}
+                  from={mathStep === 3 ? 0 : inView ? 0 : currExpenses}
+                  prefix={displayCurrency}
+                  signBeforeNumber={mathStep !== 3}
+                  duration={0.85}
+                  delay={0.05}
+                  triggerKey={`exp-${replayKey}-${equationPlayCount}-${mathStep === 3 ? 'step3' : 'rest'}`}
+                  className="text-sm sm:text-base md:text-lg font-black text-slate-900 dark:text-slate-100"
+                />
+                {/* Single-line Variance Pill (green when saved!) */}
+                <motion.span
+                  key={`pill-exp-${replayKey}`}
+                  dir="ltr"
+                  style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+                  initial={shouldReduceMotion ? {} : { scale: 0.9 }}
+                  animate={shouldReduceMotion ? {} : { scale: [1, 1.12, 1] }}
+                  transition={{ duration: 0.45, delay: 0.45 }}
+                  className={`inline-flex items-center gap-0.5 text-[11px] font-mono font-black px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 border ${
+                    !isExpenseUp
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/35'
+                      : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/35'
+                  }`}
+                >
+                  {expenseDiff < 0 ? <ArrowDown size={11} /> : <ArrowUp size={11} />}
+                  <span>
+                    {expenseDiff < 0 ? '-' : '+'}
+                    {expensePctNum.toFixed(1)}%
+                  </span>
+                </motion.span>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 4 (and intermediate running chip for Steps 1-3): Closing / Running Balance */}
+          <motion.div
+            key={`closing-${equationPlayCount}-${mathStep}`}
+            animate={
+              mathStep === 4 && !shouldReduceMotion
+                ? {
+                    scale: [1, 1.02, 1],
+                  }
+                : {}
+            }
+            transition={{ duration: 0.55, ease: 'easeOut' }}
+            className={`p-3.5 rounded-2xl border transition-all duration-300 ${
+              mathStep === 4 && isImprovedBalance
+                ? 'bg-emerald-500/12 border-emerald-400/70 ring-2 ring-emerald-400/35 shadow-[0_8px_24px_-6px_rgba(16,185,129,0.35)]'
+                : mathStep < 4
+                ? 'bg-indigo-500/12 border-indigo-400/60 ring-2 ring-indigo-400/30'
+                : 'bg-indigo-500/10 border-indigo-300/60 dark:border-indigo-400/25'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className={`size-8 rounded-xl flex items-center justify-center shrink-0 ${
+                    mathStep === 4 && isImprovedBalance
+                      ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
+                      : 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300'
+                  }`}
+                >
+                  <Calculator size={16} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 block truncate">
+                    {mathStep < 4
+                      ? isUrdu
+                        ? 'جاری بیلنس (حساب جاری)'
+                        : 'Running Balance'
+                      : isUrdu
+                      ? 'اختتامی بیلنس'
+                      : 'Closing Balance'}
+                  </span>
+                  {currCctv > 0 && mathStep >= 3 && (
+                    <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 block">
+                      {isUrdu ? `کیپیکس: -${displayCurrency} ${fmtInt(currCctv)}` : `Includes CapEx: -${displayCurrency} ${fmtInt(currCctv)}`}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 ml-auto">
+                <AnimatedNumber
+                  value={runningBalanceValue}
+                  from={runningBalanceFrom}
+                  prefix={displayCurrency}
+                  signBeforeNumber
+                  duration={0.85}
+                  triggerKey={`bal-${replayKey}-${equationPlayCount}-${mathStep}`}
+                  className={`text-sm sm:text-base md:text-lg font-black ${
+                    runningBalanceValue >= 0
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : isImprovedBalance && mathStep === 4
+                      ? 'text-emerald-600 dark:text-emerald-300'
+                      : 'text-rose-600 dark:text-rose-400'
+                  }`}
+                />
+                {/* Recovery / Variance Single-Line Pill */}
+                <span
+                  dir="ltr"
+                  style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+                  className={`inline-flex items-center gap-1 text-[11px] font-mono font-black px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 border ${
+                    balanceDiff >= 0
+                      ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/35'
+                      : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/35'
+                  }`}
+                >
+                  {balanceDiff >= 0 ? '+' : '-'}
+                  {displayCurrency} {fmtInt(balanceDiff)}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Sub-bar */}
+        <div className="mt-4 pt-3 border-t border-indigo-500/20 flex items-center justify-between gap-2 text-xs font-medium">
+          <span className="text-slate-500 dark:text-slate-400 truncate">
+            {isUrdu ? 'ماہانہ خالص تبدیلی:' : 'Net MoM Variance:'}
+          </span>
+          <span
+            className={`font-black font-mono flex items-center gap-1.5 whitespace-nowrap ${
+              isFavorableVariance
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-rose-600 dark:text-rose-400'
+            }`}
+          >
+            {isFavorableVariance ? (
+              <>
+                <TrendingUp size={14} />
+                <span>{isUrdu ? 'بہتر کیش فلو ریکوری' : 'Favorable Recovery'}</span>
+              </>
+            ) : (
+              <>
+                <TrendingDown size={14} />
+                <span>{isUrdu ? 'اضافی خسارہ' : 'Higher Deficit'}</span>
+              </>
+            )}
+          </span>
+        </div>
+      </GlassCard>
+    </TiltCard>
+  )
+
   return (
-    <div className="w-full my-8">
-      {/* ─── Header & Top Controls ─── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 px-1">
-        <div className="flex items-center gap-3">
-          <div className="size-10 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20 flex-shrink-0">
+    <section ref={sectionRef} className="w-full my-8">
+      {/* ─── Header, VS Badge, Mobile Tabs & Global Replay Button ─── */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 mb-5 px-1">
+        <div className="flex items-start sm:items-center gap-3 min-w-0">
+          <div className="size-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-teal-500 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
             <ArrowLeftRight size={20} className="stroke-[2.5]" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                {isUrdu ? 'ماہانہ تقابلی جائزہ (3D موازنہ)' : 'Month-over-Month 3D Comparison'}
+                {isUrdu
+                  ? 'ماہانہ تقابلی جائزہ (3D موازنہ)'
+                  : 'Month-over-Month 3D Comparison'}
               </h3>
-              <span className="text-[10px] font-mono font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 shadow-xs">
-                {translateMonth(prevName, lang).toUpperCase()} {isUrdu ? 'بمقابلہ' : 'VS'} {translateMonth(currName, lang).toUpperCase()}
+              <span className="text-[10px] font-mono font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border border-indigo-400/35 whitespace-nowrap">
+                {translateMonth(prevName, lang).toUpperCase()}{' '}
+                {isUrdu ? 'بمقابلہ' : 'VS'}{' '}
+                {translateMonth(currName, lang).toUpperCase()}
               </span>
             </div>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
               {isUrdu
-                ? 'آمدن، اخراجات اور ریزرو فنڈ میں تفصیلی تبدیلیوں کا 3D موازنہ'
-                : 'Interactive 3D dual-card perspective comparing collection, burn rate, and reserves'}
+                ? 'آمدن، اخراجات اور اختتامی بیلنس کی تبدیلی کا مرحلہ وار 3D مظاہرہ'
+                : 'Watch how opening balance, collections, and expenses combine into this month’s balance'}
             </p>
           </div>
         </div>
 
-        {/* Mobile View Selector */}
-        <div className="flex lg:hidden items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 shadow-inner self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={() => handleMobileTabChange('prev')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-              mobileTab === 'prev'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md'
-                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
-            }`}
-          >
-            {translateMonth(prevName, lang).split(' ')[0]}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleMobileTabChange('split')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
-              mobileTab === 'split'
-                ? 'bg-gradient-to-r from-indigo-600 via-teal-600 to-cyan-600 text-white shadow-md shadow-indigo-500/25 ring-2 ring-cyan-400/40'
-                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
-            }`}
-          >
-            <Sparkles size={13} className={mobileTab === 'split' ? 'animate-pulse' : ''} />
-            <span>{isUrdu ? '3D موازنہ (+/-)' : '3D Split (+/-)'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleMobileTabChange('current')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-              mobileTab === 'current'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md'
-                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
-            }`}
-          >
-            {translateMonth(currName, lang).split(' ')[0]}
-          </button>
-        </div>
-      </div>
-
-      {/* ─── 100% RAZOR-SHARP CARD STAGE (ZERO BLUR) ─── */}
-      <div className="w-full relative">
-        <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] items-center gap-5 sm:gap-6">
-          
-          {/* ================= CARD 1: PREVIOUS CYCLE ================= */}
-          <motion.div
-            onClick={() => setElevatedCard(1)}
-            whileHover={shouldReduceMotion ? {} : { y: -4 }}
-            whileTap={shouldReduceMotion ? {} : { scale: 0.99 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            className={`relative rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-[#0f172a] p-6 sm:p-7 overflow-hidden flex flex-col justify-between cursor-pointer transition-all duration-200 ${
-              elevatedCard === 1
-                ? 'shadow-[0_20px_45px_-10px_rgba(59,130,246,0.22),0_8px_20px_-4px_rgba(0,0,0,0.06)] ring-2 ring-primary/40'
-                : 'shadow-[0_10px_30px_-5px_rgba(0,0,0,0.06),0_4px_12px_-2px_rgba(0,0,0,0.04)]'
-            } ${mobileTab === 'current' ? 'hidden lg:flex' : 'flex'}`}
-            style={{
-              transform: 'none',
-              WebkitFontSmoothing: 'antialiased',
-              MozOsxFontSmoothing: 'grayscale',
-              textRendering: 'optimizeLegibility',
-            }}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-slate-800">
-              <div>
-                <span className="text-[10px] font-mono uppercase font-extrabold tracking-wider text-slate-400">
-                  {isUrdu ? 'گزشتہ مالیاتی سائیکل' : 'PREVIOUS CYCLE'}
-                </span>
-                <h4 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight mt-0.5">
-                  {translateMonth(prevName, lang)}
-                </h4>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                  {isUrdu ? 'بنیادی موازنہ' : 'Baseline'}
-                </span>
-                <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${
-                  isPrevSurplus
-                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                    : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
-                }`}>
-                  {isUrdu ? (isPrevSurplus ? 'سرپلس' : 'خسارہ') : (isPrevSurplus ? 'Surplus' : 'Deficit')}
-                </span>
-              </div>
-            </div>
-
-            {/* Metrics */}
-            <div className="space-y-3 pt-3.5">
-              {/* Collection */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/80">
-                <div className="flex items-center gap-2.5">
-                  <div className="size-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
-                    <Wallet size={16} />
-                  </div>
-                  <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
-                    {isUrdu ? 'ماہانہ وصولی' : 'Monthly Collection'}
-                  </span>
-                </div>
-                <RollingOdometer
-                  value={Math.abs(prevCollection).toLocaleString('en-PK')}
-                  prefix={displayCurrency}
-                  className="text-sm sm:text-base md:text-lg font-black font-mono text-slate-900 dark:text-slate-100"
-                />
-              </div>
-
-              {/* Expenses */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/80">
-                <div className="flex items-center gap-2.5">
-                  <div className="size-8 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center flex-shrink-0">
-                    <TrendingDown size={16} />
-                  </div>
-                  <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
-                    {isUrdu ? 'کل اخراجات' : 'Total Expenses'}
-                  </span>
-                </div>
-                <RollingOdometer
-                  value={Math.abs(prevExpenses).toLocaleString('en-PK')}
-                  prefix={displayCurrency}
-                  className="text-sm sm:text-base md:text-lg font-black font-mono text-slate-900 dark:text-slate-100"
-                />
-              </div>
-
-              {/* Closing Balance */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/80">
-                <div className="flex items-center gap-2.5">
-                  <div className="size-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
-                    <Calendar size={16} />
-                  </div>
-                  <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
-                    {isUrdu ? 'اختتامی بیلنس' : 'Closing Balance'}
-                  </span>
-                </div>
-                <RollingOdometer
-                  value={(prevBalance < 0 ? '-' : '') + Math.abs(prevBalance).toLocaleString('en-PK')}
-                  prefix={displayCurrency}
-                  className={`text-sm sm:text-base md:text-lg font-black font-mono ${
-                    prevBalance >= 0
-                      ? 'text-emerald-600 dark:text-emerald-400'
-                      : 'text-rose-600 dark:text-rose-400'
+        {/* Right Controls: Section Replay Button + Mobile Mode Pills */}
+        <div className="flex items-center justify-between sm:justify-end gap-2 flex-wrap">
+          {/* Mobile View Switcher (keeps ?compare= URL synced; includes Carousel option) */}
+          <div className="flex lg:hidden items-center p-1 rounded-2xl bg-white/70 dark:bg-white/[0.07] backdrop-blur-md border border-slate-200/80 dark:border-white/12 shadow-xs overflow-x-auto max-w-full">
+            {[
+              { id: 'split', label: isUrdu ? 'اسٹیک 3D' : 'Stack', icon: Layers },
+              { id: 'carousel', label: isUrdu ? 'سوائپ' : 'Swipe', icon: Sparkles },
+              { id: 'prev', label: translateMonth(prevName, lang).split(' ')[0] },
+              { id: 'current', label: translateMonth(currName, lang).split(' ')[0] },
+            ].map((tab) => {
+              const Icon = tab.icon
+              const active = mobileTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => handleMobileTabChange(tab.id)}
+                  className={`min-h-[44px] px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer ${
+                    active
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   }`}
-                />
-              </div>
-            </div>
+                >
+                  {Icon && <Icon size={13} />}
+                  <span>{tab.label}</span>
+                </button>
+              )
+            })}
+          </div>
 
-            {/* Sub-bar */}
-            <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400 font-medium">
-              <span className="flex items-center gap-1.5">
-                <ShieldCheck size={14} className="text-emerald-500" />
-                <span>{isUrdu ? 'مکمل تصدیق شدہ ریکارڈ' : 'Reconciled Audit Record'}</span>
-              </span>
-              <span className="font-mono text-[11px] text-slate-500 font-bold">{isUrdu ? '100% حساب مکمل' : '100% Settled'}</span>
-            </div>
+          <button
+            type="button"
+            onClick={handleReplayAll}
+            className="min-h-[44px] px-3.5 py-2 rounded-2xl bg-white/70 hover:bg-white/95 dark:bg-white/[0.08] dark:hover:bg-white/[0.14] border border-slate-200/80 dark:border-white/15 text-slate-700 dark:text-slate-200 text-xs font-extrabold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+          >
+            <RotateCcw size={14} className="text-indigo-600 dark:text-indigo-300" />
+            <span>{isUrdu ? 'دوبارہ دیکھیں' : 'Replay'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Desktop Perspective Stage (lg+) ─── */}
+      <div className="hidden lg:block relative">
+        {/* Animated Connecting Beam Arcs (SVG behind cards, linking Prev row -> Delta -> Curr row) */}
+        <svg
+          key={`beams-${replayKey}`}
+          aria-hidden="true"
+          viewBox="0 0 1200 320"
+          preserveAspectRatio="none"
+          className="pointer-events-none absolute inset-0 w-full h-full z-0 opacity-75"
+        >
+          <defs>
+            <linearGradient id="beamCollectionGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
+              <stop offset="50%" stopColor="#10b981" stopOpacity="0.85" />
+              <stop offset="100%" stopColor="#10b981" stopOpacity="0.25" />
+            </linearGradient>
+            <linearGradient id="beamExpenseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={!isExpenseUp ? '#10b981' : '#f43f5e'} stopOpacity="0.15" />
+              <stop offset="50%" stopColor={!isExpenseUp ? '#10b981' : '#f43f5e'} stopOpacity="0.85" />
+              <stop offset="100%" stopColor={!isExpenseUp ? '#10b981' : '#f43f5e'} stopOpacity="0.25" />
+            </linearGradient>
+          </defs>
+
+          {/* Collection Beam */}
+          <motion.path
+            d="M 380 120 C 520 90, 680 90, 820 125"
+            fill="none"
+            stroke="url(#beamCollectionGrad)"
+            strokeWidth="2.5"
+            strokeDasharray="6 6"
+            initial={shouldReduceMotion ? { pathLength: 1 } : { pathLength: 0, opacity: 0 }}
+            animate={inView ? { pathLength: 1, opacity: 1 } : {}}
+            transition={{ duration: 0.9, delay: 0.35, ease: 'easeOut' }}
+          />
+          {/* Expense Beam */}
+          <motion.path
+            d="M 380 195 C 520 225, 680 225, 820 200"
+            fill="none"
+            stroke="url(#beamExpenseGrad)"
+            strokeWidth="2.5"
+            strokeDasharray="6 6"
+            initial={shouldReduceMotion ? { pathLength: 1 } : { pathLength: 0, opacity: 0 }}
+            animate={inView ? { pathLength: 1, opacity: 1 } : {}}
+            transition={{ duration: 0.9, delay: 0.48, ease: 'easeOut' }}
+          />
+        </svg>
+
+        {/* 3-Column 3D Grid */}
+        <div
+          style={{ perspective: 1400 }}
+          className="relative z-10 grid grid-cols-[1fr_auto_1fr] items-center gap-6"
+        >
+          {/* Left: Previous Cycle Card slides in from left */}
+          <motion.div
+            key={`prev-desk-${replayKey}`}
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, x: isRtl ? 44 : -44 }}
+            animate={inView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {renderPreviousCard()}
           </motion.div>
 
-          {/* ================= CENTER PILLAR: FLOATING VARIANCE / DELTA (DESKTOP) ================= */}
-          <div className="hidden lg:flex flex-col items-center justify-center p-4 rounded-3xl bg-[#070b16] border-2 border-cyan-500/40 shadow-xl text-center w-[184px] flex-shrink-0 z-20 self-center relative overflow-hidden">
-            {/* Ambient Background Radial Glow */}
-            <div className="pointer-events-none absolute -top-10 -left-10 size-32 rounded-full bg-cyan-500/20 blur-2xl" />
+          {/* Center: Delta Capsule rises up */}
+          <DeltaCapsule
+            variant="desktop"
+            collectionDiff={collectionDiff}
+            collectionPct={collectionPctNum}
+            isCollectionUp={isCollectionUp}
+            expenseDiff={expenseDiff}
+            expensePct={expensePctNum}
+            isExpenseUp={isExpenseUp}
+            balanceDiff={balanceDiff}
+            displayCurrency={displayCurrency}
+            isUrdu={isUrdu}
+            onReplay={handleReplayAll}
+            replayKey={replayKey}
+            inView={inView}
+          />
 
-            {/* Top Pill Icon */}
-            <div className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-cyan-400 mb-3">
-              <Sparkles size={13} className="text-cyan-400 animate-pulse" />
-              <span>{isUrdu ? 'فرق / تبدیلی' : 'Variance / Delta'}</span>
-            </div>
-
-            {/* Collection Shift */}
-            <div className="w-full bg-slate-900/90 rounded-2xl p-2.5 mb-2.5 border border-slate-800">
-              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wide mb-1">
-                {isUrdu ? 'وصولی تبدیلی' : 'Collection (+)'}
-              </p>
-              <div
-                dir="ltr"
-                style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                className={`inline-flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-xl text-xs font-black font-mono w-full ${
-                  isCollectionUp
-                    ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/40'
-                    : 'bg-rose-950/80 text-rose-400 border border-rose-500/40'
-                }`}
-              >
-                <span>{isCollectionUp ? '↑ +' : '↓ '}{collectionPct}%</span>
-                <span className="text-[9px] font-bold opacity-80">{isCollectionUp ? '+' : '-'}{displayCurrency} {absCollDiff}</span>
-              </div>
-            </div>
-
-            {/* Expense Shift */}
-            <div className="w-full bg-slate-900/90 rounded-2xl p-2.5 mb-3 border border-slate-800">
-              <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wide mb-1">
-                {isUrdu ? 'اخراجات بچت' : 'Expenses (-)'}
-              </p>
-              <div
-                dir="ltr"
-                style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                className={`inline-flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-xl text-xs font-black font-mono w-full ${
-                  !isExpenseUp
-                    ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/40'
-                    : 'bg-rose-950/80 text-rose-400 border border-rose-500/40'
-                }`}
-              >
-                <span>{expenseDiff < 0 ? '↓ -' : '↑ +'}{expensePct}%</span>
-                <span className="text-[9px] font-bold opacity-80">{expenseDiff < 0 ? '-' : '+'}{displayCurrency} {absExpDiff}</span>
-              </div>
-            </div>
-
-            {/* Center Arrow */}
-            <div className="size-7 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center">
-              <ArrowRight size={14} className={isUrdu ? 'rotate-180' : ''} />
-            </div>
-          </div>
-
-          {/* ================= MOBILE 3D VARIANCE CONNECTOR & DELTA BRIDGE ================= */}
-          <div className={`lg:hidden flex flex-col items-center justify-center my-2 z-20 w-full ${mobileTab === 'split' ? 'flex' : 'hidden'}`}>
-            <motion.div
-              initial={{ opacity: 1, y: 0 }}
-              animate={shouldReduceMotion ? { y: 0 } : {
-                y: [0, -3.5, 0],
-                rotateX: [0, 1.2, 0],
-              }}
-              transition={{
-                duration: 4.5,
-                repeat: Infinity,
-                repeatType: 'reverse',
-                ease: 'easeInOut'
-              }}
-              className="w-full rounded-2xl bg-gradient-to-r from-slate-900 via-[#0a1226] to-slate-900 border-2 border-cyan-500/60 p-3.5 sm:p-4 shadow-xl shadow-cyan-500/15 text-white relative overflow-hidden"
-              style={{
-                perspective: 800,
-                transformStyle: 'preserve-3d',
-              }}
-            >
-              {/* Radial ambient glow */}
-              <div className="pointer-events-none absolute -top-8 -right-8 size-28 rounded-full bg-cyan-500/20 blur-xl" />
-              <div className="pointer-events-none absolute -bottom-8 -left-8 size-28 rounded-full bg-emerald-500/20 blur-xl" />
-
-              {/* Title & 3-Step Realtime Math Ticker Controls */}
-              <div className="flex items-center justify-between gap-1.5 mb-2.5 pb-2 border-b border-cyan-500/30">
-                <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-cyan-300">
-                  <Sparkles size={14} className="text-cyan-400 animate-pulse" />
-                  <span>{isUrdu ? '⚡ ریئل ٹائم 3D حساب (+/-)' : '⚡ Realtime 3D Math (+/-)'}</span>
-                </div>
-                
-                {/* 3-Step Interactive Math Progress Pills */}
-                <div className="flex items-center gap-1 bg-slate-950/80 p-0.5 rounded-full border border-cyan-500/30 text-[9px] font-mono">
-                  <button
-                    type="button"
-                    onClick={() => setMathStep(0)}
-                    className={`px-1.5 py-0.5 rounded-full transition-all cursor-pointer ${
-                      mathStep === 0
-                        ? 'bg-cyan-500 text-slate-950 font-black shadow-xs'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    1. {translateMonth(prevName, lang).split(' ')[0]}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMathStep(1)}
-                    className={`px-1.5 py-0.5 rounded-full transition-all cursor-pointer ${
-                      mathStep === 1
-                        ? 'bg-gradient-to-r from-emerald-500 to-cyan-400 text-slate-950 font-black shadow-xs ring-1 ring-emerald-300 animate-pulse'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    2. {isUrdu ? 'حساب (+/-)' : '+ / -'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMathStep(2)}
-                    className={`px-1.5 py-0.5 rounded-full transition-all cursor-pointer ${
-                      mathStep === 2
-                        ? 'bg-indigo-500 text-white font-black shadow-xs'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    3. {translateMonth(currName, lang).split(' ')[0]}
-                  </button>
-                </div>
-              </div>
-
-              {/* 3 Interactive Highlighted Metrics with Realtime 3D Math Flip Animation */}
-              <div className="grid grid-cols-3 gap-2 text-center" style={{ perspective: 600 }}>
-                {/* 1. Collection Shift */}
-                <div className="p-2 rounded-xl bg-slate-900/95 border border-emerald-500/50 flex flex-col items-center justify-between shadow-xs min-h-[96px] overflow-hidden relative">
-                  <div className="flex items-center gap-1 text-[9px] uppercase font-bold text-slate-400">
-                    <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>{isUrdu ? 'وصولی' : 'Collection'}</span>
-                  </div>
-
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={`coll-${mathStep}`}
-                      initial={{ opacity: 0, y: 6, rotateX: -15 }}
-                      animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                      exit={{ opacity: 0, y: -6, rotateX: 15 }}
-                      transition={{ duration: 0.35, ease: 'easeOut' }}
-                      className="w-full my-auto flex flex-col items-center justify-center"
-                    >
-                      {mathStep === 0 && (
-                        <>
-                          <span className="text-xs sm:text-sm font-black font-mono text-slate-300">
-                            {displayCurrency} {prevCollection.toLocaleString('en-PK')}
-                          </span>
-                          <span className="text-[9px] font-mono text-slate-400 font-bold mt-0.5">
-                            {isUrdu ? 'گزشتہ بنیاد' : 'Sep Starting'}
-                          </span>
-                        </>
-                      )}
-
-                      {mathStep === 1 && (
-                        <>
-                          <div className="inline-flex items-center gap-0.5 text-xs sm:text-sm font-black font-mono text-emerald-400">
-                            <span className="text-emerald-300 font-black">➕</span>
-                            <span>+{collectionPct}%</span>
-                          </div>
-                          <span className="text-[10px] font-mono font-black text-emerald-300 mt-0.5 bg-emerald-950/80 px-1 py-0.2 rounded border border-emerald-500/30">
-                            +{displayCurrency} {absCollDiff}
-                          </span>
-                          <span className="text-[8px] font-bold text-emerald-400/80 uppercase tracking-tighter mt-0.5">
-                            {isUrdu ? 'وصولی میں اضافہ (+)' : 'Added Inflow (+)'}
-                          </span>
-                        </>
-                      )}
-
-                      {mathStep === 2 && (
-                        <>
-                          <span className="text-xs sm:text-sm font-black font-mono text-emerald-400">
-                            {displayCurrency} {currCollection.toLocaleString('en-PK')}
-                          </span>
-                          <span className="text-[9px] font-mono text-emerald-300/80 font-bold mt-0.5">
-                            {isUrdu ? 'موجودہ ٹوٹل' : 'Oct Total (↑ +4.4%)'}
-                          </span>
-                        </>
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
-
-                {/* 2. Expense Shift */}
-                <div className="p-2 rounded-xl bg-slate-900/95 border border-cyan-500/50 flex flex-col items-center justify-between shadow-xs min-h-[96px] overflow-hidden relative">
-                  <div className="flex items-center gap-1 text-[9px] uppercase font-bold text-slate-400">
-                    <span className="size-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                    <span>{isUrdu ? 'اخراجات' : 'Expenses'}</span>
-                  </div>
-
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={`exp-${mathStep}`}
-                      initial={{ opacity: 0, y: 6, rotateX: -15 }}
-                      animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                      exit={{ opacity: 0, y: -6, rotateX: 15 }}
-                      transition={{ duration: 0.35, ease: 'easeOut' }}
-                      className="w-full my-auto flex flex-col items-center justify-center"
-                    >
-                      {mathStep === 0 && (
-                        <>
-                          <span className="text-xs sm:text-sm font-black font-mono text-slate-300">
-                            {displayCurrency} {prevExpenses.toLocaleString('en-PK')}
-                          </span>
-                          <span className="text-[9px] font-mono text-slate-400 font-bold mt-0.5">
-                            {isUrdu ? 'گزشتہ اخراجات' : 'Sep Burn'}
-                          </span>
-                        </>
-                      )}
-
-                      {mathStep === 1 && (
-                        <>
-                          <div className="inline-flex items-center gap-0.5 text-xs sm:text-sm font-black font-mono text-cyan-400">
-                            <span className="text-cyan-300 font-black">➖</span>
-                            <span>-{expensePct}%</span>
-                          </div>
-                          <span className="text-[10px] font-mono font-black text-cyan-300 mt-0.5 bg-cyan-950/80 px-1 py-0.2 rounded border border-cyan-500/30">
-                            -{displayCurrency} {absExpDiff}
-                          </span>
-                          <span className="text-[8px] font-bold text-cyan-400/80 uppercase tracking-tighter mt-0.5">
-                            {isUrdu ? 'اخراجات میں کمی (-)' : 'Spend Cut (Saved -)'}
-                          </span>
-                        </>
-                      )}
-
-                      {mathStep === 2 && (
-                        <>
-                          <span className="text-xs sm:text-sm font-black font-mono text-cyan-400">
-                            {displayCurrency} {currExpenses.toLocaleString('en-PK')}
-                          </span>
-                          <span className="text-[9px] font-mono text-cyan-300/80 font-bold mt-0.5">
-                            {isUrdu ? 'موجودہ اخراجات' : 'Oct Total (↓ -8.1%)'}
-                          </span>
-                        </>
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
-
-                {/* 3. Net Recovery Shift */}
-                <div className="p-2 rounded-xl bg-slate-900/95 border border-amber-400/50 flex flex-col items-center justify-between shadow-xs min-h-[96px] overflow-hidden relative">
-                  <div className="flex items-center gap-1 text-[9px] uppercase font-bold text-slate-400">
-                    <span className="size-1.5 rounded-full bg-amber-400 animate-pulse" />
-                    <span>{isUrdu ? 'خالص بچت' : 'Recovery'}</span>
-                  </div>
-
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={`net-${mathStep}`}
-                      initial={{ opacity: 0, y: 6, rotateX: -15 }}
-                      animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                      exit={{ opacity: 0, y: -6, rotateX: 15 }}
-                      transition={{ duration: 0.35, ease: 'easeOut' }}
-                      className="w-full my-auto flex flex-col items-center justify-center"
-                    >
-                      {mathStep === 0 && (
-                        <>
-                          <span className="text-xs sm:text-sm font-black font-mono text-rose-400">
-                            -{displayCurrency} {Math.abs(prevBalance).toLocaleString('en-PK')}
-                          </span>
-                          <span className="text-[9px] font-mono text-rose-400/80 font-bold mt-0.5">
-                            {isUrdu ? 'گزشتہ خسارہ' : 'Sep Deficit'}
-                          </span>
-                        </>
-                      )}
-
-                      {mathStep === 1 && (
-                        <>
-                          <div className="inline-flex items-center gap-0.5 text-xs sm:text-sm font-black font-mono text-amber-300">
-                            <span className="text-amber-300 font-black">➕</span>
-                            <span>+{displayCurrency} {absBalanceDiff}</span>
-                          </div>
-                          <span className="text-[10px] font-mono font-black text-amber-300 mt-0.5 bg-amber-950/80 px-1 py-0.2 rounded border border-amber-500/30">
-                            {isUrdu ? 'سرپلس فائدہ' : 'Surplus Gain'}
-                          </span>
-                          <span className="text-[8px] font-bold text-amber-400/80 uppercase tracking-tighter mt-0.5">
-                            {isUrdu ? 'کیش فلو ریکوری (+)' : 'Recovery Gain (+)'}
-                          </span>
-                        </>
-                      )}
-
-                      {mathStep === 2 && (
-                        <>
-                          <span className="text-xs sm:text-sm font-black font-mono text-amber-300">
-                            -{displayCurrency} {Math.abs(currBalance).toLocaleString('en-PK')}
-                          </span>
-                          <span className="text-[9px] font-mono text-emerald-300 font-bold mt-0.5">
-                            {isUrdu ? 'خسارہ 80% کم' : 'Deficit Cut by 80%'}
-                          </span>
-                        </>
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
-              </div>
-
-              {/* Bottom Directional Flow Bar with Dynamic Math Narrative */}
-              <div className="mt-2.5 pt-2 border-t border-cyan-500/20 flex items-center justify-between gap-1 text-[10px] font-bold text-cyan-300/90 flex-wrap">
-                <div className="flex items-center gap-1.5 font-mono">
-                  <span>{translateMonth(prevName, lang).split(' ')[0]}</span>
-                  <span className="text-cyan-400 font-black animate-pulse">➔</span>
-                  <span className="text-white font-black">{translateMonth(currName, lang).split(' ')[0]}</span>
-                </div>
-
-                <div className="flex items-center gap-1.5 font-mono text-[9px] sm:text-[10px]">
-                  {mathStep === 0 && (
-                    <span className="text-slate-400 font-semibold">
-                      {isUrdu ? 'مرحلہ 1: ستمبر کی بنیادی رقم' : '1. September Starting Figures'}
-                    </span>
-                  )}
-                  {mathStep === 1 && (
-                    <span className="text-emerald-300 font-black bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-500/40 animate-pulse">
-                      {isUrdu ? '⚡ لائیو 3D حساب: (+ وصولی) اور (- اخراجات کی بچت)' : '⚡ Live 3D Math: (+ Inflow) & (- Expense Saved)'}
-                    </span>
-                  )}
-                  {mathStep === 2 && (
-                    <span className="text-cyan-300 font-black bg-cyan-950/80 px-2 py-0.5 rounded-full border border-cyan-500/40">
-                      {isUrdu ? 'مرحلہ 3: اکتوبر میں خالص سرپلس بہتری (+17,986)' : '3. October Net Surplus Recovered (+17,986)'}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* ================= CARD 2: CURRENT CYCLE ================= */}
+          {/* Right: Current Cycle Card slides in from right */}
           <motion.div
-            onClick={() => setElevatedCard(2)}
-            whileHover={shouldReduceMotion ? {} : { y: -4 }}
-            whileTap={shouldReduceMotion ? {} : { scale: 0.99 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            className={`relative rounded-3xl border-2 border-indigo-500/50 dark:border-indigo-500/40 bg-gradient-to-b from-indigo-50/40 via-white to-white dark:from-slate-900 dark:via-[#0b1120] dark:to-[#0b1120] p-6 sm:p-7 overflow-hidden flex flex-col justify-between cursor-pointer transition-all duration-200 ${
-              elevatedCard === 2
-                ? 'shadow-[0_25px_50px_-12px_rgba(99,102,241,0.25),0_10px_25px_-5px_rgba(0,0,0,0.08)] ring-2 ring-indigo-500/40'
-                : 'shadow-[0_10px_30px_-5px_rgba(0,0,0,0.06),0_4px_12px_-2px_rgba(0,0,0,0.04)]'
-            } ${mobileTab === 'prev' ? 'hidden lg:flex' : 'flex'}`}
-            style={{
-              transform: 'none',
-              WebkitFontSmoothing: 'antialiased',
-              MozOsxFontSmoothing: 'grayscale',
-              textRendering: 'optimizeLegibility',
-            }}
+            key={`curr-desk-${replayKey}`}
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, x: isRtl ? -44 : 44 }}
+            animate={inView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.55, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3.5 border-b border-indigo-100 dark:border-slate-800">
-              <div>
-                <span className="text-[10px] font-mono uppercase font-extrabold tracking-wider text-indigo-500 dark:text-indigo-400">
-                  {isUrdu ? 'موجودہ فعال سائیکل' : 'CURRENT ACTIVE CYCLE'}
-                </span>
-                <h4 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight mt-0.5">
-                  {translateMonth(currName, lang)}
-                </h4>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-600 text-white shadow-xs">
-                  {isUrdu ? 'موجودہ فعال' : 'Live Active'}
-                </span>
-                <span className={`px-2.5 py-1 rounded-full text-[11px] font-black ${
-                  isCurrSurplus
-                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                    : 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
-                }`}>
-                  {isUrdu ? (isCurrSurplus ? 'سرپلس' : 'خسارہ') : (isCurrSurplus ? 'Surplus' : 'Deficit')}
-                </span>
-              </div>
-            </div>
-
-            {/* Metrics */}
-            <div className="space-y-3 pt-3.5">
-              {/* Collection Row */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-slate-800/90 border border-indigo-100 dark:border-slate-700/80 shadow-xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="size-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
-                    <Wallet size={16} />
-                  </div>
-                  <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
-                    {isUrdu ? 'ماہانہ وصولی' : 'Monthly Collection'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RollingOdometer
-                    value={Math.abs(currCollection).toLocaleString('en-PK')}
-                    prefix={displayCurrency}
-                    className="text-sm sm:text-base md:text-lg font-black font-mono text-slate-900 dark:text-slate-100"
-                  />
-                  <motion.span
-                    dir="ltr"
-                    style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                    animate={shouldReduceMotion ? {} : { scale: [1, 1.05, 1] }}
-                    transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                    className={`text-[10px] sm:text-xs font-mono font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs ${
-                      isCollectionUp
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-300 border border-emerald-400/60 ring-2 ring-emerald-500/20'
-                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950/90 dark:text-rose-300 border border-rose-400/60 ring-2 ring-rose-500/20'
-                    }`}
-                  >
-                    <span>{isCollectionUp ? '↑ +' : '↓ '}{collectionPct}%</span>
-                    <span className="hidden sm:inline font-bold opacity-80">(+{displayCurrency} {absCollDiff})</span>
-                  </motion.span>
-                </div>
-              </div>
-
-              {/* Expenses Row */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-slate-800/90 border border-indigo-100 dark:border-slate-700/80 shadow-xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="size-8 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center flex-shrink-0">
-                    <TrendingDown size={16} />
-                  </div>
-                  <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
-                    {isUrdu ? 'کل اخراجات' : 'Total Expenses'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RollingOdometer
-                    value={Math.abs(currExpenses).toLocaleString('en-PK')}
-                    prefix={displayCurrency}
-                    className="text-sm sm:text-base md:text-lg font-black font-mono text-slate-900 dark:text-slate-100"
-                  />
-                  <motion.span
-                    dir="ltr"
-                    style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                    animate={shouldReduceMotion ? {} : { scale: [1, 1.05, 1] }}
-                    transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-                    className={`text-[10px] sm:text-xs font-mono font-black px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs ${
-                      !isExpenseUp
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-300 border border-emerald-400/60 ring-2 ring-emerald-500/20'
-                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950/90 dark:text-rose-300 border border-rose-400/60 ring-2 ring-rose-500/20'
-                    }`}
-                  >
-                    <span>{expenseDiff < 0 ? '↓ -' : '↑ +'}{expensePct}%</span>
-                    <span className="hidden sm:inline font-bold opacity-80">(-{displayCurrency} {absExpDiff} {expenseDiff < 0 ? (isUrdu ? 'بچت' : 'Saved') : ''})</span>
-                  </motion.span>
-                </div>
-              </div>
-
-              {/* Closing Balance Row */}
-              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-slate-800/80 border border-indigo-100/70 dark:border-slate-700/80">
-                <div className="flex items-center gap-2.5">
-                  <div className="size-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
-                    <Calendar size={16} />
-                  </div>
-                  <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
-                    {isUrdu ? 'اختتامی بیلنس' : 'Closing Balance'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RollingOdometer
-                    value={(currBalance < 0 ? '-' : '') + Math.abs(currBalance).toLocaleString('en-PK')}
-                    prefix={displayCurrency}
-                    className={`text-sm sm:text-base md:text-lg font-black font-mono ${
-                      currBalance >= 0
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-rose-600 dark:text-rose-400'
-                    }`}
-                  />
-                  <motion.span
-                    dir="ltr"
-                    style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-                    animate={shouldReduceMotion ? {} : { scale: [1, 1.05, 1] }}
-                    transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-                    className={`text-[10px] sm:text-xs font-mono font-black px-2 py-0.5 rounded-full inline-flex items-center gap-1 shadow-xs ${
-                      balanceDiff >= 0
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-300 border border-emerald-400/60 ring-2 ring-emerald-500/20'
-                        : 'bg-rose-100 text-rose-800 dark:bg-rose-950/90 dark:text-rose-300 border border-rose-400/60 ring-2 ring-rose-500/20'
-                    }`}
-                  >
-                    <span>{balanceDiff >= 0 ? '+' : '-'}{displayCurrency} {absBalanceDiff}</span>
-                    <span className="hidden sm:inline font-bold opacity-80">({isUrdu ? 'بہتری' : 'Recovery'})</span>
-                  </motion.span>
-                </div>
-              </div>
-            </div>
-
-            {/* Sub-bar */}
-            <div className="mt-5 pt-3.5 border-t border-indigo-500/20 flex items-center justify-between text-xs font-medium">
-              <span className="text-slate-400">{isUrdu ? 'ماہانہ خالص تبدیلی:' : 'Net MoM Variance:'}</span>
-              <span
-                className={`font-black font-mono flex items-center gap-1.5 ${
-                  isFavorableVariance ? 'text-emerald-500' : 'text-amber-500'
-                }`}
-              >
-                {isFavorableVariance ? (
-                  <>
-                    <TrendingUp size={14} />
-                    <span>{isUrdu ? 'بہتر کیش فلو ریکوری' : 'Favorable Inflow Recovery'}</span>
-                  </>
-                ) : (
-                  <>
-                    <TrendingDown size={14} />
-                    <span>{isUrdu ? 'اضافی خسارہ' : 'Higher Deficit Gap'}</span>
-                  </>
-                )}
-              </span>
-            </div>
+            {renderCurrentCard()}
           </motion.div>
         </div>
       </div>
-    </div>
+
+      {/* ─── Mobile / Tablet Stage (< lg) ─── */}
+      <div className="lg:hidden relative">
+        {mobileTab === 'carousel' ? (
+          /* Swipe-Left / Right Snap Carousel Alternative */
+          <div className="space-y-3">
+            <DeltaCapsule
+              variant="mobile"
+              collectionDiff={collectionDiff}
+              collectionPct={collectionPctNum}
+              isCollectionUp={isCollectionUp}
+              expenseDiff={expenseDiff}
+              expensePct={expensePctNum}
+              isExpenseUp={isExpenseUp}
+              balanceDiff={balanceDiff}
+              displayCurrency={displayCurrency}
+              isUrdu={isUrdu}
+              onReplay={handleReplayAll}
+              replayKey={replayKey}
+              inView={inView}
+            />
+            <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-2">
+              <div className="w-[88vw] max-w-[420px] shrink-0 snap-center">
+                {renderPreviousCard({ forCarousel: true })}
+              </div>
+              <div className="w-[88vw] max-w-[420px] shrink-0 snap-center">
+                {renderCurrentCard({ forCarousel: true })}
+              </div>
+            </div>
+            <p className="text-center text-[11px] font-bold text-slate-400">
+              {isUrdu ? '← دونوں مہینوں کا موازنہ دیکھنے کے لیے سوائپ کریں →' : '← Swipe sideways between Previous & Current month →'}
+            </p>
+          </div>
+        ) : (
+          /* Vertical Stack: Previous (top, scaled/dimmed) -> Horizontal Delta Capsule -> Current (below) */
+          <div className="flex flex-col gap-3.5">
+            {mobileTab !== 'current' && (
+              <motion.div
+                key={`prev-mob-${replayKey}`}
+                initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: -16 }}
+                animate={inView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                className="scale-[0.97] origin-center"
+              >
+                {renderPreviousCard()}
+              </motion.div>
+            )}
+
+            {mobileTab === 'split' && (
+              <DeltaCapsule
+                variant="mobile"
+                collectionDiff={collectionDiff}
+                collectionPct={collectionPctNum}
+                isCollectionUp={isCollectionUp}
+                expenseDiff={expenseDiff}
+                expensePct={expensePctNum}
+                isExpenseUp={isExpenseUp}
+                balanceDiff={balanceDiff}
+                displayCurrency={displayCurrency}
+                isUrdu={isUrdu}
+                onReplay={handleReplayAll}
+                replayKey={replayKey}
+                inView={inView}
+              />
+            )}
+
+            {mobileTab !== 'prev' && (
+              <motion.div
+                key={`curr-mob-${replayKey}`}
+                initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 18 }}
+                animate={inView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.48, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {renderCurrentCard()}
+              </motion.div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ─── Always-Visible Live Equation Bar Under the Cards ─── */}
+      <EquationPlayer
+        openingBalance={currOpening}
+        collection={currCollection}
+        expenses={currExpenses}
+        cctvExpense={currCctv}
+        closingBalance={currBalance}
+        isImproved={isImprovedBalance || isFavorableVariance}
+        displayCurrency={displayCurrency}
+        isUrdu={isUrdu}
+        activeStep={mathStep}
+        isPlaying={isPlayingEquation}
+        playCount={equationPlayCount}
+        onShowMeHow={runEquationSequence}
+        onSelectStep={handleSelectStep}
+      />
+    </section>
   )
 }
 

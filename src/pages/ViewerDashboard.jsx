@@ -315,8 +315,10 @@ export default function ViewerDashboard() {
 
     const currMonthObj = {
       name: currentMonthKey,
+      openingBalance: totals?.record?.openingBalance ?? 0,
       collection: totals?.record?.monthlyCollection ?? 282250,
       expenses: totals?.totalExpense ?? 306285,
+      cctvExpense: totals?.record?.showCctvExpense ? Number(totals?.record?.cctvExpense || 0) : 0,
       balance: totals?.closingBalance ?? -4012,
       status: totals?.status || (totals?.closingBalance < 0 ? 'Deficit' : 'Surplus')
     }
@@ -928,6 +930,8 @@ export default function ViewerDashboard() {
           allExpenses={data.expenses}
           monthlyRecords={data.monthlyRecords}
           selectedMonth={currentMonthKey}
+          totalExpense={totals?.totalExpense}
+          currency={data?.settings?.currency || 'PKR'}
         />
 
         {/* Main Content Grid */}
