@@ -29,7 +29,7 @@ const ExpenseTable = ({
   const fmt = (n) => pkrFormatter.format(Math.round(Math.abs(Number(n) || 0)))
 
   const sectionRef = useRef(null)
-  const inView = useInView(sectionRef, { once: true, amount: 0.06 })
+  const inView = useInView(sectionRef, { once: true, amount: 0.01 })
   const [replayKey, setReplayKey] = useState(0)
 
   // Expandable Row State (strictly one unfolded 3D receipt at a time)
@@ -109,8 +109,8 @@ const ExpenseTable = ({
 
   return (
     <section ref={sectionRef} className="space-y-5">
-      {/* Main Glass Table Container (overflow-x-clip keeps sticky thead working cleanly) */}
-      <GlassCard glow="none" className="rounded-3xl overflow-x-clip">
+      {/* Main Glass Table Container */}
+      <GlassCard glow="none" className="rounded-3xl overflow-hidden">
         {/* Title Bar + Replay Control */}
         <div className="px-4 sm:px-6 py-4 bg-white/60 dark:bg-white/[0.04] border-b border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="min-w-0 space-y-1">
@@ -201,33 +201,54 @@ const ExpenseTable = ({
         </div>
 
         {/* ========================================================================= */}
-        {/* DESKTOP VIEW (md+): Sticky Glass Header Table with 3D Flip & Unfold Rows */}
+        {/* DESKTOP VIEW (md+): Compact Proportioned Table with 3D Flip & Unfold Rows */}
         {/* ========================================================================= */}
-        <div className="hidden md:block">
-          <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 z-10 text-xs font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-b border-slate-200/80 dark:border-white/12">
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-start border-collapse">
+            <thead className="sticky top-0 z-10 text-slate-600 dark:text-slate-300 uppercase bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-b border-slate-200/80 dark:border-white/12">
               <tr>
-                <th className="px-4 lg:px-5 py-3.5 w-[35%]">{t.colItem || 'Line Item'}</th>
-                <th className="px-3 lg:px-4 py-3.5 text-right w-[18%] whitespace-nowrap">
-                  {hasPriorData
-                    ? `${t.colPrevious || 'Prior'} (${translateMonth(
-                        priorMonthShort,
-                        isUrdu ? 'ur' : 'en'
-                      )})`
-                    : t.colPrevious || 'Prior Month'}
+                <th className="px-3 lg:px-4 py-3 text-start">
+                  <span className="block text-[11px] font-black tracking-wider whitespace-nowrap">
+                    {t.colItem || 'Line Item'}
+                  </span>
+                  <span className="block text-[10px] font-semibold text-slate-400 dark:text-slate-400 normal-case tracking-normal whitespace-nowrap">
+                    {isUrdu ? 'مد اور 3D رسید' : 'Category & receipt'}
+                  </span>
                 </th>
-                <th className="px-3 lg:px-4 py-3.5 text-right w-[19%] whitespace-nowrap">
-                  {`${t.colCurrent || 'Current'} (${translateMonth(
-                    curMonthShort,
-                    isUrdu ? 'ur' : 'en'
-                  )})`}
+                <th className="px-2 lg:px-3 py-3 text-end whitespace-nowrap">
+                  <span className="block text-[11px] font-black tracking-wider">
+                    {t.colPrevious || 'Previous Month'}
+                  </span>
+                  <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-400 normal-case tracking-normal">
+                    {hasPriorData
+                      ? `(${translateMonth(priorMonthShort, isUrdu ? 'ur' : 'en')})`
+                      : isUrdu
+                      ? '(بنیادی ماہ)'
+                      : '(Baseline)'}
+                  </span>
                 </th>
-                <th className="px-4 lg:px-5 py-3.5 text-right w-[28%] whitespace-nowrap">
-                  {isUrdu ? `${t.colVariance || 'فرق'} اور ${t.colStatus || 'حیثیت'}` : 'Variance & Status'}
+                <th className="px-2 lg:px-3 py-3 text-end whitespace-nowrap">
+                  <span className="block text-[11px] font-black tracking-wider text-indigo-700 dark:text-indigo-300">
+                    {t.colCurrent || 'Current Month'}
+                  </span>
+                  <span className="block text-[10px] font-bold text-indigo-500/85 dark:text-indigo-400 normal-case tracking-normal">
+                    ({translateMonth(curMonthShort, isUrdu ? 'ur' : 'en')})
+                  </span>
+                </th>
+                <th className="px-2.5 lg:px-4 py-3 text-end whitespace-nowrap">
+                  <span className="block text-[11px] font-black tracking-wider">
+                    {isUrdu ? `${t.colVariance || 'فرق'} / ${t.colStatus || 'حیثیت'}` : 'Variance & Status'}
+                  </span>
+                  <span className="block text-[10px] font-semibold text-slate-400 dark:text-slate-400 normal-case tracking-normal">
+                    {isUrdu ? 'ماہانہ تبدیلی' : 'MoM change'}
+                  </span>
                 </th>
                 {isAdmin && (
-                  <th className="px-4 py-3.5 text-center w-24 border-l border-slate-200/60 dark:border-slate-800">
-                    Actions
+                  <th className="px-2.5 py-3 text-center whitespace-nowrap border-l border-slate-200/60 dark:border-slate-800">
+                    <span className="block text-[11px] font-black tracking-wider">Actions</span>
+                    <span className="block text-[10px] font-semibold text-slate-400 dark:text-slate-400 normal-case tracking-normal">
+                      Manage
+                    </span>
                   </th>
                 )}
               </tr>

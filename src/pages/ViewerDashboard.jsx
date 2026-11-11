@@ -937,7 +937,7 @@ export default function ViewerDashboard() {
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
           {/* Table Section */}
-          <div className="xl:col-span-8 space-y-6">
+          <div className="xl:col-span-8 min-w-0 space-y-6">
             <ExpenseTable
               expenses={monthlyExpenses}
               allExpenses={data.expenses}

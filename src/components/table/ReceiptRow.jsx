@@ -91,14 +91,14 @@ function VariancePill({
             : {}
         }
         transition={{ duration: 0.55, ease: 'easeOut' }}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-400/40 shadow-[0_4px_16px_-4px_rgba(59,130,246,0.35)] whitespace-nowrap shrink-0"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-400/40 shadow-[0_4px_16px_-4px_rgba(59,130,246,0.35)] whitespace-nowrap shrink-0"
       >
         <motion.span
           animate={shouldReduceMotion ? {} : { rotate: [0, 18, -12, 0] }}
           transition={{ duration: 0.7, delay: 0.15 }}
           className="inline-flex"
         >
-          <Sparkles size={13} />
+          <Sparkles size={12} />
         </motion.span>
         <span>{isUrdu ? t.statusNew : 'NEW'}</span>
       </motion.span>
@@ -110,7 +110,7 @@ function VariancePill({
       <span
         dir="ltr"
         style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-        className="inline-flex items-center gap-1 font-black text-rose-700 dark:text-rose-300 text-xs sm:text-[13px] bg-rose-500/12 px-2.5 sm:px-3 py-1.5 rounded-xl border border-rose-400/35 whitespace-nowrap shrink-0 font-mono"
+        className="inline-flex items-center gap-1 font-black text-rose-700 dark:text-rose-300 text-xs bg-rose-500/12 px-2.5 py-1 rounded-xl border border-rose-400/35 whitespace-nowrap shrink-0 font-mono"
       >
         <motion.span
           key={`up-${row.id || row.name}-${replayKey}`}
@@ -119,9 +119,12 @@ function VariancePill({
           transition={{ duration: 0.35 }}
           className="inline-flex shrink-0"
         >
-          <TrendingUp size={13} className="stroke-[2.5]" />
+          <TrendingUp size={12} className="stroke-[2.5]" />
         </motion.span>
-        <span>+{displayCurrency}</span>
+        <span className={`inline-flex items-center ${isUrdu ? 'gap-0.5' : ''}`}>
+          <span>+</span>
+          <span dir={isUrdu ? 'rtl' : 'ltr'}>{displayCurrency}</span>
+        </span>
         <AnimatedNumber
           value={absDiff}
           from={inView ? 0 : absDiff}
@@ -129,8 +132,14 @@ function VariancePill({
           triggerKey={replayKey}
         />
         {row.pct && (
-          <span className="text-[11px] font-extrabold text-rose-600 dark:text-rose-400 whitespace-nowrap">
-            ({isUrdu ? `${t.statusHigher} ` : ''}▲ {row.pct}%)
+          <span
+            className={`inline-flex items-center ${
+              isUrdu ? 'gap-1' : ''
+            } text-[10.5px] font-extrabold text-rose-600 dark:text-rose-400 whitespace-nowrap`}
+          >
+            <span>(▲ {row.pct}%</span>
+            {isUrdu && <span dir="rtl">{t.statusHigher}</span>}
+            <span>)</span>
           </span>
         )}
       </span>
@@ -142,7 +151,7 @@ function VariancePill({
       <span
         dir="ltr"
         style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-        className="inline-flex items-center gap-1 font-black text-emerald-700 dark:text-emerald-300 text-xs sm:text-[13px] bg-emerald-500/12 px-2.5 sm:px-3 py-1.5 rounded-xl border border-emerald-400/35 whitespace-nowrap shrink-0 font-mono"
+        className="inline-flex items-center gap-1 font-black text-emerald-700 dark:text-emerald-300 text-xs bg-emerald-500/12 px-2.5 py-1 rounded-xl border border-emerald-400/35 whitespace-nowrap shrink-0 font-mono"
       >
         <motion.span
           key={`down-${row.id || row.name}-${replayKey}`}
@@ -151,9 +160,12 @@ function VariancePill({
           transition={{ duration: 0.35 }}
           className="inline-flex shrink-0"
         >
-          <TrendingDown size={13} className="stroke-[2.5]" />
+          <TrendingDown size={12} className="stroke-[2.5]" />
         </motion.span>
-        <span>-{displayCurrency}</span>
+        <span className={`inline-flex items-center ${isUrdu ? 'gap-0.5' : ''}`}>
+          <span>-</span>
+          <span dir={isUrdu ? 'rtl' : 'ltr'}>{displayCurrency}</span>
+        </span>
         <AnimatedNumber
           value={absDiff}
           from={inView ? 0 : absDiff}
@@ -161,8 +173,14 @@ function VariancePill({
           triggerKey={replayKey}
         />
         {row.pct && (
-          <span className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-            ({isUrdu ? `${t.statusSaved} ` : ''}▼ {Math.abs(Number(row.pct))}%)
+          <span
+            className={`inline-flex items-center ${
+              isUrdu ? 'gap-1' : ''
+            } text-[10.5px] font-extrabold text-emerald-600 dark:text-emerald-400 whitespace-nowrap`}
+          >
+            <span>(▼ {Math.abs(Number(row.pct))}%</span>
+            {isUrdu && <span dir="rtl">{t.statusSaved}</span>}
+            <span>)</span>
           </span>
         )}
       </span>
@@ -675,24 +693,12 @@ export const ReceiptRow = ({
   }
 
   // Desktop <tr> + Expandable Unfolding 3D Receipt Row
+  // Note: Animate block <motion.div> inside each <td> rather than transforming <tr> directly,
+  // avoiding Blink 3D transform / overflow-x-auto paint bugs on display:table-row (especially in RTL).
   return (
     <>
-      <motion.tr
-        key={`desk-row-${rowKey}-${replayKey}`}
+      <tr
         onClick={() => onToggle(rowKey)}
-        initial={
-          shouldReduceMotion
-            ? { opacity: 1 }
-            : { opacity: 0, rotateX: -18, y: 8 }
-        }
-        animate={inView ? { opacity: 1, rotateX: 0, y: 0 } : {}}
-        transition={{
-          duration: 0.4,
-          delay: entranceDelay,
-          ease: [0.22, 1, 0.36, 1],
-        }}
-        whileHover={shouldReduceMotion ? {} : { y: -2 }}
-        style={{ transformOrigin: 'top center' }}
         className={`relative transition-all duration-200 cursor-pointer group ${hoverStatusGlow} ${
           isExpanded
             ? 'bg-indigo-500/[0.06] dark:bg-indigo-500/[0.10]'
@@ -700,10 +706,20 @@ export const ReceiptRow = ({
         }`}
       >
         {/* Col 1: Line Item, Normalized Category Badge & Non-Wrapping Receipt Hint */}
-        <td className="px-4 lg:px-5 py-4">
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2">
-              <span className="text-sm lg:text-base font-black text-slate-900 dark:text-slate-100 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
+        <td className="px-3 lg:px-4 py-3.5 text-start">
+          <motion.div
+            key={`desk-c1-${rowKey}-${replayKey}`}
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{
+              duration: 0.36,
+              delay: entranceDelay,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            className="flex flex-col gap-1.5"
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm lg:text-[15px] font-black text-slate-900 dark:text-slate-100 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
                 {isUrdu ? translateItemName(row.normName || row.name, 'ur') : row.normName || row.name}
               </span>
               <ChevronDown
@@ -713,9 +729,9 @@ export const ReceiptRow = ({
                 }`}
               />
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-x-2 gap-y-1 flex-wrap">
               <span
-                className={`inline-flex items-center w-fit text-[11px] font-bold px-2.5 py-0.5 rounded-md border whitespace-nowrap ${catClass}`}
+                className={`inline-flex items-center w-fit text-[10.5px] font-bold px-2 py-0.5 rounded-md border whitespace-nowrap ${catClass}`}
               >
                 {isUrdu ? translateCategory(row.category, 'ur') : row.category}
               </span>
@@ -732,51 +748,84 @@ export const ReceiptRow = ({
                 </span>
               </span>
             </div>
-          </div>
+          </motion.div>
         </td>
 
         {/* Col 2: Prior Month */}
-        <td className="px-3 lg:px-4 py-4 text-right">
-          {hasPriorData && row.priorAmount > 0 ? (
-            <span
-              dir="ltr"
-              style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-              className="text-sm lg:text-base font-semibold text-slate-600 dark:text-slate-300 font-mono tabular-nums whitespace-nowrap"
-            >
-              {displayCurrency} {fmt(row.priorAmount)}
-            </span>
-          ) : (
-            <span className="text-sm font-bold text-slate-300 dark:text-slate-600 font-mono">—</span>
-          )}
+        <td className="px-2 lg:px-3 py-3.5 text-end whitespace-nowrap">
+          <motion.div
+            key={`desk-c2-${rowKey}-${replayKey}`}
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{
+              duration: 0.36,
+              delay: entranceDelay,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+          >
+            {hasPriorData && row.priorAmount > 0 ? (
+              <span
+                dir="ltr"
+                style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+                className="text-[13px] lg:text-sm font-semibold text-slate-600 dark:text-slate-300 font-mono tabular-nums whitespace-nowrap"
+              >
+                {displayCurrency} {fmt(row.priorAmount)}
+              </span>
+            ) : (
+              <span className="text-sm font-bold text-slate-300 dark:text-slate-600 font-mono">—</span>
+            )}
+          </motion.div>
         </td>
 
         {/* Col 3: Current Month */}
-        <td className="px-3 lg:px-4 py-4 text-right">
-          <span
-            dir="ltr"
-            style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
-            className="text-sm lg:text-base font-black text-slate-900 dark:text-slate-100 font-mono tabular-nums whitespace-nowrap"
+        <td className="px-2 lg:px-3 py-3.5 text-end whitespace-nowrap">
+          <motion.div
+            key={`desk-c3-${rowKey}-${replayKey}`}
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{
+              duration: 0.36,
+              delay: entranceDelay,
+              ease: [0.22, 1, 0.36, 1],
+            }}
           >
-            {displayCurrency} {fmt(row.currentAmount)}
-          </span>
+            <span
+              dir="ltr"
+              style={{ direction: 'ltr', unicodeBidi: 'isolate' }}
+              className="text-[13px] lg:text-sm font-black text-slate-900 dark:text-slate-100 font-mono tabular-nums whitespace-nowrap"
+            >
+              {displayCurrency} {fmt(row.currentAmount)}
+            </span>
+          </motion.div>
         </td>
 
         {/* Col 4: Single-Line Variance & Status Pill */}
-        <td className="px-4 lg:px-5 py-4 text-right">
-          <VariancePill
-            row={row}
-            hasPriorData={hasPriorData}
-            displayCurrency={displayCurrency}
-            isUrdu={isUrdu}
-            t={t}
-            inView={inView}
-            replayKey={replayKey}
-          />
+        <td className="px-2.5 lg:px-4 py-3.5 text-end whitespace-nowrap">
+          <motion.div
+            key={`desk-c4-${rowKey}-${replayKey}`}
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{
+              duration: 0.36,
+              delay: entranceDelay,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+          >
+            <VariancePill
+              row={row}
+              hasPriorData={hasPriorData}
+              displayCurrency={displayCurrency}
+              isUrdu={isUrdu}
+              t={t}
+              inView={inView}
+              replayKey={replayKey}
+            />
+          </motion.div>
         </td>
 
         {/* Col 5 (Admin Actions) */}
         {isAdmin && (
-          <td className="px-4 py-4 border-l border-slate-200/60 dark:border-slate-800 text-center">
+          <td className="px-2.5 py-3.5 border-l border-slate-200/60 dark:border-slate-800 text-center whitespace-nowrap">
             <div className="flex justify-center gap-1.5">
               <button
                 type="button"
@@ -784,7 +833,7 @@ export const ReceiptRow = ({
                   e.stopPropagation()
                   onEdit && onEdit(row.expense)
                 }}
-                className="text-xs bg-blue-50 text-blue-600 px-2.5 py-1 rounded-lg font-bold hover:bg-blue-100 transition-colors cursor-pointer"
+                className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-lg font-bold hover:bg-blue-100 transition-colors cursor-pointer"
               >
                 Edit
               </button>
@@ -794,14 +843,14 @@ export const ReceiptRow = ({
                   e.stopPropagation()
                   onDelete && onDelete(row.id)
                 }}
-                className="text-xs bg-red-50 text-red-600 px-2.5 py-1 rounded-lg font-bold hover:bg-red-100 transition-colors cursor-pointer"
+                className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-lg font-bold hover:bg-red-100 transition-colors cursor-pointer"
               >
                 Del
               </button>
             </div>
           </td>
         )}
-      </motion.tr>
+      </tr>
 
       {/* Expandable 3D Receipt Row */}
       <AnimatePresence initial={false}>
